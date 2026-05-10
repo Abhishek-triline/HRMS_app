@@ -12,10 +12,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { FieldError } from '@/components/ui/FieldError';
@@ -170,9 +169,9 @@ export function RegularisationForm() {
             {/* BL-010 conflict block */}
             <ConflictErrorBlock error={submitError} />
 
-            {/* Original Record */}
+            {/* Original Record — crimsonbg/border per prototype */}
             {watchedDate && (
-              <div className="bg-offwhite border border-sage/30 rounded-lg p-4">
+              <div className="bg-crimsonbg border border-crimson/20 rounded-lg p-4">
                 <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">
                   Original Record
                 </div>
@@ -281,12 +280,24 @@ export function RegularisationForm() {
           </h3>
           <div className="space-y-3">
             <div className="bg-greenbg rounded-lg p-3">
-              <div className="text-xs font-bold text-richgreen mb-1">Within 7 days</div>
-              <div className="text-xs text-charcoal">Routed to your reporting Manager for approval.</div>
+              <div className="text-xs font-bold text-richgreen mb-2">Within 7 days</div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">M</div>
+                <div>
+                  <div className="text-sm font-semibold text-charcoal">Your Manager</div>
+                  <div className="text-xs text-slate">Direct Reporting Manager</div>
+                </div>
+              </div>
             </div>
             <div className="bg-softmint rounded-lg p-3">
-              <div className="text-xs font-bold text-forest mb-1">Older than 7 days</div>
-              <div className="text-xs text-charcoal">Automatically routed to Admin.</div>
+              <div className="text-xs font-bold text-forest mb-2">Older than 7 days</div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-forest text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">A</div>
+                <div>
+                  <div className="text-sm font-semibold text-charcoal">Admin</div>
+                  <div className="text-xs text-slate">Organisation Administrator</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -311,7 +322,14 @@ export function RegularisationForm() {
               <div className="w-1.5 h-1.5 rounded-full bg-slate mt-1.5 flex-shrink-0" aria-hidden="true" />
               <span>
                 Original attendance record is <strong className="text-charcoal">preserved</strong> — corrections
-                create a new overlay entry upon approval (BL-047).
+                create a new overlay entry upon approval (BL-007).
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-umber mt-1.5 flex-shrink-0" aria-hidden="true" />
+              <span>
+                Late deduction is <strong className="text-charcoal">recomputed</strong> if the corrected check-in
+                time changes your attendance status for that day.
               </span>
             </li>
           </ul>
@@ -328,18 +346,17 @@ export function RegularisationForm() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-offwhite border-b border-sage/20">
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">For Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days Old</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actioned By</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Submitted</th>
+                  <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Submitted</th>
+                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">For Date</th>
+                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days Old</th>
+                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
+                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actioned By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/20">
                 {!historyData?.data?.length ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-sm text-slate py-8">
+                    <td colSpan={5} className="text-center text-sm text-slate py-8">
                       No regularisation history.
                     </td>
                   </tr>
@@ -347,9 +364,7 @@ export function RegularisationForm() {
                   historyData.data.map((r) => (
                     <tr key={r.id} className="hover:bg-offwhite transition-colors">
                       <td className="px-6 py-4 font-medium text-charcoal">
-                        <Link href={`/employee/regularisation/${r.id}`} className="hover:text-forest hover:underline">
-                          {r.code}
-                        </Link>
+                        {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-4 py-4 text-slate">{r.date}</td>
                       <td className="px-4 py-4 text-slate">{r.ageDaysAtSubmit} days</td>
@@ -357,9 +372,6 @@ export function RegularisationForm() {
                         <RegularisationStatusBadge status={r.status} routedTo={r.routedTo} />
                       </td>
                       <td className="px-4 py-4 text-slate">{r.approverName ?? '—'}</td>
-                      <td className="px-4 py-4 text-slate text-xs">
-                        {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
                     </tr>
                   ))
                 )}
