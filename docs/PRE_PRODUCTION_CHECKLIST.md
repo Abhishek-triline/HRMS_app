@@ -72,3 +72,12 @@ Items that are **safe to defer in development** but **MUST** be completed before
 | SEC-001 | Audit log REVOKE for app DB user | Crit-for-prod | Open | Ops + DBA | — |
 
 When an item closes, append the verification evidence (timestamp + verifier name) and move it out of "Open".
+
+---
+
+## Phase 6 deferred items
+
+- [ ] **Wire `auditLogId` on notifications (BUG-NOT-004 / SEC-006-P6)**
+  Requires changing the `audit()` helper to return the created row's `id` and threading
+  that return value through every call site (~20 across all modules). Deferred from Phase 6
+  QA to Phase 7 grooming to avoid a broad cross-cutting change late in the release cycle.
