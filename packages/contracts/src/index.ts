@@ -15,3 +15,5 @@ export * from './attendance.js';
 export * from './payroll.js';
 export * from './performance.js';
 export * from './notifications.js';
+export * from './audit.js';
+export * from './configuration.js';
