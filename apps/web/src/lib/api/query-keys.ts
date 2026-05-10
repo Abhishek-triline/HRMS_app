@@ -3,6 +3,9 @@
  * One canonical location — import from here, never inline keys.
  */
 
+import type { AttendanceListQuery } from '@nexora/contracts/attendance';
+import type { RegularisationListQuery } from '@nexora/contracts/attendance';
+
 export const qk = {
   auth: {
     me: ['auth', 'me'] as const,
@@ -28,9 +31,25 @@ export const qk = {
   },
 
   attendance: {
+    all: () => ['attendance'] as const,
+    today: () => ['attendance', 'today'] as const,
+    list: (scope: 'me' | 'team' | 'all', q?: Partial<AttendanceListQuery>) =>
+      ['attendance', scope, q ?? {}] as const,
+    // Legacy aliases — kept for existing references
     summary: (employeeId: string, month: string) =>
       ['attendance', 'summary', employeeId, month] as const,
     overview: (date: string) => ['attendance', 'overview', date] as const,
+  },
+
+  regularisations: {
+    all: () => ['regularisations'] as const,
+    list: (q?: Partial<RegularisationListQuery>) =>
+      ['regularisations', 'list', q ?? {}] as const,
+    detail: (id: string) => ['regularisations', id] as const,
+  },
+
+  holidays: {
+    byYear: (year: number) => ['holidays', year] as const,
   },
 
   payroll: {

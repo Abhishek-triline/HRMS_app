@@ -11,3 +11,4 @@ export * from './errors.js';
 export * from './auth.js';
 export * from './employees.js';
 export * from './leave.js';
+export * from './attendance.js';

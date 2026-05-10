@@ -12,7 +12,8 @@
     "./errors": "./src/errors.ts",
     "./common": "./src/common.ts",
     "./employees": "./src/employees.ts",
-    "./leave": "./src/leave.ts"
+    "./leave": "./src/leave.ts",
+    "./attendance": "./src/attendance.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

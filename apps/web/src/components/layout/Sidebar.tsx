@@ -51,11 +51,6 @@ const adminNav: NavSection[] = [
         iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
       },
       {
-        label: 'Attendance',
-        href: '/admin/attendance',
-        iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-      },
-      {
         label: 'Payroll',
         href: '/admin/payroll',
         iconPath: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -78,6 +73,26 @@ const adminNav: NavSection[] = [
     ],
   },
   {
+    title: 'Attendance',
+    items: [
+      {
+        label: 'Org-wide Attendance',
+        href: '/admin/attendance',
+        iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'Reg Queue (>7d)',
+        href: '/admin/regularisation-queue',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+      },
+      {
+        label: 'Holiday Calendar',
+        href: '/admin/holidays',
+        iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+      },
+    ],
+  },
+  {
     title: 'Leave',
     items: [
       {
@@ -95,11 +110,6 @@ const adminNav: NavSection[] = [
         href: '/admin/leave-config',
         iconPath: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
       },
-      {
-        label: 'My Leave',
-        href: '/admin/leave',
-        iconPath: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-      },
     ],
   },
   {
@@ -109,6 +119,26 @@ const adminNav: NavSection[] = [
         label: 'My Profile',
         href: '/admin/profile',
         iconPath: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+      },
+      {
+        label: 'My Leave',
+        href: '/admin/leave',
+        iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+      },
+      {
+        label: 'My Attendance',
+        href: '/admin/attendance',
+        iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+      },
+      {
+        label: 'Check In/Out',
+        href: '/admin/checkin',
+        iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'My Regularisation',
+        href: '/admin/regularisation',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
       },
     ],
   },
@@ -143,9 +173,14 @@ const managerNav: NavSection[] = [
         iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
       },
       {
-        label: 'Attendance',
-        href: '/manager/attendance',
+        label: 'Team Attendance',
+        href: '/manager/team-attendance',
         iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'Reg Queue',
+        href: '/manager/regularisation-queue',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
       },
       {
         label: 'Performance',
@@ -166,6 +201,21 @@ const managerNav: NavSection[] = [
         label: 'My Leave',
         href: '/manager/leave',
         iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+      },
+      {
+        label: 'My Attendance',
+        href: '/manager/attendance',
+        iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+      },
+      {
+        label: 'Check In/Out',
+        href: '/manager/checkin',
+        iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'My Regularisation',
+        href: '/manager/regularisation',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
       },
       {
         label: 'My Payslips',
@@ -202,7 +252,17 @@ const employeeNav: NavSection[] = [
       {
         label: 'My Attendance',
         href: '/employee/attendance',
+        iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+      },
+      {
+        label: 'Check In/Out',
+        href: '/employee/checkin',
         iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'Regularise',
+        href: '/employee/regularisation',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
       },
       {
         label: 'My Payslips',
@@ -255,6 +315,21 @@ const payrollNav: NavSection[] = [
         label: 'My Leave',
         href: '/payroll/leave',
         iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+      },
+      {
+        label: 'My Attendance',
+        href: '/payroll/attendance',
+        iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+      },
+      {
+        label: 'Check In/Out',
+        href: '/payroll/checkin',
+        iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      },
+      {
+        label: 'My Regularisation',
+        href: '/payroll/regularisation',
+        iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
       },
       {
         label: 'My Profile',
