@@ -214,6 +214,13 @@ function SkeletonRow() {
 
 // ── CSV export ───────────────────────────────────────────────────────────────
 
+/** SEC-004-P7: Prefix formula-trigger characters so spreadsheet clients treat
+ *  the cell as text rather than evaluating it as a formula. */
+function csvSanitize(value: string): string {
+  if (/^[=+\-@\t\r]/.test(value)) return `'${value}`;
+  return value;
+}
+
 function exportToCsv(entries: AuditLogEntry[]) {
   const headers = ['Timestamp (IST)', 'Actor ID', 'Actor Role', 'Module', 'Action', 'Target Type', 'Target ID'];
   const rows = entries.map((e) => [
@@ -226,7 +233,7 @@ function exportToCsv(entries: AuditLogEntry[]) {
     e.targetId ?? '',
   ]);
   const csv = [headers, ...rows]
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .map((r) => r.map((c) => `"${csvSanitize(String(c)).replace(/"/g, '""')}"`).join(','))
     .join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
