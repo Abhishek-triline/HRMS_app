@@ -34,6 +34,8 @@ export const ErrorCode = {
 
   // Payroll (BL-031 / BL-034)
   RUN_ALREADY_FINALISED: 'RUN_ALREADY_FINALISED',
+  // SEC-P8-007: DB unique constraint fallback for concurrent run creates
+  RUN_ALREADY_EXISTS: 'RUN_ALREADY_EXISTS',
   PAYSLIP_IMMUTABLE: 'PAYSLIP_IMMUTABLE',
 
   // Performance (BL-041)
