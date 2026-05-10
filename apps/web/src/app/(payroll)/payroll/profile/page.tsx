@@ -2,6 +2,9 @@
 
 /**
  * Payroll Officer — My Profile (read-only self-service view).
+ *
+ * Renders the forest-gradient ProfileHero via ProfileView.
+ * Profile details are read-only for non-Admin roles — contact HR to update.
  * Salary section visible because the viewer is SELF.
  */
 

@@ -2,7 +2,9 @@
 
 /**
  * Manager — My Profile (read-only self-service view).
- * Calls useMe() to get the logged-in user's ID, then renders ProfileView.
+ *
+ * Renders the forest-gradient ProfileHero via ProfileView.
+ * Profile details are read-only for non-Admin roles — contact HR to update.
  * Salary section visible because the viewer is SELF.
  */
 
