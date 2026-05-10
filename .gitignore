@@ -1,0 +1,52 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build artifacts
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# tooling
+.eslintcache
+
+# Prisma
+apps/api/prisma/migrations/.tmp/
+
+# API runtime logs (JSONL — viewable via .claude/view-api-log.sh)
+apps/api/logs/
+
+# dev mail stub (BL email delivery in dev)
+/tmp/mail/
+
+# Claude Code — runtime agent logs (project-scoped, generated per machine).
+# settings.json, agents/, log-agent.sh, and view-log.sh stay tracked so the
+# team shares the hook configuration; only the runtime log artefacts are local.
+.claude/agents.log
+.claude/agents.txt
+.claude/settings.local.json
