@@ -66,6 +66,9 @@ export function LeaveRequestRow({
     request.status === 'Pending' || (request.status === 'Approved' && beforeStart);
   const isPending = request.status === 'Pending' || request.status === 'Escalated';
 
+  const truncatedReason =
+    request.reason.length > 60 ? request.reason.slice(0, 60) + '…' : request.reason;
+
   return (
     <tr className="hover:bg-offwhite transition-colors group">
       {showEmployee && (
@@ -79,14 +82,18 @@ export function LeaveRequestRow({
         {formatDuration(request.fromDate, request.toDate)}
       </td>
       <td className="px-4 py-4 text-slate text-sm">{request.days}</td>
+      <td
+        className="px-4 py-4 text-slate text-sm max-w-[180px]"
+        title={request.reason.length > 60 ? request.reason : undefined}
+      >
+        {truncatedReason}
+      </td>
       <td className="px-4 py-4">
         <LeaveStatusBadge status={request.status} />
       </td>
-      {showEmployee && (
-        <td className="px-4 py-4 text-slate text-sm">
-          {request.approverName ?? '—'}
-        </td>
-      )}
+      <td className="px-4 py-4 text-slate text-sm">
+        {request.approverName ?? '—'}
+      </td>
       <td className="px-4 py-4">
         <div className="flex items-center gap-2">
           <Link

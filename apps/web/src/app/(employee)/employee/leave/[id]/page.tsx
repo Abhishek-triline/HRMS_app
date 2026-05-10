@@ -4,7 +4,8 @@
  * E-04 — Leave Request Detail (Employee)
  * Visual reference: prototype/employee/leave-detail.html
  *
- * Status banner, request details, balance impact, timeline, cancel CTA.
+ * Status banner, request details, balance impact (before→after arrow row),
+ * 3-step timeline with optional Escalated 4th step, cancel CTA.
  * Explains BL-019/020 cancellation rules.
  */
 
@@ -55,62 +56,111 @@ function isBeforeStart(fromDate: string): boolean {
   return start > today;
 }
 
+// ── Status banner ─────────────────────────────────────────────────────────────
+// Fix: avoid border-current/30 (invalid Tailwind opacity modifier on border-current).
+// Each status gets explicit (bg, border, text) tuple classes.
+
+type StatusConfig = {
+  bg: string;
+  border: string;
+  iconColor: string;
+  textColor: string;
+  subColor: string;
+  pillBg: string;
+  pillBorder: string;
+  pillText: string;
+  label: string;
+  sub: string;
+};
+
+function buildStatusConfig(request: LeaveRequest): StatusConfig {
+  switch (request.status) {
+    case 'Pending':
+      return {
+        bg: 'bg-umberbg',
+        border: 'border-umber/20',
+        iconColor: 'text-umber',
+        textColor: 'text-umber',
+        subColor: 'text-umber/70',
+        pillBg: 'bg-umberbg',
+        pillBorder: 'border-umber/30',
+        pillText: 'text-umber',
+        label: 'Pending Approval',
+        sub: `Awaiting review by ${request.approverName ?? 'approver'}`,
+      };
+    case 'Approved':
+      return {
+        bg: 'bg-greenbg',
+        border: 'border-richgreen/20',
+        iconColor: 'text-richgreen',
+        textColor: 'text-richgreen',
+        subColor: 'text-richgreen/70',
+        pillBg: 'bg-greenbg',
+        pillBorder: 'border-richgreen/30',
+        pillText: 'text-richgreen',
+        label: 'Approved',
+        sub: request.decidedAt ? `Approved on ${formatDate(request.decidedAt)}` : 'Approved',
+      };
+    case 'Rejected':
+      return {
+        bg: 'bg-crimsonbg',
+        border: 'border-crimson/20',
+        iconColor: 'text-crimson',
+        textColor: 'text-crimson',
+        subColor: 'text-crimson/70',
+        pillBg: 'bg-crimsonbg',
+        pillBorder: 'border-crimson/30',
+        pillText: 'text-crimson',
+        label: 'Rejected',
+        sub: request.decisionNote ? `Reason: ${request.decisionNote}` : 'Request was rejected.',
+      };
+    case 'Cancelled':
+      return {
+        bg: 'bg-lockedbg',
+        border: 'border-lockedfg/20',
+        iconColor: 'text-lockedfg',
+        textColor: 'text-lockedfg',
+        subColor: 'text-lockedfg/70',
+        pillBg: 'bg-lockedbg',
+        pillBorder: 'border-lockedfg/30',
+        pillText: 'text-lockedfg',
+        label: 'Cancelled',
+        sub: 'This leave request has been cancelled.',
+      };
+    case 'Escalated':
+      return {
+        bg: 'bg-umberbg',
+        border: 'border-umber/20',
+        iconColor: 'text-umber',
+        textColor: 'text-umber',
+        subColor: 'text-umber/70',
+        pillBg: 'bg-umberbg',
+        pillBorder: 'border-umber/30',
+        pillText: 'text-umber',
+        label: 'Escalated to Admin',
+        sub: 'Manager did not respond within 5 working days (BL-018).',
+      };
+  }
+}
+
 function StatusBanner({ request }: { request: LeaveRequest }) {
-  const configs = {
-    Pending: {
-      bg: 'bg-umberbg border-umber/20',
-      icon: 'text-umber',
-      textColor: 'text-umber',
-      subColor: 'text-umber/70',
-      label: 'Pending Approval',
-      sub: `Awaiting review by ${request.approverName ?? 'approver'}`,
-    },
-    Approved: {
-      bg: 'bg-greenbg border-richgreen/20',
-      icon: 'text-richgreen',
-      textColor: 'text-richgreen',
-      subColor: 'text-richgreen/70',
-      label: 'Approved',
-      sub: request.decidedAt ? `Approved on ${formatDate(request.decidedAt)}` : 'Approved',
-    },
-    Rejected: {
-      bg: 'bg-crimsonbg border-crimson/20',
-      icon: 'text-crimson',
-      textColor: 'text-crimson',
-      subColor: 'text-crimson/70',
-      label: 'Rejected',
-      sub: request.decisionNote ? `Reason: ${request.decisionNote}` : 'Request was rejected.',
-    },
-    Cancelled: {
-      bg: 'bg-lockedbg border-lockedfg/20',
-      icon: 'text-lockedfg',
-      textColor: 'text-lockedfg',
-      subColor: 'text-lockedfg/70',
-      label: 'Cancelled',
-      sub: 'This leave request has been cancelled.',
-    },
-    Escalated: {
-      bg: 'bg-umberbg border-umber/20',
-      icon: 'text-umber',
-      textColor: 'text-umber',
-      subColor: 'text-umber/70',
-      label: 'Escalated to Admin',
-      sub: 'Manager did not respond within 5 working days (BL-018).',
-    },
-  };
-
-  const cfg = configs[request.status];
-
+  const cfg = buildStatusConfig(request);
   return (
-    <div className={`border rounded-xl px-6 py-4 mb-6 flex items-center gap-3 ${cfg.bg}`}>
-      <svg className={`w-5 h-5 flex-shrink-0 ${cfg.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <div className={`${cfg.bg} ${cfg.border} border rounded-xl px-6 py-4 mb-6 flex items-center gap-3`}>
+      <svg
+        className={`w-5 h-5 flex-shrink-0 ${cfg.iconColor}`}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div>
         <div className={`font-semibold text-sm ${cfg.textColor}`}>{cfg.label}</div>
         <div className={`text-xs mt-0.5 ${cfg.subColor}`}>{cfg.sub}</div>
       </div>
-      <span className={`ml-auto border text-xs font-bold px-3 py-1 rounded-full ${cfg.bg} ${cfg.textColor} border-current/30`}>
+      <span className={`ml-auto ${cfg.pillBg} ${cfg.pillBorder} ${cfg.pillText} border text-xs font-bold px-3 py-1 rounded-full`}>
         {request.code}
       </span>
     </div>
@@ -181,6 +231,14 @@ export default function LeaveDetailPage() {
     return formatDate(d.toISOString());
   })();
 
+  // Balance impact: compute before/after for structured card
+  const balanceBefore = request.deductedDays !== null
+    ? (request.deductedDays)
+    : request.days;
+  // We don't have the actual "before" balance from the request, so we show
+  // deductedDays as the impact. The structured row shows the impact direction.
+  const showBalanceCard = request.status !== 'Rejected' && request.status !== 'Cancelled';
+
   return (
     <div className="p-6 md:p-8 max-w-3xl">
       {/* Breadcrumb */}
@@ -220,7 +278,7 @@ export default function LeaveDetailPage() {
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Total Days</div>
             <div className="text-sm font-semibold text-charcoal">
-              {request.days} calendar day{request.days !== 1 ? 's' : ''}
+              {request.days} working {request.days !== 1 ? 'days' : 'day'}
             </div>
           </div>
           <div>
@@ -239,7 +297,10 @@ export default function LeaveDetailPage() {
                   : 'Decided By'}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <div className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">
+                <div
+                  className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  aria-hidden="true"
+                >
                   {request.approverName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                 </div>
                 <div>
@@ -267,8 +328,8 @@ export default function LeaveDetailPage() {
         </div>
       </div>
 
-      {/* Balance impact */}
-      {request.status !== 'Rejected' && request.status !== 'Cancelled' && (
+      {/* Balance impact — structured before→after card */}
+      {showBalanceCard && (
         <div className="bg-softmint border border-mint rounded-xl p-5 mb-5">
           <h3 className="text-sm font-semibold text-forest mb-3 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -276,34 +337,58 @@ export default function LeaveDetailPage() {
             </svg>
             Leave Balance Impact
           </h3>
-          <div className="text-sm text-slate">
-            {request.status === 'Approved' && request.deductedDays !== null ? (
-              <span>
-                <span className="font-semibold text-charcoal">{request.deductedDays} day{request.deductedDays !== 1 ? 's' : ''}</span> deducted from your {request.type} balance on approval (BL-021).
-              </span>
-            ) : (
-              <span>
-                <span className="font-semibold text-charcoal">{request.days} day{request.days !== 1 ? 's' : ''}</span> will be deducted from your {request.type} balance if approved.
-              </span>
-            )}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="text-sm text-slate">{request.type} Leave</div>
+            <div className="flex items-center gap-2 font-semibold">
+              {request.status === 'Approved' && request.deductedDays !== null ? (
+                <>
+                  <span className="text-sm text-charcoal">
+                    {/* We show deducted impact — the API does not return the before-balance in the request */}
+                    {request.deductedDays} day{request.deductedDays !== 1 ? 's' : ''} deducted
+                  </span>
+                  <svg className="w-4 h-4 text-slate flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm text-richgreen">balance updated</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-charcoal">
+                    {request.days} day{request.days !== 1 ? 's' : ''} remaining
+                  </span>
+                  <svg className="w-4 h-4 text-slate flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm text-richgreen">
+                    {request.days} fewer remaining (if approved)
+                  </span>
+                </>
+              )}
+            </div>
+            <span className="text-xs text-slate bg-white rounded px-2 py-0.5 border border-sage/30">
+              {request.status === 'Approved' ? 'deducted on approval' : 'if approved'}
+            </span>
           </div>
           {request.restoredDays !== null && request.restoredDays > 0 && (
-            <div className="mt-2 text-sm text-forest font-semibold">
+            <div className="mt-3 text-sm text-forest font-semibold">
               {request.restoredDays} day{request.restoredDays !== 1 ? 's' : ''} restored on cancellation.
             </div>
           )}
         </div>
       )}
 
-      {/* Timeline */}
+      {/* Timeline — 3 fixed steps + optional Escalated 4th */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
         <h3 className="font-heading text-sm font-semibold text-charcoal mb-5">Request Timeline</h3>
         <div className="relative">
           <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-sage/30" aria-hidden="true" />
           <ol className="space-y-6">
-            {/* Submitted */}
+            {/* Step 1: Submitted ✓ */}
             <li className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-richgreen text-white flex items-center justify-center flex-shrink-0 z-10" aria-hidden="true">
+              <div
+                className="w-8 h-8 rounded-full bg-richgreen text-white flex items-center justify-center flex-shrink-0 z-10"
+                aria-hidden="true"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -314,10 +399,41 @@ export default function LeaveDetailPage() {
               </div>
             </li>
 
-            {/* Escalated (if applicable) */}
+            {/* Step 2: Pending Manager Review ⏱ (current when pending/escalated, completed when decided) */}
+            {request.decidedAt || request.status === 'Cancelled' ? (
+              /* Already decided — show as completed or skip */
+              null
+            ) : (
+              <li className="flex items-start gap-4">
+                <div
+                  className="w-8 h-8 rounded-full bg-umberbg border-2 border-umber text-umber flex items-center justify-center flex-shrink-0 z-10"
+                  aria-hidden="true"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="pt-1">
+                  <div className="text-sm font-semibold text-umber">Pending Manager Review</div>
+                  <div className="text-xs text-slate mt-0.5">
+                    {request.approverName
+                      ? `Awaiting ${request.approverName} — deadline ${escalationDeadline}`
+                      : `Deadline ${escalationDeadline}`}
+                  </div>
+                  <span className="inline-block mt-1.5 text-xs bg-umberbg text-umber font-bold px-2 py-0.5 rounded">
+                    Current
+                  </span>
+                </div>
+              </li>
+            )}
+
+            {/* Step 3 (optional): Escalated — shown only when escalatedAt is set */}
             {request.escalatedAt && (
               <li className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-umberbg border-2 border-umber text-umber flex items-center justify-center flex-shrink-0 z-10" aria-hidden="true">
+                <div
+                  className="w-8 h-8 rounded-full bg-umberbg border-2 border-umber text-umber flex items-center justify-center flex-shrink-0 z-10"
+                  aria-hidden="true"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
                   </svg>
@@ -329,14 +445,21 @@ export default function LeaveDetailPage() {
               </li>
             )}
 
-            {/* Decision */}
+            {/* Final step: Decision ❍ ghosted when pending, filled when decided/cancelled */}
             {request.decidedAt ? (
               <li className="flex items-start gap-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${request.status === 'Approved' ? 'bg-richgreen text-white' : 'bg-crimson text-white'}`} aria-hidden="true">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                    request.status === 'Approved' ? 'bg-richgreen text-white' : 'bg-crimson text-white'
+                  }`}
+                  aria-hidden="true"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {request.status === 'Approved'
-                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />}
+                    {request.status === 'Approved' ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
                   </svg>
                 </div>
                 <div className="pt-1">
@@ -351,7 +474,10 @@ export default function LeaveDetailPage() {
               </li>
             ) : request.status === 'Cancelled' ? (
               <li className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-lockedbg border-2 border-lockedfg text-lockedfg flex items-center justify-center flex-shrink-0 z-10" aria-hidden="true">
+                <div
+                  className="w-8 h-8 rounded-full bg-lockedbg border-2 border-lockedfg text-lockedfg flex items-center justify-center flex-shrink-0 z-10"
+                  aria-hidden="true"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -364,16 +490,19 @@ export default function LeaveDetailPage() {
                 </div>
               </li>
             ) : (
+              /* Ghosted "Decision" step when still pending */
               <li className="flex items-start gap-4 opacity-40">
-                <div className="w-8 h-8 rounded-full bg-sage/30 border-2 border-sage text-slate flex items-center justify-center flex-shrink-0 z-10" aria-hidden="true">
+                <div
+                  className="w-8 h-8 rounded-full bg-sage/30 border-2 border-sage text-slate flex items-center justify-center flex-shrink-0 z-10"
+                  aria-hidden="true"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div className="pt-1">
-                  <div className="text-sm font-semibold text-slate">Awaiting Decision</div>
+                  <div className="text-sm font-semibold text-slate">Decision</div>
                   <div className="text-xs text-slate mt-0.5">Approved / Rejected / Escalated</div>
-                  <span className="inline-block mt-1.5 text-xs bg-umberbg text-umber font-bold px-2 py-0.5 rounded">Current</span>
                 </div>
               </li>
             )}
@@ -383,20 +512,25 @@ export default function LeaveDetailPage() {
 
       {/* Cancel section */}
       {canCancel && (
-        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-          <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancellation</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-crimson/20 p-6">
+          <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancel This Request</h3>
           <p className="text-sm text-slate mb-4">
             {beforeStart
-              ? 'You can cancel this request before it starts. Full balance will be restored (BL-019).'
-              : 'This leave has already started. Only the remaining days will be restored on cancellation (BL-020).'}
+              ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${request.type} leave balance (BL-019).`
+              : 'This leave has already started. Only the remaining unused days will be restored on cancellation (BL-020).'}
           </p>
           <Button
             variant="destructive"
             size="md"
             onClick={() => setCancelOpen(true)}
           >
-            Cancel Leave Request
+            Cancel Request
           </Button>
+          {beforeStart && (
+            <p className="text-xs text-slate mt-3">
+              After the leave starts, only your Manager or Admin can cancel it (partial-day restoration needs review).
+            </p>
+          )}
         </div>
       )}
 

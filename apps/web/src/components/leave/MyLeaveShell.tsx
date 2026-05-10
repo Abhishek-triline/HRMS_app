@@ -116,6 +116,18 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
     return false;
   }
 
+  // ── FY subtitle ──────────────────────────────────────────────────────────
+  // Format: "FY 2026-27 — as of May 11, 2026"
+  const todayDate = new Date();
+  const fiscalYear = todayDate.getMonth() >= 3 ? todayDate.getFullYear() : todayDate.getFullYear() - 1;
+  const fiscalYearLabel = `FY ${fiscalYear}-${String(fiscalYear + 1).slice(-2)}`;
+  const asOfLabel = todayDate.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const fySubtitle = `${fiscalYearLabel} — as of ${asOfLabel}`;
+
   return (
     <div className="p-6 md:p-8">
       {/* Page header */}
@@ -123,9 +135,7 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
         <div>
           <h2 className="font-heading text-lg font-semibold text-charcoal">Leave Balances</h2>
           <p className="text-sm text-slate mt-0.5">
-            {balancesQuery.data
-              ? `FY ${balancesQuery.data.year}`
-              : 'Loading…'}
+            {fySubtitle}
           </p>
         </div>
         <Link href={`${basePath}/new`}>
@@ -206,7 +216,9 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
                       <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Type</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Duration</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Reason</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Approved By</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actions</th>
                     </tr>
                   </thead>
@@ -236,6 +248,16 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
             </>
           )}
         </div>
+      </div>
+
+      {/* Cancellation policy footer banner */}
+      <div className="bg-softmint border border-mint/30 rounded-xl px-5 py-4 mt-6 text-sm text-forest">
+        <p className="font-semibold mb-1">Cancellation policy</p>
+        <p>
+          You can self-cancel a pending or approved leave only before the start date.
+          After the leave starts, only your Manager or Admin can cancel it. Approved
+          days are restored to your balance automatically on cancellation.
+        </p>
       </div>
 
       {cancelTarget && (

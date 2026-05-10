@@ -182,6 +182,7 @@ export const LeaveRequestSummarySchema = LeaveRequestSchema.pick({
   fromDate: true,
   toDate: true,
   days: true,
+  reason: true,
   status: true,
   routedTo: true,
   approverName: true,
