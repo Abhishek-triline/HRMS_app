@@ -13,3 +13,4 @@ export * from './employees.js';
 export * from './leave.js';
 export * from './attendance.js';
 export * from './payroll.js';
+export * from './performance.js';
