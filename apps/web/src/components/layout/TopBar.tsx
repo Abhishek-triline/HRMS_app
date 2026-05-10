@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { AuthUser } from '@nexora/contracts/auth';
+import { NotificationBell } from './NotificationBell';
 
 interface TopBarProps {
   user: AuthUser;
@@ -41,32 +42,7 @@ export function TopBar({ user, children, hasUnread = false, burgerSlot }: TopBar
       {/* Right cluster */}
       <div className="flex items-center gap-2.5 flex-shrink-0">
         {/* Notification bell */}
-        <Link
-          href="/notifications"
-          aria-label={hasUnread ? 'Notifications (unread)' : 'Notifications'}
-          className="relative w-9 h-9 rounded-lg border border-sage/40 flex items-center justify-center text-slate hover:bg-offwhite hover:text-forest transition-colors"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
-          </svg>
-          {hasUnread && (
-            <span
-              className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-crimson rounded-full"
-              aria-hidden="true"
-            />
-          )}
-        </Link>
+        <NotificationBell hasUnread={hasUnread} />
 
         {/* Avatar + name */}
         <Link

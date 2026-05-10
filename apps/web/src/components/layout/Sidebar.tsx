@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import type { Role } from '@nexora/contracts/common';
+import { SignOutButton } from './SignOutButton';
 
 // ── Icon helpers (inline SVG to avoid deps) ───────────────────────────────────
 
@@ -316,6 +317,25 @@ export function Sidebar({ role, currentPath, initials, name, email }: SidebarPro
             <ul className="space-y-0.5" role="list">
               {section.items.map((item) => {
                 const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
+
+                if (item.danger) {
+                  // Sign-out uses SignOutButton (client component) which calls
+                  // POST /auth/logout and handles the router redirect.
+                  return (
+                    <li key={item.href}>
+                      <SignOutButton
+                        className={clsx(
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                          'text-white/70 hover:text-white hover:bg-crimson/20',
+                        )}
+                      >
+                        <Icon path={item.iconPath} />
+                        {item.label}
+                      </SignOutButton>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -324,9 +344,7 @@ export function Sidebar({ role, currentPath, initials, name, email }: SidebarPro
                         'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                         isActive
                           ? 'bg-white/10 border-l-2 border-mint text-white font-medium'
-                          : item.danger
-                            ? 'text-white/70 hover:text-white hover:bg-crimson/20'
-                            : 'text-white/70 hover:text-white hover:bg-emerald/10',
+                          : 'text-white/70 hover:text-white hover:bg-emerald/10',
                       )}
                       aria-current={isActive ? 'page' : undefined}
                     >
