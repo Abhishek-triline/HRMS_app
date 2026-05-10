@@ -25,7 +25,6 @@ export function useMarkRead() {
       queryClient.invalidateQueries({ queryKey: qk.notifications.all });
       queryClient.invalidateQueries({ queryKey: qk.notifications.unreadCount() });
 
-      if ('all' in data.data) return; // all: true path (no count to surface)
       const updated = data.data.updated;
       if (updated > 0) {
         // Silently refresh — toast only on "Mark all" (handled by MarkAllReadButton)

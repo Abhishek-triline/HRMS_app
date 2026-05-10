@@ -23,7 +23,7 @@ type RoleChips = {
 };
 
 export const ROLE_CHIPS: RoleChips = {
-  Admin:         ['all', 'unread', 'Status', 'Configuration', 'Performance', 'Payroll', 'Auth', 'System'],
+  Admin:         ['all', 'unread', 'Leave', 'Attendance', 'Status', 'Configuration', 'Performance', 'Payroll', 'Auth', 'System'],
   Manager:       ['all', 'unread', 'Leave', 'Attendance', 'Performance', 'System'],
   Employee:      ['all', 'unread', 'Leave', 'Attendance', 'Payroll', 'Performance', 'Auth', 'System'],
   PayrollOfficer:['all', 'unread', 'Payroll', 'System'],
