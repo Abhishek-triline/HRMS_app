@@ -13,7 +13,8 @@
     "./common": "./src/common.ts",
     "./employees": "./src/employees.ts",
     "./leave": "./src/leave.ts",
-    "./attendance": "./src/attendance.ts"
+    "./attendance": "./src/attendance.ts",
+    "./payroll": "./src/payroll.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
