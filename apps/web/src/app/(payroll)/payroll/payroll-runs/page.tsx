@@ -1,0 +1,155 @@
+'use client';
+
+/**
+ * P-02 — Payroll Runs List (PayrollOfficer).
+ * Same layout as A-11 but without the Reverse CTA.
+ * Visual reference: prototype/payroll-officer/initiate-payroll.html (list view).
+ */
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePayrollRuns } from '@/lib/hooks/usePayroll';
+import { PayrollRunStatusBadge } from '@/components/payroll/PayrollRunStatusBadge';
+import { MoneyDisplay } from '@/components/payroll/MoneyDisplay';
+import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
+import type { PayrollRunStatus } from '@nexora/contracts/payroll';
+
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const FY_OPTIONS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+
+const STATUS_OPTIONS: Array<{ label: string; value: PayrollRunStatus | '' }> = [
+  { label: 'All Status', value: '' },
+  { label: 'Draft', value: 'Draft' },
+  { label: 'Review', value: 'Review' },
+  { label: 'Finalised', value: 'Finalised' },
+  { label: 'Reversed', value: 'Reversed' },
+];
+
+export default function POPayrollRunsPage() {
+  const [year, setYear] = useState<number | undefined>(undefined);
+  const [status, setStatus] = useState<PayrollRunStatus | ''>('');
+
+  const { data, isLoading, isError } = usePayrollRuns({ year, status: status || undefined });
+  const runs = data?.data ?? [];
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="font-heading text-xl font-bold text-charcoal">Payroll Runs</h1>
+          <p className="text-xs text-slate mt-0.5">Indian fiscal year — April to March</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/payroll/reversal-history" className="text-xs text-emerald font-semibold hover:underline">
+            Reversal History →
+          </Link>
+          <Link href="/payroll/payroll-runs/new">
+            <Button variant="primary" size="sm" leadingIcon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            }>
+              Initiate Run
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-sage/20">
+          <h2 className="text-sm font-semibold text-charcoal">Run History</h2>
+          <div className="flex gap-2">
+            <select
+              value={year ?? ''}
+              onChange={(e) => setYear(e.target.value ? Number(e.target.value) : undefined)}
+              className="border border-sage/50 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
+              aria-label="Filter by year"
+            >
+              <option value="">All Years</option>
+              {FY_OPTIONS.map((y) => <option key={y} value={y}>FY {y}-{String(y + 1).slice(2)}</option>)}
+            </select>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as PayrollRunStatus | '')}
+              className="border border-sage/50 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
+              aria-label="Filter by status"
+            >
+              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Spinner /><span className="ml-2 text-sm text-slate">Loading…</span>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-12 text-crimson text-sm">Failed to load payroll runs.</div>
+        ) : (
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm" aria-label="Payroll run history">
+                <thead>
+                  <tr className="bg-offwhite border-b border-sage/20">
+                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Run Code</th>
+                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Period</th>
+                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
+                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
+                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
+                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
+                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sage/10">
+                  {runs.length === 0 ? (
+                    <tr><td colSpan={7} className="px-5 py-12 text-center text-slate text-sm">No payroll runs found.</td></tr>
+                  ) : (
+                    runs.map((run) => (
+                      <tr key={run.id} className="hover:bg-offwhite/60 transition-colors">
+                        <td className="px-5 py-3.5 font-mono text-xs text-forest font-semibold">{run.code}</td>
+                        <td className="px-5 py-3.5 text-charcoal text-xs">{MONTH_NAMES[run.month]} {run.year}</td>
+                        <td className="px-5 py-3.5 text-center"><PayrollRunStatusBadge status={run.status} /></td>
+                        <td className="px-5 py-3.5 text-center text-charcoal">{run.employeeCount}</td>
+                        <td className="px-5 py-3.5 text-right text-charcoal"><MoneyDisplay paise={run.totalGrossPaise} /></td>
+                        <td className="px-5 py-3.5 text-right font-semibold text-richgreen"><MoneyDisplay paise={run.totalNetPaise} /></td>
+                        <td className="px-5 py-3.5 text-center">
+                          <Link href={`/payroll/payroll-runs/${run.id}`} className="text-forest text-xs font-semibold hover:underline">View</Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="md:hidden space-y-3 p-4">
+              {runs.length === 0 ? (
+                <p className="text-center text-slate text-sm py-8">No payroll runs found.</p>
+              ) : (
+                runs.map((run) => (
+                  <Link key={run.id} href={`/payroll/payroll-runs/${run.id}`} className="block bg-white border border-sage/30 rounded-xl p-4 hover:border-forest/30 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-xs text-forest font-semibold">{run.code}</span>
+                      <PayrollRunStatusBadge status={run.status} />
+                    </div>
+                    <p className="text-sm font-semibold text-charcoal">{MONTH_NAMES[run.month]} {run.year}</p>
+                    <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                      <div><p className="text-slate">Employees</p><p className="font-semibold">{run.employeeCount}</p></div>
+                      <div><p className="text-slate">Gross</p><p className="font-semibold"><MoneyDisplay paise={run.totalGrossPaise} /></p></div>
+                      <div><p className="text-slate">Net</p><p className="font-semibold text-richgreen"><MoneyDisplay paise={run.totalNetPaise} /></p></div>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
