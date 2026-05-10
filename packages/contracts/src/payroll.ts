@@ -274,6 +274,8 @@ export const PayslipListQuerySchema = PaginationQuerySchema.extend({
   month: z.coerce.number().int().min(1).max(12).optional(),
   employeeId: z.string().optional(),
   status: PayslipStatusSchema.optional(),
+  /** Filter to a single payroll run (BUG-PAY-004 fix). */
+  runId: z.string().optional(),
   /** Filter to reversal records only (or originals only). */
   isReversal: z.coerce.boolean().optional(),
 });
