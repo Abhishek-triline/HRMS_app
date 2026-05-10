@@ -967,7 +967,8 @@ The following are explicitly out of scope for v1 and tracked as future-phase wor
 | **Email / SMS / push notification delivery** | Future phase | v1 ships in-app notifications only |
 | Employee self-registration | **By design — never** | Admin-only account creation is intentional and not on any roadmap |
 | User-authored notifications / broadcasts | **By design — never** | Notifications are system-generated only |
-| Time-of-day demo dock on Check In / Out hero | **Prototype-only — strip before ship** | A small "🌅 Morning · ☀️ Day · 🌇 Evening · 🌙 Night · ⟲ Live" pill (`#nx-tod-demo`) lets reviewers preview the four hero scenes manually. Production UI relies only on the auto wall-clock swap (see [Design Document § 4 — Time-of-day Hero Scene](./hrms_design_document.md)) and must not include the demo controls |
+| Time-of-day demo dock on Check In / Out + Dashboard heroes | **Prototype-only — strip before ship** | A small "🌅 Morning · ☀️ Day · 🌇 Evening · 🌙 Night · ⟲ Live" pill (`#nx-tod-demo`) lets reviewers preview the four hero scenes manually. Lives on every role's dashboard greeting hero **and** the Check In / Out hero. Production UI relies only on the auto wall-clock swap (see [Design Document § 4 — Time-of-day Hero Scene](./hrms_design_document.md)) and must not include the demo controls |
+| Check-in state preview dock on employee Check In / Out hero | **Prototype-only — strip before ship** | A small "⏰ Ready · ✓ Working · 🌙 Out" pill (`#nx-state-demo`) on the employee `checkin.html` page only, lets reviewers toggle between the three panel states without manipulating localStorage. Production UI picks the panel from today's attendance row (no check-in yet → Ready; check-in time present and no check-out → Working; check-out time present → Confirm) and must not include the demo controls |
 
 ---
 

@@ -202,10 +202,12 @@ A reusable rich background applied to surfaces that benefit from a sense of mome
 
 | Time band | Mood key | Sky / gradient | Sun / moon | Atmosphere |
 |---|---|---|---|---|
-| 05:00 – 10:59 | **morning** | peach → cream → mint → emerald | amber `#F4A56B` | warm sunrise tones, mountains rendered in lighter forest |
-| 11:00 – 16:59 | **day** | sky-blue → cyan-mint → emerald → forest | golden `#FFD56B` | three drifting white clouds animate across the upper sky |
+| 05:00 – 10:59 | **morning** | coppery-orange → tan → emerald → forest (`#C97155 → #C8804D → #5BAA85 → #2D7A5F → #1C3D2E`) | amber `#F4A56B` | warm "golden hour" sunrise, mountains rendered in lighter forest |
+| 11:00 – 16:59 | **day** | deep teal → emerald → forest (`#3F8AA8 → #4A9C88 → #2D7A5F → #1C3D2E`) | golden `#FFD56B` | three drifting white clouds animate across the upper sky |
 | 17:00 – 18:59 | **evening** | violet → rose → amber | saffron `#FBC97D` | sunset gradient, mountains darker for contrast |
 | 19:00 – 04:59 | **night** | navy → forest | moonlight `#E4F1EB` | seven twinkling white stars become visible |
+
+> **Brightness tuning.** The morning and day gradients were originally pale (peach/cream and sky-blue/cyan); they have been deepened so the dashboard greeting card — which is much shorter than the check-in hero — reads with the same atmospheric weight as evening and night. The lighter top stops were dropped and the darker greens were brought up earlier in the gradient.
 
 **Behaviour**
 - A small `applyTimeOfDay()` helper in `theme.js` reads the wall clock on `DOMContentLoaded` and re-runs every hour, setting `data-tod="morning|day|evening|night"` on every `[data-nx-hero]` on the page.
@@ -215,7 +217,7 @@ A reusable rich background applied to surfaces that benefit from a sense of mome
 
 **Prototype-only demo controls**
 
-The Check In / Out hero in the prototype carries a small demo dock (`#nx-tod-demo`) with five swatches:
+Both the **Check In / Out hero** and the **dashboard greeting hero** on each role's dashboard carry a small demo dock (`#nx-tod-demo`) with five swatches:
 
 | Swatch | Effect |
 |---|---|
@@ -225,7 +227,11 @@ The Check In / Out hero in the prototype carries a small demo dock (`#nx-tod-dem
 | 🌙 Night | force the night scene |
 | ⟲ Live | revert to wall-clock time |
 
-This dock is purely for prototype demos / visual review — **it is not part of the production UI**. It is safe to delete the entire `<div id="nx-tod-demo">…</div>` block before shipping; nothing else depends on it. The wall-clock auto-detection will continue to work without it.
+This dock is purely for prototype demos / visual review — **it is not part of the production UI**. It is safe to delete every `<div id="nx-tod-demo">…</div>` block before shipping; nothing else depends on them. The wall-clock auto-detection will continue to work without them.
+
+**Check-in state preview dock (employee/checkin.html only)**
+
+The employee Check In / Out page also carries a `#nx-state-demo` dock at the top-right of the hero with three swatches — ⏰ Ready · ✓ Working · 🌙 Out — that toggles between the three panel states (`#nx-ready-panel`, `#nx-working-panel`, `#nx-confirm-panel`). This is a prototype-only preview affordance so reviewers can see all three designs without manipulating localStorage; it should be stripped before shipping. The `Ready` panel itself (the "Ready to Start" design with the gradient Check-In button + late-mark reminder strip) is **not** prototype-only — it is the intended pre-check-in design and would render in production whenever today's attendance row has no check-in time.
 
 ### Self-Service Hero Card
 
