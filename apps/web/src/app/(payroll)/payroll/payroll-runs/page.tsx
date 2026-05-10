@@ -2,8 +2,9 @@
 
 /**
  * P-02 — Payroll Runs List (PayrollOfficer).
- * Same layout as A-11 but without the Reverse CTA.
- * Visual reference: prototype/payroll-officer/initiate-payroll.html (list view).
+ * Same layout as A-11 (admin) including 4-tile stat strip.
+ * Without the Reverse CTA.
+ * Visual reference: prototype/payroll-officer/payroll-runs.html
  */
 
 import { useState } from 'react';
@@ -13,7 +14,15 @@ import { PayrollRunStatusBadge } from '@/components/payroll/PayrollRunStatusBadg
 import { MoneyDisplay } from '@/components/payroll/MoneyDisplay';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PayrollRunStatus } from '@nexora/contracts/payroll';
+import type { PayrollRunStatus, PayrollRunSummary } from '@nexora/contracts/payroll';
+
+/** PayrollRunSummary doesn't include LOP/Tax — access them safely from the runtime payload. */
+function getLopPaise(run: PayrollRunSummary): number {
+  return (run as unknown as { totalLopPaise?: number }).totalLopPaise ?? 0;
+}
+function getTaxPaise(run: PayrollRunSummary): number {
+  return (run as unknown as { totalTaxPaise?: number }).totalTaxPaise ?? 0;
+}
 
 const MONTH_NAMES = [
   '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -38,6 +47,13 @@ export default function POPayrollRunsPage() {
   const { data, isLoading, isError } = usePayrollRuns({ year, status: status || undefined });
   const runs = data?.data ?? [];
 
+  // Stat tile computations
+  const finalised = runs.filter((r) => r.status === 'Finalised');
+  const lastFinalised = finalised[0];
+  const ytdNet = finalised.reduce((acc, r) => acc + r.totalNetPaise, 0);
+  const reversalCount = runs.filter((r) => r.status === 'Reversed').length;
+  const draftRun = runs.find((r) => r.status === 'Draft');
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-5">
@@ -58,6 +74,53 @@ export default function POPayrollRunsPage() {
               Initiate Run
             </Button>
           </Link>
+        </div>
+      </div>
+
+      {/* 4-tile stat strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
+          <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Current Month</p>
+          {draftRun ? (
+            <>
+              <p className="font-heading text-base font-bold text-charcoal">
+                {MONTH_NAMES[draftRun.month]} {draftRun.year}
+              </p>
+              <PayrollRunStatusBadge status={draftRun.status} className="mt-2" />
+            </>
+          ) : (
+            <p className="text-sm text-slate italic">No active run</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
+          <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Last Finalised</p>
+          {lastFinalised ? (
+            <>
+              <p className="font-heading text-base font-bold text-charcoal">
+                {MONTH_NAMES[lastFinalised.month]} {lastFinalised.year}
+              </p>
+              <p className="text-xs text-slate mt-2">
+                <MoneyDisplay paise={lastFinalised.totalNetPaise} /> · {lastFinalised.employeeCount} employees
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate italic">None yet</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
+          <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">YTD Disbursed</p>
+          <p className="font-heading text-2xl font-bold text-richgreen">
+            <MoneyDisplay paise={ytdNet} />
+          </p>
+          <p className="text-xs text-slate mt-1">Finalised runs only</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
+          <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Reversals</p>
+          <p className="font-heading text-2xl font-bold text-charcoal">{reversalCount}</p>
+          <p className="text-xs text-slate mt-1">All time</p>
         </div>
       </div>
 
@@ -97,29 +160,48 @@ export default function POPayrollRunsPage() {
               <table className="w-full text-sm" aria-label="Payroll run history">
                 <thead>
                   <tr className="bg-offwhite border-b border-sage/20">
-                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Run Code</th>
                     <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Period</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
-                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
-                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
+                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">LOP</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Tax</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
+                    <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
+                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10">
                   {runs.length === 0 ? (
-                    <tr><td colSpan={7} className="px-5 py-12 text-center text-slate text-sm">No payroll runs found.</td></tr>
+                    <tr><td colSpan={8} className="px-5 py-12 text-center text-slate text-sm">No payroll runs found.</td></tr>
                   ) : (
                     runs.map((run) => (
                       <tr key={run.id} className="hover:bg-offwhite/60 transition-colors">
-                        <td className="px-5 py-3.5 font-mono text-xs text-forest font-semibold">{run.code}</td>
-                        <td className="px-5 py-3.5 text-charcoal text-xs">{MONTH_NAMES[run.month]} {run.year}</td>
-                        <td className="px-5 py-3.5 text-center"><PayrollRunStatusBadge status={run.status} /></td>
-                        <td className="px-5 py-3.5 text-center text-charcoal">{run.employeeCount}</td>
-                        <td className="px-5 py-3.5 text-right text-charcoal"><MoneyDisplay paise={run.totalGrossPaise} /></td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-richgreen"><MoneyDisplay paise={run.totalNetPaise} /></td>
-                        <td className="px-5 py-3.5 text-center">
-                          <Link href={`/payroll/payroll-runs/${run.id}`} className="text-forest text-xs font-semibold hover:underline">View</Link>
+                        <td className="px-5 py-3.5">
+                          <span className="font-semibold text-charcoal">{MONTH_NAMES[run.month]} {run.year}</span>
+                          <p className="text-xs text-slate font-mono mt-0.5">{run.code}{run.reversalOfRunId ? ' · reversal' : ''}</p>
+                        </td>
+                        <td className="px-4 py-3.5 text-center text-slate">{run.employeeCount}</td>
+                        <td className="px-4 py-3.5 text-right text-charcoal">
+                          <MoneyDisplay paise={run.totalGrossPaise} />
+                          {(run.status === 'Draft' || run.status === 'Review') && <span className="text-slate text-[10px]">*</span>}
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-crimson font-semibold">
+                          <MoneyDisplay paise={getLopPaise(run)} />
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-slate">
+                          <MoneyDisplay paise={getTaxPaise(run)} />
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-semibold text-charcoal">
+                          <MoneyDisplay paise={run.totalNetPaise} />
+                          {(run.status === 'Draft' || run.status === 'Review') && <span className="text-slate text-[10px]">*</span>}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <PayrollRunStatusBadge status={run.status} />
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <Link href={`/payroll/payroll-runs/${run.id}`} className="text-forest text-xs font-semibold hover:underline">
+                            {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
+                          </Link>
                         </td>
                       </tr>
                     ))
@@ -150,6 +232,11 @@ export default function POPayrollRunsPage() {
           </>
         )}
       </div>
+
+      {/* Footer disclaimer */}
+      <p className="text-xs text-slate mt-3 italic">
+        * Estimated amounts for Draft runs. Final figures available after finalisation.
+      </p>
     </div>
   );
 }

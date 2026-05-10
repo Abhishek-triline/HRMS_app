@@ -18,7 +18,15 @@ import { PayrollRunStatusBadge } from '@/components/payroll/PayrollRunStatusBadg
 import { MoneyDisplay } from '@/components/payroll/MoneyDisplay';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PayrollRunStatus } from '@nexora/contracts/payroll';
+import type { PayrollRunStatus, PayrollRunSummary } from '@nexora/contracts/payroll';
+
+/** PayrollRunSummary doesn't include LOP/Tax — access them safely from the runtime payload. */
+function getLopPaise(run: PayrollRunSummary): number {
+  return (run as unknown as { totalLopPaise?: number }).totalLopPaise ?? 0;
+}
+function getTaxPaise(run: PayrollRunSummary): number {
+  return (run as unknown as { totalTaxPaise?: number }).totalTaxPaise ?? 0;
+}
 
 const MONTH_NAMES = [
   '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -173,14 +181,14 @@ export default function PayrollRunsPage() {
               <table className="w-full text-sm" aria-label="Payroll run history">
                 <thead>
                   <tr className="bg-offwhite border-b border-sage/20">
-                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Run Code</th>
                     <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Period</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
-                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
-                    <th scope="col" className="text-right px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
-                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Initiated By</th>
-                    <th scope="col" className="text-center px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
+                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">LOP</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Tax</th>
+                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
+                    <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
+                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10">
@@ -194,40 +202,41 @@ export default function PayrollRunsPage() {
                     runs.map((run) => (
                       <tr key={run.id} className="hover:bg-offwhite/60 transition-colors">
                         <td className="px-5 py-3.5">
-                          <span className="font-mono text-xs text-forest font-semibold">
-                            {run.code}
+                          <span className="font-semibold text-charcoal">
+                            {MONTH_NAMES[run.month]} {run.year}
                           </span>
-                          {run.reversalOfRunId && (
-                            <span className="ml-1.5 text-[10px] text-crimson font-semibold uppercase tracking-wide">reversal</span>
+                          {run.code && (
+                            <p className="text-xs text-slate font-mono mt-0.5">{run.code}{run.reversalOfRunId ? ' · reversal' : ''}</p>
                           )}
                         </td>
-                        <td className="px-5 py-3.5 text-charcoal text-xs">
-                          {MONTH_NAMES[run.month]} {run.year}
+                        <td className="px-4 py-3.5 text-center text-slate">{run.employeeCount}</td>
+                        <td className="px-4 py-3.5 text-right text-charcoal">
+                          <MoneyDisplay paise={run.totalGrossPaise} />
+                          {(run.status === 'Draft' || run.status === 'Review') && (
+                            <span className="text-slate text-[10px]">*</span>
+                          )}
                         </td>
-                        <td className="px-5 py-3.5 text-center">
+                        <td className="px-4 py-3.5 text-right text-crimson font-semibold">
+                          <MoneyDisplay paise={getLopPaise(run)} />
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-slate">
+                          <MoneyDisplay paise={getTaxPaise(run)} />
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-semibold text-charcoal">
+                          <MoneyDisplay paise={run.totalNetPaise} />
+                          {(run.status === 'Draft' || run.status === 'Review') && (
+                            <span className="text-slate text-[10px]">*</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
                           <PayrollRunStatusBadge status={run.status} />
                         </td>
-                        <td className="px-5 py-3.5 text-center text-charcoal">{run.employeeCount}</td>
-                        <td className="px-5 py-3.5 text-right text-charcoal">
-                          <MoneyDisplay paise={run.totalGrossPaise} />
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-semibold text-richgreen">
-                          <MoneyDisplay paise={run.totalNetPaise} />
-                        </td>
-                        <td className="px-5 py-3.5 text-xs text-slate">
-                          <p>{run.initiatedByName}</p>
-                          {run.finalisedAt && (
-                            <p className="text-richgreen/80 mt-0.5">
-                              Finalised {new Date(run.finalisedAt).toLocaleDateString('en-IN')}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
+                        <td className="px-4 py-3.5 text-center">
                           <Link
                             href={`/admin/payroll-runs/${run.id}`}
                             className="text-forest text-xs font-semibold hover:underline"
                           >
-                            View
+                            {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
                           </Link>
                         </td>
                       </tr>
@@ -270,6 +279,11 @@ export default function PayrollRunsPage() {
           </>
         )}
       </div>
+
+      {/* Footer disclaimer */}
+      <p className="text-xs text-slate mt-3 italic">
+        * Estimated amounts for Draft runs. Final figures available after finalisation.
+      </p>
     </div>
   );
 }

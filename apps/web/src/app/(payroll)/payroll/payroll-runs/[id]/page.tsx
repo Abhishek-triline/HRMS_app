@@ -7,14 +7,14 @@
  * PO can also finalise the run (two-step modal, BL-034).
  * PO cannot reverse — Reverse button is Admin-only.
  *
- * Visual reference: prototype/payroll-officer/initiate-payroll.html (detail tab).
+ * Visual reference: prototype/payroll-officer/payroll-run-detail.html
  */
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { usePayrollRun } from '@/lib/hooks/usePayroll';
-import { RunSummaryCard } from '@/components/payroll/RunSummaryCard';
+import { RunSummaryStatStrip, RunSummaryDetail } from '@/components/payroll/RunSummaryCard';
 import { PayslipTable } from '@/components/payroll/PayslipTable';
 import { RunChecklist } from '@/components/payroll/RunChecklist';
 import { TwoStepFinaliseModal } from '@/components/payroll/TwoStepFinaliseModal';
@@ -22,6 +22,11 @@ import { EditableTaxEntry } from '@/components/payroll/EditableTaxEntry';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
+
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 export default function POPayrollRunDetailPage() {
   const params = useParams();
@@ -53,8 +58,14 @@ export default function POPayrollRunDetailPage() {
   const isFinalised = run.status === 'Finalised';
   const isDraft = run.status === 'Draft';
 
+  // Count pro-rated payslips using lopDays as proxy for mid-month joiners.
+  const proRatedCount = payslips.filter(
+    (p) => p.lopDays > 0 && p.workingDays === run.workingDays,
+  ).length;
+
   return (
     <div className="p-6">
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate mb-4">
         <Link href="/payroll/payroll-runs" className="hover:text-forest transition-colors">Payroll Runs</Link>
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -63,7 +74,18 @@ export default function POPayrollRunDetailPage() {
         <span className="text-charcoal font-medium">{run.code}</span>
       </div>
 
-      <RunSummaryCard run={run} />
+      {/* Page title */}
+      <div className="mb-6">
+        <h1 className="font-heading text-xl font-bold text-charcoal">
+          Payroll Run — {MONTH_NAMES[run.month]} {run.year}
+        </h1>
+        <p className="text-xs text-slate mt-0.5">
+          {run.code} · Period {run.periodStart} to {run.periodEnd} · {run.workingDays} working days
+        </p>
+      </div>
+
+      {/* 4-tile stat strip */}
+      <RunSummaryStatStrip run={run} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 min-w-0">
@@ -82,32 +104,39 @@ export default function POPayrollRunDetailPage() {
           </div>
         </div>
 
-        <div className="w-full lg:w-80 shrink-0 space-y-4">
+        <div className="w-full lg:w-72 shrink-0 space-y-4">
+          {/* Run Summary sidebar card */}
+          <RunSummaryDetail run={run} proRatedCount={proRatedCount} />
+
+          {/* Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+            <h3 className="font-heading font-semibold text-sm text-charcoal mb-3">Review &amp; Finalise</h3>
+            <p className="text-xs text-slate leading-relaxed mb-4">
+              Once finalised, this run is <span className="font-semibold text-umber">permanently locked</span>. All payslips become immutable records.
+            </p>
+            {(isDraft || isReview) && (
+              <Button variant="primary" className="w-full" onClick={() => setFinaliseOpen(true)}>
+                Finalise Payroll
+              </Button>
+            )}
+            {isFinalised && (
+              <>
+                <div className="bg-greenbg/60 border border-richgreen/30 rounded-xl px-4 py-3 mb-3">
+                  <p className="text-xs text-richgreen font-semibold">Run finalised — all payslips locked (BL-031).</p>
+                  {run.finalisedByName && (
+                    <p className="text-xs text-richgreen/80 mt-0.5">By {run.finalisedByName}</p>
+                  )}
+                </div>
+                <div className="bg-offwhite border border-sage/40 rounded-xl px-4 py-3">
+                  <p className="text-xs text-slate">
+                    Reversals can only be initiated by Admin (BL-033).
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
           <RunChecklist payslips={payslips} workingDays={run.workingDays} />
-
-          {(isDraft || isReview) && (
-            <Button variant="primary" className="w-full" onClick={() => setFinaliseOpen(true)}>
-              Finalise Run
-            </Button>
-          )}
-
-          {isFinalised && (
-            <div className="bg-greenbg/60 border border-richgreen/30 rounded-xl px-4 py-3">
-              <p className="text-xs text-richgreen font-semibold">Run finalised — all payslips locked (BL-031).</p>
-              {run.finalisedByName && (
-                <p className="text-xs text-richgreen/80 mt-0.5">By {run.finalisedByName}</p>
-              )}
-            </div>
-          )}
-
-          {/* PO cannot reverse — informational note */}
-          {isFinalised && (
-            <div className="bg-offwhite border border-sage/40 rounded-xl px-4 py-3">
-              <p className="text-xs text-slate">
-                Reversals can only be initiated by Admin (BL-033).
-              </p>
-            </div>
-          )}
         </div>
       </div>
 
