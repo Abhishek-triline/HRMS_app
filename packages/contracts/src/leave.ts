@@ -203,12 +203,14 @@ export type LeaveRequestSummary = z.infer<typeof LeaveRequestSummarySchema>;
  *   - routing — Maternity/Paternity → Admin (BL-015/016); manager-with-no-manager
  *     → Admin (BL-017); else Manager
  */
-export const CreateLeaveRequestSchema = z.object({
-  type: LeaveTypeSchema,
-  fromDate: ISODateOnlySchema,
-  toDate: ISODateOnlySchema,
-  reason: z.string().min(3).max(1000),
-});
+export const CreateLeaveRequestSchema = z
+  .object({
+    type: LeaveTypeSchema,
+    fromDate: ISODateOnlySchema,
+    toDate: ISODateOnlySchema,
+    reason: z.string().min(3).max(1000),
+  })
+  .strict();
 export type CreateLeaveRequest = z.infer<typeof CreateLeaveRequestSchema>;
 
 export const CreateLeaveResponseSchema = z.object({
