@@ -9,10 +9,11 @@
 #
 # Events captured:
 #
-#   user      UserPromptSubmit         — user message arrives
+#   user      UserPromptSubmit          — user message arrives
 #   start     PreToolUse (matcher=Task) — sub-agent dispatched
-#   stop      SubagentStop             — sub-agent finishes
-#   turn-end  Stop                     — main assistant finishes a turn
+#   result    PostToolUse (matcher=Task) — sub-agent's response captured
+#   stop      SubagentStop              — sub-agent session terminates
+#   turn-end  Stop                      — main assistant finishes a turn
 #
 # Both files are gitignored — they're a runtime view of activity for this
 # developer's machine, not a shared artefact.
@@ -81,6 +82,44 @@ case "$EVENT" in
     ' >> "$LOG_TXT"
     ;;
 
+  result)
+    # PostToolUse(matcher=Task) — sub-agent's response is captured here.
+    # `tool_response` shape varies: it may be a plain string (the agent's
+    # final message), an object containing `content` (an array of {text}),
+    # or a richer structure. We coerce defensively to a single string and
+    # cap at 240 chars for the preview.
+    printf '%s\n' "$INPUT" | jq -c '{
+      ts:               (now | todate),
+      event:            "result",
+      session_id:       (.session_id // null),
+      subagent_type:    (.tool_input.subagent_type // null),
+      description:      (.tool_input.description // null),
+      response_preview: (
+        (.tool_response // "")
+        | if   type == "string" then .
+          elif type == "object" and (.content | type) == "array" then
+            (.content | map(.text // "") | join(" "))
+          elif type == "object" then tojson
+          else tostring end
+        | .[0:240]
+      )
+    }' >> "$LOG_JSON"
+
+    printf '%s\n' "$INPUT" | jq -r '
+      ((now + 19800) | strftime("%Y-%m-%d %H:%M:%S")) as $ist |
+      ((.tool_response // "")
+        | if   type == "string" then .
+          elif type == "object" and (.content | type) == "array" then
+            (.content | map(.text // "") | join(" "))
+          elif type == "object" then tojson
+          else tostring end
+        | .[0:240]
+        | gsub("\n"; " ")
+      ) as $preview |
+      "\($ist) IST  📝  RESULT  \(.tool_input.subagent_type // "?")  | \($preview)"
+    ' >> "$LOG_TXT"
+    ;;
+
   turn-end)
     # Stop — main assistant has finished a response turn.
     printf '%s\n' "$INPUT" | jq -c '{
@@ -96,7 +135,7 @@ case "$EVENT" in
     ;;
 
   *)
-    echo "log-agent.sh: unknown event '$EVENT' (expected: user | start | stop | turn-end)" >&2
+    echo "log-agent.sh: unknown event '$EVENT' (expected: user | start | result | stop | turn-end)" >&2
     exit 1
     ;;
 esac

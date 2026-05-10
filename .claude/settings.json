@@ -22,6 +22,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/log-agent.sh result"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
