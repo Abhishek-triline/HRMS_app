@@ -10,7 +10,8 @@
     ".": "./src/index.ts",
     "./auth": "./src/auth.ts",
     "./errors": "./src/errors.ts",
-    "./common": "./src/common.ts"
+    "./common": "./src/common.ts",
+    "./employees": "./src/employees.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

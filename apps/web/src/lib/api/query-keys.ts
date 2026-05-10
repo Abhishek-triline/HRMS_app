@@ -12,6 +12,8 @@ export const qk = {
     all: ['employees'] as const,
     list: (filters?: Record<string, unknown>) => ['employees', 'list', filters] as const,
     detail: (id: string) => ['employees', id] as const,
+    team: (id: string) => ['employees', id, 'team'] as const,
+    profile: (id: string) => ['employees', id, 'profile'] as const,
   },
 
   leave: {

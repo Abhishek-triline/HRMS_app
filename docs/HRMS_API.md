@@ -549,6 +549,7 @@ Errors return `{ error: { code, message, details?, ruleId? } }` with the appropr
 | `409` | `VERSION_MISMATCH` | Optimistic concurrency: caller's `version` is stale. | — |
 | `409` | `CYCLE_CLOSED` | Attempt to mutate goals / ratings on a Closed cycle. | BL-041 |
 | `409` | `PAYSLIP_IMMUTABLE` | Attempt to edit a Finalised payslip. | BL-031 |
+| `409` | `CIRCULAR_REPORTING` | `POST /employees/{id}/reassign-manager` would create a cycle (the target manager is in the employee's own subtree). | BL-005 |
 | `423` | `LOCKED` | Account temporarily locked (5 wrong logins). Carries `Retry-After`. | — |
 | `429` | `RATE_LIMITED` | Throttled. Carries `Retry-After`. | — |
 | `500` | `INTERNAL_ERROR` | Anything unhandled. Always logged. | — |
