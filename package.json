@@ -1,0 +1,25 @@
+{
+  "name": "nexora-hrms",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nexora HRMS — Indian HR Management System (Triline)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "db:migrate": "pnpm --filter @nexora/api run db:migrate",
+    "db:seed": "pnpm --filter @nexora/api run db:seed",
+    "db:reset": "pnpm --filter @nexora/api run db:reset"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}
