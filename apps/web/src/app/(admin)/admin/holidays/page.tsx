@@ -205,11 +205,11 @@ export default function HolidaysPage() {
             <table className="w-full text-sm">
               <thead className="bg-offwhite border-b border-sage/30">
                 <tr>
-                  <th className="text-left text-xs font-semibold text-slate px-5 py-3">#</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Date</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Holiday Name</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Day</th>
-                  <th className="text-right text-xs font-semibold text-slate px-5 py-3">Actions</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-5 py-3">#</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Date</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Holiday Name</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Day</th>
+                  <th scope="col" className="text-right text-xs font-semibold text-slate px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/20">

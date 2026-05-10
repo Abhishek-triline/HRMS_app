@@ -52,6 +52,14 @@ export function RoleLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Skip-to-main link — WCAG 2.4.1 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:top-2 focus:left-2 focus:bg-white focus:text-forest focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:font-semibold focus:text-sm focus:ring-2 focus:ring-forest"
+      >
+        Skip to main content
+      </a>
+
       {/* Desktop Sidebar (hidden on mobile via lg: classes) */}
       <div className="hidden lg:flex">
         <Sidebar
@@ -81,7 +89,7 @@ export function RoleLayout({
           {pageTitle}
         </TopBar>
 
-        <main className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+        <main id="main-content" className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
           {children}
         </main>
       </div>

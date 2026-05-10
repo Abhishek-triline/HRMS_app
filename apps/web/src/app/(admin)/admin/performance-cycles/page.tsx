@@ -180,12 +180,12 @@ export default function PerformanceCyclesPage() {
               <table className="w-full text-sm" aria-label="Performance cycles">
                 <thead className="bg-offwhite border-b border-sage/30">
                   <tr>
-                    <th className="text-left py-3 px-4 font-semibold text-charcoal">Cycle</th>
-                    <th className="text-left py-3 px-4 font-semibold text-charcoal">Period</th>
-                    <th className="text-left py-3 px-4 font-semibold text-charcoal">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-charcoal">Participants</th>
-                    <th className="text-left py-3 px-4 font-semibold text-charcoal">Deadlines</th>
-                    <th className="text-right py-3 px-4 font-semibold text-charcoal">Actions</th>
+                    <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Cycle</th>
+                    <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Period</th>
+                    <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Status</th>
+                    <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Participants</th>
+                    <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Deadlines</th>
+                    <th scope="col" className="text-right py-3 px-4 font-semibold text-charcoal">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/20">

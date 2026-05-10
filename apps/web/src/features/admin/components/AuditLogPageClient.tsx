@@ -486,7 +486,8 @@ export function AuditLogPageClient() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop table — hidden on mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm" aria-label="Audit log entries">
             <thead>
               <tr className="bg-offwhite border-b border-sage/30">
@@ -529,6 +530,50 @@ export function AuditLogPageClient() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list — visible below md breakpoint */}
+        <div className="md:hidden divide-y divide-sage/10">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="px-4 py-4 space-y-2 animate-pulse">
+                <div className="h-3 bg-sage/20 rounded w-40" />
+                <div className="h-3 bg-sage/20 rounded w-56" />
+                <div className="h-3 bg-sage/20 rounded w-32" />
+              </div>
+            ))
+          ) : isError ? (
+            <div className="text-center py-10">
+              <p className="text-sm text-crimson mb-3">Failed to load audit log.</p>
+              <Button variant="secondary" size="sm" onClick={() => refetch()}>Retry</Button>
+            </div>
+          ) : allEntries.length === 0 ? (
+            <div className="text-center py-12 px-4">
+              <p className="text-sm text-slate font-medium">No audit entries found</p>
+              {activeFilterCount > 0 && (
+                <p className="text-xs text-slate mt-1">Try clearing the active filters.</p>
+              )}
+            </div>
+          ) : (
+            allEntries.map((entry) => (
+              <div key={entry.id} className="px-4 py-3 space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-[11px] text-slate">{formatIST(entry.createdAt)}</span>
+                  <ModuleBadge module={entry.module} />
+                </div>
+                <div className="text-xs text-charcoal font-semibold">
+                  {entry.actorId ?? 'System'}{' '}
+                  <span className="font-normal text-slate">· {entry.actorRole}</span>
+                </div>
+                <ActionBadge action={entry.action} />
+                {entry.targetId && (
+                  <div className="text-[11px] font-mono text-forest">
+                    {entry.targetType ? `${entry.targetType} · ` : ''}{entry.targetId}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Footer */}

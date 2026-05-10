@@ -158,14 +158,14 @@ export default function CycleDetailPage() {
           <table className="w-full text-sm" aria-label="Cycle reviews">
             <thead className="bg-offwhite border-b border-sage/30">
               <tr>
-                <th className="text-left py-3 px-4 font-semibold text-charcoal">Employee</th>
-                <th className="text-left py-3 px-4 font-semibold text-charcoal">Department</th>
-                <th className="text-left py-3 px-4 font-semibold text-charcoal">Manager</th>
-                <th className="text-center py-3 px-4 font-semibold text-charcoal">Self</th>
-                <th className="text-center py-3 px-4 font-semibold text-charcoal">Manager</th>
-                <th className="text-center py-3 px-4 font-semibold text-charcoal">Final</th>
-                <th className="text-center py-3 px-4 font-semibold text-charcoal">Status</th>
-                <th className="text-right py-3 px-4 font-semibold text-charcoal">Action</th>
+                <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Employee</th>
+                <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Department</th>
+                <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Manager</th>
+                <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Self</th>
+                <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Manager Rating</th>
+                <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Final</th>
+                <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Status</th>
+                <th scope="col" className="text-right py-3 px-4 font-semibold text-charcoal">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sage/20">

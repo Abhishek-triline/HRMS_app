@@ -9,7 +9,7 @@
  * - Used by E-05 My Attendance, M-05 Team Attendance, A-09 Org-wide.
  */
 
-import { useState, useCallback, useRef, KeyboardEvent } from 'react';
+import { useState, useCallback, useMemo, useRef, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
 import { AttendanceStatusBadge } from './AttendanceStatusBadge';
 import type { AttendanceStatus } from '@nexora/contracts/attendance';
@@ -149,10 +149,13 @@ export function AttendanceCalendar({
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const dayMap: Record<string, CalendarDay> = {};
-  for (const d of days) {
-    dayMap[d.date] = d;
-  }
+  const dayMap = useMemo<Record<string, CalendarDay>>(() => {
+    const map: Record<string, CalendarDay> = {};
+    for (const d of days) {
+      map[d.date] = d;
+    }
+    return map;
+  }, [days]);
 
   const totalDays = getDaysInMonth(year, month);
   const firstOffset = getFirstDayOfMonth(year, month); // 0=Mon

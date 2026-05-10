@@ -111,12 +111,12 @@ export default function ManagerPerformanceQueuePage() {
                 <table className="w-full text-sm" aria-label="Completed reviews">
                   <thead className="bg-offwhite border-b border-sage/30">
                     <tr>
-                      <th className="text-left py-3 px-4 font-semibold text-charcoal">Employee</th>
-                      <th className="text-left py-3 px-4 font-semibold text-charcoal">Cycle</th>
-                      <th className="text-center py-3 px-4 font-semibold text-charcoal">Self</th>
-                      <th className="text-center py-3 px-4 font-semibold text-charcoal">Manager</th>
-                      <th className="text-center py-3 px-4 font-semibold text-charcoal">Final</th>
-                      <th className="text-right py-3 px-4"></th>
+                      <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Employee</th>
+                      <th scope="col" className="text-left py-3 px-4 font-semibold text-charcoal">Cycle</th>
+                      <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Self</th>
+                      <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Manager</th>
+                      <th scope="col" className="text-center py-3 px-4 font-semibold text-charcoal">Final</th>
+                      <th scope="col" className="text-right py-3 px-4"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-sage/20">

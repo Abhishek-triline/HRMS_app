@@ -102,13 +102,13 @@ export default function AdminRegularisationQueuePage() {
             <table className="w-full text-sm">
               <thead className="bg-offwhite border-b border-sage/30">
                 <tr>
-                  <th className="text-left text-xs font-semibold text-slate px-5 py-3">Employee</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Code</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">For Date</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Days Old</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Submitted</th>
-                  <th className="text-left text-xs font-semibold text-slate px-4 py-3">Actions</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-5 py-3">Employee</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Code</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">For Date</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Days Old</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Status</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Submitted</th>
+                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/20">
