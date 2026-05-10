@@ -86,12 +86,17 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
   const style = categoryStyle[category];
   const iconPath = categoryIcon[category];
 
+  // SEC-001-P6: Only navigate to safe internal relative paths.
+  // Rejects `//evil.com` (protocol-relative), `http://`, `javascript:`, etc.
+  // Requires a single leading `/` followed by a non-`/` character (or end of string).
+  const isSafeInternalLink = (l: string) => /^\/[^/]/.test(l);
+
   const handleClick = useCallback(() => {
     if (unread) {
       onRead?.(id);
       markRead.mutate({ ids: [id] });
     }
-    if (link) {
+    if (link && isSafeInternalLink(link)) {
       router.push(link);
     }
   }, [id, unread, link, onRead, markRead, router]);

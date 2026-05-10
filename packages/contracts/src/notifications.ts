@@ -69,8 +69,18 @@ export const NotificationSchema = z.object({
   title: z.string().max(120),
   /** Plain-text body ≤ 600 chars. No HTML — UI renders text only. */
   body: z.string().max(600),
-  /** Deep link to the originating record, e.g. /employee/leave/L-2026-0118. */
-  link: z.string().nullable(),
+  /**
+   * Deep link to the originating record, e.g. /employee/leave/L-2026-0118.
+   *
+   * Security: only relative paths starting with `/` are valid.
+   * `javascript:`, absolute URLs (http://, https://), and
+   * protocol-relative URLs (//example.com) are all rejected by the regex.
+   */
+  link: z
+    .string()
+    .max(191)
+    .regex(/^\/[A-Za-z0-9/_\-?=&%.]*$/, 'link must be a relative path starting with /')
+    .nullable(),
   unread: z.boolean(),
   /**
    * Reference back to the audit-log row that produced this notification, when
