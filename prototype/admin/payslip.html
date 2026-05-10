@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payslip — Arjun Kapoor — May 2026 — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+  <style>
+    /* Print-only stylesheet — keep just the payslip document, drop chrome.
+       Hides the sidebar, top header, state tabs, notice banners, the burger,
+       and any backdrop. Everything inside the white payslip card prints. */
+    @media print {
+      @page { margin: 12mm; }
+      html, body { background: #fff !important; }
+      aside,
+      header,
+      #ps-state-tabs,
+      #nx-sidebar-burger,
+      #nx-sidebar-backdrop,
+      main > div[data-state] { display: none !important; }
+      .flex.h-screen.overflow-hidden,
+      main,
+      main > div { overflow: visible !important; height: auto !important; }
+      main { margin: 0 !important; padding: 0 !important; }
+      .ml-60, .pt-16 { margin-left: 0 !important; padding-top: 0 !important; }
+      /* Inside the payslip card, hide anything explicitly opted-out of print
+         (e.g., the editable Income Tax card on the Draft view). */
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="font-body bg-offwhite text-charcoal">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 h-full w-60 bg-forest text-white flex flex-col z-30">
+    <div class="px-6 py-5 border-b border-white/10">
+      <span class="font-heading font-bold text-lg tracking-tight">Nexora HRMS</span>
+    </div>
+    <nav class="flex-1 py-4 overflow-y-auto">
+      <a href="dashboard.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="employees.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-5-3.5M9 20H4v-2a4 4 0 015-3.5m0 0a4 4 0 118 0m-8 0V17m8 0V17M12 12a4 4 0 100-8 4 4 0 000 8z"/></svg>
+        Employees
+      </a>
+      <a href="leave-queue.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Leave
+      </a>
+      <a href="attendance.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Attendance
+      </a>
+      <a href="payroll-runs.html" class="flex items-center gap-3 px-5 py-2.5 text-white text-sm bg-white/10 border-l-2 border-mint font-medium">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Payroll
+      </a>
+      <a href="performance-cycles.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Performance
+      </a>
+      <a href="config.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        Configuration
+      </a>
+      <div class="my-3 mx-5 border-t border-white/10"></div>
+      <a href="#" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        My Profile
+      </a>
+      <a href="../index.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Top Bar -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white shadow-sm flex items-center justify-between px-8 z-20">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-slate mb-0.5">
+        <a href="payroll-runs.html" class="hover:text-forest transition-colors">Payroll</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <a href="payroll-run-detail.html" class="hover:text-forest transition-colors">PR-2026-05</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-charcoal font-medium">Arjun Kapoor</span>
+      </div>
+      <h1 class="font-heading font-bold text-xl text-charcoal leading-tight">Payslip — May 2026</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-medium text-charcoal">Priya Sharma</span>
+      <span class="bg-mint text-forest px-2 py-0.5 rounded-full text-xs font-bold">Admin</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="ml-60 pt-16 min-h-screen bg-offwhite">
+    <div class="p-8">
+
+      <!-- Finalised Notice Banner -->
+      <div class="bg-greenbg/70 border border-richgreen/40 rounded-xl px-5 py-3.5 mb-6 flex items-center justify-between flex-wrap gap-3 no-print">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 text-richgreen shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <p class="text-charcoal font-semibold text-sm"><strong>Finalised — locked permanently.</strong> This payslip is immutable. Corrections require an Admin-initiated reversal that creates a new record (BL-031 / BL-032).</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button class="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download PDF
+          </button>
+          <button onclick="window.print()" class="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Payslip Document -->
+      <div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
+
+          <!-- Payslip Header -->
+          <div class="bg-forest px-8 py-7 text-white">
+            <div class="flex items-start justify-between">
+              <div>
+                <h2 class="font-heading font-bold text-2xl text-white tracking-tight">Nexora Technologies Pvt. Ltd.</h2>
+                <p class="text-white/70 text-sm mt-1">4th Floor, Orchid Business Park, Pune — 411006, Maharashtra, India</p>
+                <p class="text-white/70 text-sm">GSTIN: 27AABCN1234F1Z5 &nbsp;|&nbsp; CIN: U72200MH2018PTC123456</p>
+              </div>
+              <div class="text-right">
+                <div class="bg-white/15 rounded-lg px-4 py-2.5 inline-block">
+                  <p class="font-heading font-bold text-base text-white uppercase tracking-widest">Salary Slip</p>
+                  <p class="text-mint text-sm font-semibold mt-0.5">May 2026</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employee Info Grid -->
+          <div class="px-8 py-6 bg-softmint border-b border-sage/20">
+            <div class="grid grid-cols-3 gap-x-8 gap-y-3">
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Employee Name</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">Arjun Kapoor</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">EMP Code</p>
+                <p class="text-sm font-mono font-semibold text-forest mt-0.5">EMP-2024-0001</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Designation</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">Frontend Developer</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Department</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">Engineering</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">PAN</p>
+                <p class="text-sm font-mono font-semibold text-charcoal mt-0.5">AAAP*****N</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Bank Account</p>
+                <p class="text-sm font-mono font-semibold text-charcoal mt-0.5">XXXX-XXXX-8742</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Working Days</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">23</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">LOP Days</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">0</p>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-slate uppercase tracking-wider">Net Working Days</p>
+                <p class="text-sm font-semibold text-charcoal mt-0.5">23</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Earnings & Deductions Tables -->
+          <div class="px-8 py-6 grid grid-cols-2 gap-8">
+
+            <!-- Earnings -->
+            <div>
+              <h3 class="font-heading font-semibold text-sm text-charcoal uppercase tracking-wider mb-3">Earnings</h3>
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-sage/30">
+                    <th class="text-left py-2 font-semibold text-slate text-xs">Component</th>
+                    <th class="text-right py-2 font-semibold text-slate text-xs">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sage/10">
+                  <tr>
+                    <td class="py-2.5 text-slate">Basic Salary</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">65,000</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 text-slate">House Rent Allowance</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">26,000</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 text-slate">Transport Allowance</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">2,000</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 text-slate">Other Allowances</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">5,000</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="bg-forest text-white">
+                    <td class="py-3 px-2 rounded-l-lg font-heading font-bold text-sm">Gross Earnings</td>
+                    <td class="py-3 px-2 rounded-r-lg text-right font-heading font-bold text-sm">98,000</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Deductions -->
+            <div>
+              <h3 class="font-heading font-semibold text-sm text-charcoal uppercase tracking-wider mb-3">Deductions</h3>
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-sage/30">
+                    <th class="text-left py-2 font-semibold text-slate text-xs">Component</th>
+                    <th class="text-right py-2 font-semibold text-slate text-xs">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sage/10">
+                  <tr>
+                    <td class="py-2.5 text-slate">LOP Deduction</td>
+                    <td class="py-2.5 text-right text-slate">0</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 text-slate">Professional Tax</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">200</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 text-slate">Income Tax (TDS)</td>
+                    <td class="py-2.5 text-right text-charcoal font-medium">9,383</td>
+                  </tr>
+                  <tr class="bg-offwhite/60">
+                    <td class="py-2.5 px-1 text-xs text-slate italic" colspan="2">Taxable Income (annual est.): ₹11,25,960</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="border-t-2 border-sage/40">
+                    <td class="py-3 font-heading font-bold text-sm text-charcoal">Total Deductions</td>
+                    <td class="py-3 text-right font-heading font-bold text-sm text-crimson">9,583</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Net Pay Box -->
+          <div class="mx-8 mb-6 bg-forest rounded-xl px-8 py-6 text-center text-white">
+            <p class="text-mint text-sm font-semibold uppercase tracking-widest mb-1">Net Pay</p>
+            <p class="font-heading font-bold text-4xl text-white">₹88,417</p>
+            <p class="text-white/70 text-sm mt-2 italic">Rupees Eighty-Eight Thousand Four Hundred Seventeen Only</p>
+          </div>
+
+          <!-- Payslip Footer -->
+          <div class="px-8 py-5 border-t border-sage/20 bg-offwhite/50">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-slate italic">This is a system-generated payslip and does not require a signature.</p>
+              <div class="flex items-center gap-2">
+                <span class="bg-lockedbg text-lockedfg text-xs font-bold px-2 py-1 rounded">Locked 🔒</span>
+                <p class="text-xs text-slate">Finalised: 30 Apr 2026</p>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-sage/10 grid grid-cols-3 text-xs text-slate gap-4">
+              <div>
+                <span class="font-semibold text-charcoal">Run ID:</span> PR-2026-05
+              </div>
+              <div>
+                <span class="font-semibold text-charcoal">Generated:</span> 28 May 2026, 11:42 AM
+              </div>
+              <div>
+                <span class="font-semibold text-charcoal">Fiscal Year:</span> Apr 2026 – Mar 2027
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Payslips — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+</head>
+<body class="font-body bg-offwhite">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 h-full w-60 bg-forest text-white flex flex-col z-30">
+    <div class="px-6 py-5 border-b border-white/10">
+      <span class="font-heading text-lg font-bold tracking-wide">Nexora HRMS</span>
+    </div>
+    <nav class="flex-1 py-4 overflow-y-auto">
+      <ul class="space-y-1 px-3">
+        <li>
+          <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="my-leave.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            My Leave
+          </a>
+        </li>
+        <li>
+          <a href="my-attendance.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            My Attendance
+          </a>
+        </li>
+        <li>
+          <a href="checkin.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Check In / Out
+          </a>
+        </li>
+        <li>
+          <a href="my-payslips.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold bg-white/10 text-white border-l-2 border-mint">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            My Payslips
+          </a>
+        </li>
+        <li>
+          <a href="my-reviews.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+            My Review
+          </a>
+        </li>
+      </ul>
+      <div class="mx-3 my-4 border-t border-white/10"></div>
+      <ul class="px-3">
+        <li>
+          <a href="../index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Sign Out
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Top Bar -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-sage/30 flex items-center justify-between px-8 z-20">
+    <h1 class="font-heading text-xl font-semibold text-charcoal">My Payslips</h1>
+    <div class="flex items-center gap-3">
+      <div class="text-right">
+        <div class="text-sm font-semibold text-charcoal">Kavya Nair</div>
+        <div class="text-xs text-slate">EMP-2024-0042</div>
+      </div>
+      <div class="w-9 h-9 rounded-full bg-emerald text-white flex items-center justify-center text-sm font-bold">KN</div>
+      <span class="bg-softmint text-forest text-xs rounded-full px-2.5 py-0.5 font-bold">Employee</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="ml-60 pt-16 min-h-screen bg-offwhite">
+    <div class="p-8">
+
+      <!-- YTD Summary -->
+      <div class="relative overflow-hidden rounded-2xl text-white p-6 mb-6 shadow-2xl shadow-forest/40" style="background: linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%);">
+        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(115deg, transparent 28%, rgba(200,230,218,0.20) 48%, rgba(255,255,255,0.06) 52%, transparent 72%);"></div>
+        <div class="absolute -top-16 -right-16 w-80 h-80 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(255,215,153,0.35) 0%, rgba(255,180,120,0.18) 28%, transparent 60%); filter: blur(24px);"></div>
+        <div class="absolute -bottom-20 -left-20 w-96 h-96 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(111,190,158,0.45) 0%, rgba(45,122,95,0.20) 35%, transparent 65%); filter: blur(36px);"></div>
+        <svg class="absolute inset-0 w-full h-full opacity-[0.18] pointer-events-none" viewBox="0 0 800 240" preserveAspectRatio="none" fill="none" stroke="white" stroke-width="1">
+          <path d="M0,40 C150,10 300,70 450,30 S700,80 800,50"/>
+          <path d="M0,80 C150,50 300,110 450,70 S700,120 800,90"/>
+          <path d="M0,120 C150,90 300,150 450,110 S700,160 800,130"/>
+          <path d="M0,160 C150,130 300,190 450,150 S700,200 800,170"/>
+          <path d="M0,200 C150,170 300,230 450,190 S700,240 800,210"/>
+        </svg>
+        <svg class="absolute inset-x-0 bottom-0 w-full opacity-25 pointer-events-none" viewBox="0 0 800 60" preserveAspectRatio="none" fill="#0F2E22"><path d="M0,60 L0,38 L70,18 L150,32 L230,14 L310,30 L390,8 L470,22 L550,12 L630,28 L710,16 L800,30 L800,60 Z"/></svg>
+        <svg class="absolute inset-x-0 bottom-0 w-full opacity-30 pointer-events-none" viewBox="0 0 800 40" preserveAspectRatio="none" fill="#1C3D2E"><path d="M0,40 L0,25 L60,10 L140,22 L220,5 L300,18 L380,2 L460,15 L540,6 L620,20 L700,8 L800,22 L800,40 Z"/></svg>
+        <div class="absolute inset-0 opacity-[0.10] pointer-events-none" style="background-image: radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px); background-size: 28px 28px;"></div>
+        <div class="absolute top-6 right-1/4 w-1 h-1 rounded-full bg-white pointer-events-none" style="box-shadow: 0 0 6px rgba(255,255,255,0.9);"></div>
+        <div class="absolute top-14 right-[38%] w-0.5 h-0.5 rounded-full bg-white/80 pointer-events-none"></div>
+        <div class="absolute top-20 left-1/3 w-1 h-1 rounded-full bg-white/85 pointer-events-none" style="box-shadow: 0 0 5px rgba(255,255,255,0.7);"></div>
+        <div class="absolute top-9 left-[55%] w-0.5 h-0.5 rounded-full bg-white/60 pointer-events-none"></div>
+        <div class="absolute top-24 right-[22%] w-1 h-1 rounded-full bg-mint pointer-events-none" style="box-shadow: 0 0 4px rgba(200,230,218,0.8);"></div>
+        <div class="absolute bottom-16 right-[30%] w-0.5 h-0.5 rounded-full bg-white/70 pointer-events-none"></div>
+        <div class="absolute top-16 left-[18%] w-0.5 h-0.5 rounded-full bg-mint/80 pointer-events-none"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="font-heading text-lg font-bold">Year-to-Date Summary</div>
+              <div class="text-mint/80 text-sm mt-0.5">FY 2026-27 — April 2026 to May 2026</div>
+            </div>
+            <span class="bg-white/10 border border-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">2 months</span>
+          </div>
+          <div class="grid grid-cols-3 gap-6">
+            <div>
+              <div class="text-mint/70 text-xs mb-1 uppercase tracking-wide">Gross Earned</div>
+              <div class="text-2xl font-heading font-bold">₹2,15,600</div>
+            </div>
+            <div>
+              <div class="text-mint/70 text-xs mb-1 uppercase tracking-wide">Tax Paid (TDS)</div>
+              <div class="text-2xl font-heading font-bold">₹22,780</div>
+            </div>
+            <div>
+              <div class="text-mint/70 text-xs mb-1 uppercase tracking-wide">Net Received</div>
+              <div class="text-2xl font-heading font-bold text-mint">₹1,92,820</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payslip Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-sage/30 mb-6">
+        <div class="px-6 py-4 border-b border-sage/20">
+          <h2 class="font-heading text-base font-semibold text-charcoal">Payslip History</h2>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-offwhite border-b border-sage/20">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Month</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Working Days</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">LOP Days</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Gross</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Tax (TDS)</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Net Pay</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Download</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-sage/20">
+            <tr class="hover:bg-offwhite transition-colors">
+              <td class="px-6 py-4 font-semibold text-charcoal">May 2026</td>
+              <td class="px-4 py-4 text-slate text-center">22</td>
+              <td class="px-4 py-4 text-slate text-center">0</td>
+              <td class="px-4 py-4 text-right font-medium text-charcoal">₹1,07,800</td>
+              <td class="px-4 py-4 text-right text-slate">₹11,390</td>
+              <td class="px-4 py-4 text-right font-semibold text-richgreen">₹95,412</td>
+              <td class="px-4 py-4">
+                <span class="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded flex items-center gap-1 w-fit">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Finalised
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <a href="payslip.html" class="text-forest font-semibold text-xs hover:text-emerald transition-colors flex items-center gap-1">
+                  View
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-offwhite transition-colors">
+              <td class="px-6 py-4 font-semibold text-charcoal">Apr 2026</td>
+              <td class="px-4 py-4 text-slate text-center">20</td>
+              <td class="px-4 py-4 text-slate text-center">0</td>
+              <td class="px-4 py-4 text-right font-medium text-charcoal">₹1,07,800</td>
+              <td class="px-4 py-4 text-right text-slate">₹11,390</td>
+              <td class="px-4 py-4 text-right font-semibold text-richgreen">₹95,412</td>
+              <td class="px-4 py-4">
+                <span class="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded flex items-center gap-1 w-fit">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Finalised
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <a href="payslip.html" class="text-forest font-semibold text-xs hover:text-emerald transition-colors flex items-center gap-1">
+                  View
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+              </td>
+            </tr>
+            <tr class="hover:bg-offwhite transition-colors">
+              <td class="px-6 py-4">
+                <div class="font-semibold text-charcoal">Mar 2026</div>
+                <div class="text-xs text-umber mt-0.5 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  LOP deduction applied
+                </div>
+              </td>
+              <td class="px-4 py-4 text-slate text-center">21</td>
+              <td class="px-4 py-4 text-center">
+                <span class="text-crimson font-bold">1</span>
+              </td>
+              <td class="px-4 py-4 text-right font-medium text-charcoal">₹1,02,684</td>
+              <td class="px-4 py-4 text-right text-slate">₹10,640</td>
+              <td class="px-4 py-4 text-right font-semibold text-richgreen">₹91,044</td>
+              <td class="px-4 py-4">
+                <span class="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded flex items-center gap-1 w-fit">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Finalised
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <a href="payslip.html" class="text-forest font-semibold text-xs hover:text-emerald transition-colors flex items-center gap-1">
+                  View
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <!-- LOP Note -->
+        <div class="px-6 py-3 bg-umberbg/60 border-t border-umber/10 rounded-b-xl">
+          <p class="text-xs text-umber">
+            <span class="font-bold">March 2026 LOP note:</span> 1 unpaid leave day deducted: ₹1,07,800 ÷ 21 working days × 1 day = <strong>₹5,133 deducted</strong>. Adjusted gross: ₹1,02,667.
+          </p>
+        </div>
+      </div>
+
+      <!-- Info Card -->
+      <div class="bg-softmint border border-mint rounded-xl p-5 flex items-start gap-3">
+        <svg class="w-5 h-5 text-forest mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <div>
+          <div class="text-sm font-semibold text-forest mb-0.5">Payslips are finalised and immutable</div>
+          <div class="text-xs text-slate">Once a payslip is finalised, it cannot be changed or modified. For any discrepancies or corrections, please contact Admin (Priya Sharma) or raise an HR query.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>
