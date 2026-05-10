@@ -73,17 +73,17 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditLogListQuerySchema = PaginationQuerySchema.extend({
   /** Filter to a specific actor by employee id. */
-  actorId: z.string().optional(),
+  actorId: z.string().max(50).optional(),
   /** Filter by actor role. */
-  actorRole: z.string().optional(),
+  actorRole: z.string().max(50).optional(),
   /** Filter by top-level module group. */
-  module: z.string().optional(),
+  module: z.string().max(50).optional(),
   /** Filter by action string — substring match (LIKE %action%). */
-  action: z.string().optional(),
+  action: z.string().max(200).optional(),
   /** Filter by target entity type. */
-  targetType: z.string().optional(),
+  targetType: z.string().max(100).optional(),
   /** Filter by exact target entity id. */
-  targetId: z.string().optional(),
+  targetId: z.string().max(100).optional(),
   /** Lower bound for createdAt (ISO 8601 datetime). */
   from: ISODateSchema.optional(),
   /** Upper bound for createdAt (ISO 8601 datetime). */
