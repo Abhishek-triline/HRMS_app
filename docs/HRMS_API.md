@@ -257,11 +257,11 @@ interface Payslip {
   status: PayslipStatus;
   workingDays: number;
   lopDays: number;
-  gross_paise: number;                 // computed (BL-035 / BL-036)
-  lopDeduction_paise: number;
-  referenceTax_paise: number;          // suggested; manual override below (BL-036a)
-  finalTax_paise: number;              // PO-entered, editable in Review (UC-014)
-  netPay_paise: number;                // gross − lopDeduction − finalTax
+  grossPaise: number;                  // computed (BL-035 / BL-036)
+  lopDeductionPaise: number;
+  referenceTaxPaise: number;           // suggested; manual override below (BL-036a)
+  finalTaxPaise: number;               // PO-entered, editable in Review (UC-014)
+  netPayPaise: number;                 // gross − lopDeduction − finalTax − otherDeductions
   finalisedAt: string | null;
   reversalOfId: string | null;         // null on originals; set on reversal records (BL-032)
   createdAt: string;
@@ -463,7 +463,7 @@ interface LeaveConfig {
 |---|---|---|---|---|
 | `GET` | `/payslips` | E (own), MGR (team), PO, A | E-08 / my-payslips.html | Filters: `?fyStart`, `?fyEnd`, `?employeeId`. |
 | `GET` | `/payslips/{id}` | E (owner), PO, A, MGR (employee in their chain) | payslip.html | — |
-| `PATCH` | `/payslips/{id}/tax` | PO | P-04 / UC-014 | Body: `{ finalTax_paise }`. Allowed only while parent run is `Review`. Recomputes `netPay_paise`. |
+| `PATCH` | `/payslips/{id}/tax` | PO | P-04 / UC-014 | Body: `{ finalTaxPaise: int, version: int }`. Optimistic concurrency on `version`. Allowed only while parent run is `Review`. Recomputes `netPayPaise`. |
 | `GET` | `/payslips/{id}/pdf` | E (owner), PO, A | E-08 | Streams the generated PDF. |
 
 > Reversal records are exposed under `/payslips?reversalOfId=<id>` for audit traceability.
@@ -540,8 +540,8 @@ Errors return `{ error: { code, message, details?, ruleId? } }` with the appropr
 | `400` | `INVALID_DATE_RANGE` | `from > to` or non-business-day where required. | — |
 | `401` | `UNAUTHENTICATED` | No session or expired session. | — |
 | `403` | `FORBIDDEN` | Role check failed. | — |
-| `403` | `NOT_OWNER` | Resource ownership check failed (e.g. employee accessing another's payslip). | — |
-| `404` | `NOT_FOUND` | Resource does not exist or is outside the caller's scope. | — |
+| `403` | `NOT_OWNER` | Reserved for future use. The platform's standing convention is to surface ownership failures as `404 NOT_FOUND` to avoid existence-leak (e.g. employee guessing another employee's payslip ID). | — |
+| `404` | `NOT_FOUND` | Resource does not exist OR is not visible to the caller. **No-existence-leak pattern** — used for cross-tenant / cross-employee ownership failures throughout the API (employee guessing another employee's payslip ID, manager probing a non-subordinate, etc.). | — |
 | `409` | `LEAVE_OVERLAP` | Submitted leave overlaps an existing approved leave. | BL-009 |
 | `409` | `LEAVE_REG_CONFLICT` | Leave overlaps an approved regularisation, or vice versa. Carries `details.conflictId`. | BL-010 |
 | `409` | `INSUFFICIENT_BALANCE` | Leave balance below requested days (excl. Maternity / Paternity). | BL-014 |

@@ -9,7 +9,7 @@
 #   .claude/view-log.sh                  show all events
 #   .claude/view-log.sh -f               follow live
 #   .claude/view-log.sh -n N             last N entries
-#   .claude/view-log.sh -a               agents-only (start + stop, no user / turn_end)
+#   .claude/view-log.sh -a               agents-only (start + stop + result, no user / turn_end)
 #   .claude/view-log.sh -t               turns-only (user_prompt + turn_end)
 #   .claude/view-log.sh -h               this help
 #
@@ -66,6 +66,8 @@ format() {
         then "  \(.subagent_type)"
         else "" end) as $who |
       "\($ist)  ■    STOP\($who)\($dur)"
+    elif .event == "result" then
+      "\($ist)  📝  RESULT     \(.subagent_type // "?")  | \((.response_preview // "") | gsub("\n"; " ")[0:200])"
     elif .event == "turn_end" then
       "\($ist)  ⏹️   TURN-END  (orchestrator finished a response)"
     else
@@ -94,7 +96,7 @@ case "${1:-}" in
     tail -n "$N" "$LOG" | jq -c "$FILTER" | format
     ;;
   -a)
-    FILTER='select(.event == "start" or .event == "stop")'
+    FILTER='select(.event == "start" or .event == "stop" or .event == "result")'
     cat "$LOG" | jq -c "$FILTER" | format
     ;;
   -t)

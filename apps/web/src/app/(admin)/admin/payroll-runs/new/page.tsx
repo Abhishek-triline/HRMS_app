@@ -1,0 +1,264 @@
+'use client';
+
+/**
+ * A-12 — Initiate Payroll Run (Admin).
+ * Visual reference: prototype/admin/initiate-payroll.html
+ *
+ * Two-step wizard feel:
+ * Step 1 — Select month + year, confirm working-days override (optional).
+ * Step 2 — "Continue & Calculate" calls createPayrollRun, redirects to the
+ *           new run's detail page on success.
+ *
+ * BL-003: Indian fiscal calendar (April–March).
+ * BL-030: Only future runs are initiated; past run data is unaffected.
+ */
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useCreatePayrollRun } from '@/lib/hooks/usePayroll';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { FieldError } from '@/components/ui/FieldError';
+import { showToast } from '@/components/ui/Toast';
+import { ApiError } from '@/lib/api/client';
+
+const MONTH_OPTIONS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = [CURRENT_YEAR, CURRENT_YEAR - 1];
+
+function getFiscalYear(month: number, year: number): string {
+  // Indian FY: April (4) → March (3)
+  if (month >= 4) return `FY ${year}-${String(year + 1).slice(2)}`;
+  return `FY ${year - 1}-${String(year).slice(2)}`;
+}
+
+export default function NewPayrollRunPage() {
+  const router = useRouter();
+  const mutation = useCreatePayrollRun();
+
+  const today = new Date();
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [year, setYear] = useState(today.getFullYear());
+  const [workingDaysOverride, setWorkingDaysOverride] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const fiscalYear = getFiscalYear(month, year);
+
+  function validate(): boolean {
+    const newErrors: Record<string, string> = {};
+    const override = workingDaysOverride.trim();
+    if (override !== '') {
+      const n = parseInt(override, 10);
+      if (isNaN(n) || n < 1 || n > 31) {
+        newErrors.workingDays = 'Working days must be between 1 and 31.';
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    const override = workingDaysOverride.trim();
+    try {
+      const result = await mutation.mutateAsync({
+        month,
+        year,
+        ...(override !== '' ? { workingDays: parseInt(override, 10) } : {}),
+      });
+      showToast({
+        type: 'success',
+        title: 'Run created',
+        message: `${result.run.code} created with ${result.payslipCount} payslips.`,
+      });
+      router.push(`/admin/payroll-runs/${result.run.id}`);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === 'DUPLICATE_RUN') {
+          setErrors({ form: `A run for this month already exists (${err.message}).` });
+        } else {
+          showToast({ type: 'error', title: 'Failed to create run', message: err.message });
+        }
+      } else {
+        showToast({ type: 'error', title: 'Failed to create run', message: 'Please try again.' });
+      }
+    }
+  }
+
+  return (
+    <div className="p-6">
+      <div className="max-w-2xl mx-auto">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs text-slate mb-4">
+          <Link href="/admin/payroll-runs" className="hover:text-forest transition-colors">
+            Payroll Runs
+          </Link>
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="text-charcoal font-medium">New Run</span>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-6">
+          {['Setup', 'Calculate', 'Review', 'Finalise'].map((step, i) => (
+            <div key={step} className="flex items-center gap-2">
+              {i > 0 && <div className="flex-1 h-px bg-sage/40 w-8" />}
+              <div className={`flex items-center gap-2 ${i > 0 ? 'opacity-50' : ''}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-forest text-white' : 'border-2 border-sage text-slate'}`}>
+                  {i + 1}
+                </div>
+                <span className={`text-sm ${i === 0 ? 'font-semibold text-charcoal' : 'text-slate'}`}>{step}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Form card */}
+        <form onSubmit={handleSubmit}>
+          <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
+            <h2 className="font-heading text-lg font-bold text-charcoal mb-1">Run Setup</h2>
+            <p className="text-xs text-slate mb-5">
+              Indian fiscal calendar · April to March · monthly cycle
+            </p>
+
+            {errors.form && (
+              <div className="bg-crimsonbg border border-crimson/20 rounded-lg px-4 py-3 mb-5 text-sm text-crimson">
+                {errors.form}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Month */}
+              <div>
+                <Label htmlFor="payroll-month" required>Payroll Month</Label>
+                <select
+                  id="payroll-month"
+                  value={month}
+                  onChange={(e) => setMonth(Number(e.target.value))}
+                  className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
+                >
+                  {MONTH_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year */}
+              <div>
+                <Label htmlFor="payroll-year" required>Year</Label>
+                <select
+                  id="payroll-year"
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
+                >
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fiscal Year — derived, read-only */}
+              <div>
+                <Label htmlFor="fiscal-year">Fiscal Year</Label>
+                <input
+                  id="fiscal-year"
+                  type="text"
+                  value={fiscalYear}
+                  disabled
+                  className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm bg-offwhite text-slate cursor-not-allowed"
+                />
+                <p className="text-xs text-slate mt-1.5">Auto-derived from payroll month</p>
+              </div>
+
+              {/* Working days override */}
+              <div>
+                <Label htmlFor="working-days">Working Days (optional override)</Label>
+                <input
+                  id="working-days"
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={workingDaysOverride}
+                  onChange={(e) => setWorkingDaysOverride(e.target.value)}
+                  placeholder="Auto-computed from calendar"
+                  className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
+                />
+                <FieldError id="working-days-error" message={errors.workingDays} />
+                <p className="text-xs text-slate mt-1.5">
+                  Leave blank to use the server-computed count (holidays + weekends excluded).
+                </p>
+              </div>
+            </div>
+
+            {/* Info items */}
+            <div className="border-t border-sage/20 mt-6 pt-5 space-y-3">
+              {[
+                {
+                  text: 'Include all Active & On-Notice employees',
+                  sub: 'Exited employees excluded automatically',
+                },
+                {
+                  text: 'Show reference tax (v1: PayrollOfficer enters final value)',
+                  sub: 'Standard formula: gross × flat reference rate. Slab engine deferred to v2 (BL-036a).',
+                },
+                {
+                  text: 'Auto-calculate LOP from unpaid leaves',
+                  sub: 'Formula: (Basic + Allowances) ÷ working days × LOP days (BL-035)',
+                },
+                {
+                  text: 'Pro-rate mid-month joiners and exits',
+                  sub: 'Days actually worked used for proration (BL-036)',
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <svg className="w-4 h-4 text-richgreen mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold text-charcoal">{item.text}</p>
+                    <p className="text-xs text-slate mt-0.5">{item.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between">
+            <Link href="/admin/payroll-runs">
+              <Button variant="secondary" type="button">Cancel</Button>
+            </Link>
+            <Button
+              variant="primary"
+              type="submit"
+              loading={mutation.isPending}
+              disabled={mutation.isPending}
+            >
+              Continue &amp; Calculate
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

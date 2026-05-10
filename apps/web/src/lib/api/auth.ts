@@ -26,7 +26,7 @@ import { apiClient } from './client';
  * On success the API sets an HttpOnly session cookie (nx_session).
  */
 export async function login(data: LoginRequest): Promise<LoginResponse> {
-  return apiClient.post<LoginResponse>('/auth/login', data);
+  return apiClient.post<LoginResponse>('/api/v1/auth/login', data);
 }
 
 /**
@@ -34,7 +34,7 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
  * Destroys the server-side session. Always resolves (best-effort).
  */
 export async function logout(): Promise<LogoutResponse> {
-  return apiClient.post<LogoutResponse>('/auth/logout');
+  return apiClient.post<LogoutResponse>('/api/v1/auth/logout');
 }
 
 /**
@@ -42,7 +42,7 @@ export async function logout(): Promise<LogoutResponse> {
  * UC-FL-02 — ALWAYS returns 200; never reveals whether email exists.
  */
 export async function forgotPassword(data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
-  return apiClient.post<ForgotPasswordResponse>('/auth/forgot-password', data);
+  return apiClient.post<ForgotPasswordResponse>('/api/v1/auth/forgot-password', data);
 }
 
 /**
@@ -50,7 +50,7 @@ export async function forgotPassword(data: ForgotPasswordRequest): Promise<Forgo
  * UC-FL-02 — invalidates all active sessions for that user on success.
  */
 export async function resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
-  return apiClient.post<ResetPasswordResponse>('/auth/reset-password', data);
+  return apiClient.post<ResetPasswordResponse>('/api/v1/auth/reset-password', data);
 }
 
 /**
@@ -62,7 +62,7 @@ export async function firstLoginSetPassword(
   data: FirstLoginSetPasswordRequest,
 ): Promise<FirstLoginSetPasswordResponse> {
   return apiClient.post<FirstLoginSetPasswordResponse>(
-    '/auth/first-login/set-password',
+    '/api/v1/auth/first-login/set-password',
     data,
   );
 }
@@ -76,5 +76,5 @@ export async function getMe(cookieHeader?: string): Promise<AuthMeResponse> {
   const options: RequestInit = cookieHeader
     ? { headers: { Cookie: cookieHeader } }
     : {};
-  return apiClient.get<AuthMeResponse>('/auth/me', options);
+  return apiClient.get<AuthMeResponse>('/api/v1/auth/me', options);
 }

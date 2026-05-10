@@ -5,6 +5,9 @@
 
 import type { AttendanceListQuery } from '@nexora/contracts/attendance';
 import type { RegularisationListQuery } from '@nexora/contracts/attendance';
+import type { PayrollRunListQuery, PayslipListQuery } from '@nexora/contracts/payroll';
+import type { CycleListQuery, ReviewListQuery } from '@nexora/contracts/performance';
+import type { NotificationFilters } from './notifications';
 
 export const qk = {
   auth: {
@@ -53,20 +56,37 @@ export const qk = {
   },
 
   payroll: {
-    runs: ['payroll', 'runs'] as const,
-    run: (id: string) => ['payroll', 'runs', id] as const,
-    payslips: (employeeId: string) => ['payroll', 'payslips', employeeId] as const,
-    payslip: (id: string) => ['payroll', 'payslips', 'detail', id] as const,
+    all: () => ['payroll'] as const,
+    runs: (q?: Partial<PayrollRunListQuery>) => ['payroll', 'runs', q ?? {}] as const,
+    run: (id: string) => ['payroll', 'run', id] as const,
+    reversals: () => ['payroll', 'reversals'] as const,
   },
 
+  payslips: {
+    all: () => ['payslips'] as const,
+    list: (q?: Partial<PayslipListQuery>) => ['payslips', 'list', q ?? {}] as const,
+    detail: (id: string) => ['payslips', id] as const,
+  },
+
+  taxConfig: () => ['config', 'tax'] as const,
+
   performance: {
-    cycles: ['performance', 'cycles'] as const,
-    cycle: (id: string) => ['performance', 'cycles', id] as const,
-    reviews: (cycleId: string) => ['performance', 'cycles', cycleId, 'reviews'] as const,
+    all: () => ['performance'] as const,
+    cycles: (q?: Partial<CycleListQuery>) => ['performance', 'cycles', q ?? {}] as const,
+    cycle: (id: string) => ['performance', 'cycle', id] as const,
+    reports: {
+      distribution: (cycleId: string) =>
+        ['performance', 'reports', 'distribution', cycleId] as const,
+      missing: (cycleId: string) =>
+        ['performance', 'reports', 'missing', cycleId] as const,
+    },
+    reviews: (q?: Partial<ReviewListQuery>) => ['performance', 'reviews', q ?? {}] as const,
+    review: (id: string) => ['performance', 'review', id] as const,
   },
 
   notifications: {
-    list: ['notifications'] as const,
-    unreadCount: ['notifications', 'unread-count'] as const,
+    all: ['notifications'] as const,
+    list: (filters?: NotificationFilters) => ['notifications', 'list', filters ?? {}] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
   },
 } as const;

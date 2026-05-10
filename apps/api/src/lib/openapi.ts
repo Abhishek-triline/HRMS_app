@@ -113,6 +113,75 @@ import {
   HolidayListResponseSchema,
   ReplaceHolidaysRequestSchema,
 } from '@nexora/contracts/attendance';
+import {
+  PayrollRunStatusSchema,
+  PayslipStatusSchema,
+  PayrollRunSchema,
+  PayrollRunSummarySchema,
+  PayslipSchema,
+  PayslipSummarySchema,
+  CreatePayrollRunRequestSchema,
+  CreatePayrollRunResponseSchema,
+  PayrollRunListQuerySchema,
+  PayrollRunListResponseSchema,
+  PayrollRunDetailResponseSchema,
+  FinaliseRunRequestSchema,
+  FinaliseRunResponseSchema,
+  ReverseRunRequestSchema,
+  ReverseRunResponseSchema,
+  PayslipListQuerySchema,
+  PayslipListResponseSchema,
+  PayslipDetailResponseSchema,
+  UpdatePayslipTaxRequestSchema,
+  UpdatePayslipTaxResponseSchema,
+  ReversalHistoryItemSchema,
+  ReversalHistoryResponseSchema,
+  TaxSettingsSchema,
+  TaxSettingsResponseSchema,
+  UpdateTaxSettingsRequestSchema,
+  UpdateTaxSettingsResponseSchema,
+  RunAlreadyFinalisedDetailsSchema,
+} from '@nexora/contracts/payroll';
+import {
+  CycleStatusSchema,
+  GoalOutcomeSchema,
+  GoalSchema,
+  PerformanceCycleSchema,
+  PerformanceCycleSummarySchema,
+  PerformanceReviewSchema,
+  PerformanceReviewSummarySchema,
+  CreateCycleRequestSchema,
+  CreateCycleResponseSchema,
+  CloseCycleRequestSchema,
+  CloseCycleResponseSchema,
+  CycleListQuerySchema,
+  CycleListResponseSchema,
+  CycleDetailResponseSchema,
+  ReviewListQuerySchema,
+  ReviewListResponseSchema,
+  ReviewDetailResponseSchema,
+  CreateGoalRequestSchema,
+  CreateGoalResponseSchema,
+  ProposeGoalRequestSchema,
+  ProposeGoalResponseSchema,
+  SelfRatingRequestSchema,
+  SelfRatingResponseSchema,
+  ManagerRatingRequestSchema,
+  ManagerRatingResponseSchema,
+  DistributionBucketSchema,
+  DistributionReportResponseSchema,
+  MissingReviewItemSchema,
+  MissingReviewsResponseSchema,
+} from '@nexora/contracts/performance';
+import {
+  NotificationCategorySchema,
+  NotificationSchema,
+  NotificationListQuerySchema,
+  NotificationListResponseSchema,
+  MarkReadRequestSchema,
+  MarkReadResponseSchema,
+  UnreadCountResponseSchema,
+} from '@nexora/contracts/notifications';
 
 // Augment the local `z` with .openapi() — required before any registry call.
 extendZodWithOpenApi(z);
@@ -1169,6 +1238,705 @@ registry.registerPath({
     ...errorResponse(400, 'VALIDATION_FAILED.'),
     ...errorResponse(401, 'UNAUTHENTICATED.'),
     ...errorResponse(403, 'FORBIDDEN — Admin only.'),
+  },
+});
+
+// ── Phase 4 — Payroll Processing ────────────────────────────────────────────
+
+// Register Phase 4 schemas
+registry.register('PayrollRunStatus', PayrollRunStatusSchema);
+registry.register('PayslipStatus', PayslipStatusSchema);
+registry.register('PayrollRun', PayrollRunSchema);
+registry.register('PayrollRunSummary', PayrollRunSummarySchema);
+registry.register('Payslip', PayslipSchema);
+registry.register('PayslipSummary', PayslipSummarySchema);
+registry.register('CreatePayrollRunRequest', CreatePayrollRunRequestSchema);
+registry.register('CreatePayrollRunResponse', CreatePayrollRunResponseSchema);
+registry.register('PayrollRunListQuery', PayrollRunListQuerySchema);
+registry.register('PayrollRunListResponse', PayrollRunListResponseSchema);
+registry.register('PayrollRunDetailResponse', PayrollRunDetailResponseSchema);
+registry.register('FinaliseRunRequest', FinaliseRunRequestSchema);
+registry.register('FinaliseRunResponse', FinaliseRunResponseSchema);
+registry.register('ReverseRunRequest', ReverseRunRequestSchema);
+registry.register('ReverseRunResponse', ReverseRunResponseSchema);
+registry.register('PayslipListQuery', PayslipListQuerySchema);
+registry.register('PayslipListResponse', PayslipListResponseSchema);
+registry.register('PayslipDetailResponse', PayslipDetailResponseSchema);
+registry.register('UpdatePayslipTaxRequest', UpdatePayslipTaxRequestSchema);
+registry.register('UpdatePayslipTaxResponse', UpdatePayslipTaxResponseSchema);
+registry.register('ReversalHistoryItem', ReversalHistoryItemSchema);
+registry.register('ReversalHistoryResponse', ReversalHistoryResponseSchema);
+registry.register('TaxSettings', TaxSettingsSchema);
+registry.register('TaxSettingsResponse', TaxSettingsResponseSchema);
+registry.register('UpdateTaxSettingsRequest', UpdateTaxSettingsRequestSchema);
+registry.register('UpdateTaxSettingsResponse', UpdateTaxSettingsResponseSchema);
+registry.register('RunAlreadyFinalisedDetails', RunAlreadyFinalisedDetailsSchema);
+
+const idempotencyKeyHeader = {
+  in: 'header' as const,
+  name: 'Idempotency-Key',
+  required: false,
+  schema: { type: 'string' as const, maxLength: 128 },
+  description: 'Optional client-generated idempotency key. Duplicate requests with the same key within 24h return the original response without re-applying side effects.',
+};
+
+// POST /payroll/runs
+registry.registerPath({
+  method: 'post',
+  path: '/payroll/runs',
+  tags: ['Payroll'],
+  summary: 'Initiate a payroll run for a month (Admin/PO) — A-12/P-03',
+  description: 'Creates a new payroll run. Computes payslips for all Active/On-Notice employees. BL-030: uses salary structure effective as of period start. BL-035: LOP deduction. BL-036: proration for mid-month joiners/exits. BL-036a: reference tax = gross × STANDARD_TAX_REFERENCE_RATE. Idempotent via Idempotency-Key.',
+  security: [{ sessionCookie: [] }],
+  parameters: [idempotencyKeyHeader],
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: CreatePayrollRunRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Run created — returns run + payslipCount.',
+      content: { 'application/json': { schema: CreatePayrollRunResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — Admin or PayrollOfficer only.'),
+    ...errorResponse(409, 'Run already exists for this month/year.'),
+  },
+});
+
+// GET /payroll/runs
+registry.registerPath({
+  method: 'get',
+  path: '/payroll/runs',
+  tags: ['Payroll'],
+  summary: 'List payroll runs (Admin/PO) — A-11/P-02',
+  security: [{ sessionCookie: [] }],
+  request: { query: PayrollRunListQuerySchema },
+  responses: {
+    200: {
+      description: 'Paginated list of payroll run summaries.',
+      content: { 'application/json': { schema: PayrollRunListResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+  },
+});
+
+// GET /payroll/runs/:id
+registry.registerPath({
+  method: 'get',
+  path: '/payroll/runs/{id}',
+  tags: ['Payroll'],
+  summary: 'Get a payroll run detail with payslip summaries (Admin/PO) — A-13/P-04',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'Run + payslip summaries.',
+      content: { 'application/json': { schema: PayrollRunDetailResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+// POST /payroll/runs/:id/finalise
+registry.registerPath({
+  method: 'post',
+  path: '/payroll/runs/{id}/finalise',
+  tags: ['Payroll'],
+  summary: 'Finalise a payroll run (Admin/PO) — A-14/P-05 — BL-034',
+  description: 'Two-step: client must send confirm="FINALISE". Uses SELECT…FOR UPDATE to prevent concurrent finalisation (BL-034). Second caller gets 409 RUN_ALREADY_FINALISED with winner details. Idempotent via Idempotency-Key.',
+  security: [{ sessionCookie: [] }],
+  parameters: [idempotencyKeyHeader],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: FinaliseRunRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Finalised run.',
+      content: { 'application/json': { schema: FinaliseRunResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'RUN_ALREADY_FINALISED (BL-034) or VERSION_MISMATCH.'),
+  },
+});
+
+// POST /payroll/runs/:id/reverse
+registry.registerPath({
+  method: 'post',
+  path: '/payroll/runs/{id}/reverse',
+  tags: ['Payroll'],
+  summary: 'Reverse a finalised run (Admin only) — A-15 — BL-033',
+  description: 'Two-step: client must send confirm="REVERSE" + reason (min 10 chars). Creates a new reversal run + payslips. Source run and payslips are NEVER modified (BL-031/BL-032). Idempotent via Idempotency-Key.',
+  security: [{ sessionCookie: [] }],
+  parameters: [idempotencyKeyHeader],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: ReverseRunRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Reversal run created.',
+      content: { 'application/json': { schema: ReverseRunResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — Admin only.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'Source run is not Finalised.'),
+  },
+});
+
+// GET /payroll/reversals
+registry.registerPath({
+  method: 'get',
+  path: '/payroll/reversals',
+  tags: ['Payroll'],
+  summary: 'List all reversal records (Admin/PO) — A-24/P-07',
+  security: [{ sessionCookie: [] }],
+  responses: {
+    200: {
+      description: 'Paginated list of reversal history items.',
+      content: { 'application/json': { schema: ReversalHistoryResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+  },
+});
+
+// GET /payslips
+registry.registerPath({
+  method: 'get',
+  path: '/payslips',
+  tags: ['Payslips'],
+  summary: 'List payslips — scoped by role — E-08',
+  description: 'Employee: own only. Manager: own + subordinate tree. PO/Admin: all.',
+  security: [{ sessionCookie: [] }],
+  request: { query: PayslipListQuerySchema },
+  responses: {
+    200: {
+      description: 'Paginated payslip summaries.',
+      content: { 'application/json': { schema: PayslipListResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+  },
+});
+
+// GET /payslips/:id
+registry.registerPath({
+  method: 'get',
+  path: '/payslips/{id}',
+  tags: ['Payslips'],
+  summary: 'Get a payslip detail — E-09',
+  description: 'Returns 404 if the caller cannot see this payslip (no existence leak).',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'Payslip detail.',
+      content: { 'application/json': { schema: PayslipDetailResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+// PATCH /payslips/:id/tax
+registry.registerPath({
+  method: 'patch',
+  path: '/payslips/{id}/tax',
+  tags: ['Payslips'],
+  summary: 'Update final tax on a payslip (PO/Admin) — BL-036a',
+  description: 'Only allowed while parent run is Draft or Review. Returns 409 PAYSLIP_IMMUTABLE (BL-031) if Finalised or Reversed. Recomputes netPayPaise on change. Idempotent via Idempotency-Key.',
+  security: [{ sessionCookie: [] }],
+  parameters: [idempotencyKeyHeader],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: UpdatePayslipTaxRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated payslip.',
+      content: { 'application/json': { schema: UpdatePayslipTaxResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'PAYSLIP_IMMUTABLE (BL-031) or VERSION_MISMATCH.'),
+  },
+});
+
+// GET /payslips/:id/pdf
+registry.registerPath({
+  method: 'get',
+  path: '/payslips/{id}/pdf',
+  tags: ['Payslips'],
+  summary: 'Download payslip as PDF — E-08',
+  description: 'Streams a server-rendered PDF (pdfkit). Content-Disposition: attachment. Applies same visibility rules as GET /payslips/:id.',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'PDF file stream.',
+      content: { 'application/pdf': { schema: z.string() } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+// GET /config/tax
+registry.registerPath({
+  method: 'get',
+  path: '/config/tax',
+  tags: ['TaxConfig'],
+  summary: 'Get the standard tax reference rate (Admin) — A-17',
+  security: [{ sessionCookie: [] }],
+  responses: {
+    200: {
+      description: 'Current tax settings.',
+      content: { 'application/json': { schema: TaxSettingsResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — Admin only.'),
+  },
+});
+
+// PATCH /config/tax
+registry.registerPath({
+  method: 'patch',
+  path: '/config/tax',
+  tags: ['TaxConfig'],
+  summary: 'Update the standard tax reference rate (Admin) — A-17',
+  description: 'Updates STANDARD_TAX_REFERENCE_RATE. Idempotent via Idempotency-Key.',
+  security: [{ sessionCookie: [] }],
+  parameters: [idempotencyKeyHeader],
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: UpdateTaxSettingsRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Updated tax settings.',
+      content: { 'application/json': { schema: UpdateTaxSettingsResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — Admin only.'),
+  },
+});
+
+// ── Phase 5 — Performance Reviews ───────────────────────────────────────────
+
+registry.register('CycleStatus', CycleStatusSchema);
+registry.register('GoalOutcome', GoalOutcomeSchema);
+registry.register('Goal', GoalSchema);
+registry.register('PerformanceCycle', PerformanceCycleSchema);
+registry.register('PerformanceCycleSummary', PerformanceCycleSummarySchema);
+registry.register('PerformanceReview', PerformanceReviewSchema);
+registry.register('PerformanceReviewSummary', PerformanceReviewSummarySchema);
+registry.register('CreateCycleRequest', CreateCycleRequestSchema);
+registry.register('CreateCycleResponse', CreateCycleResponseSchema);
+registry.register('CloseCycleRequest', CloseCycleRequestSchema);
+registry.register('CloseCycleResponse', CloseCycleResponseSchema);
+registry.register('CycleListQuery', CycleListQuerySchema);
+registry.register('CycleListResponse', CycleListResponseSchema);
+registry.register('CycleDetailResponse', CycleDetailResponseSchema);
+registry.register('ReviewListQuery', ReviewListQuerySchema);
+registry.register('ReviewListResponse', ReviewListResponseSchema);
+registry.register('ReviewDetailResponse', ReviewDetailResponseSchema);
+registry.register('CreateGoalRequest', CreateGoalRequestSchema);
+registry.register('CreateGoalResponse', CreateGoalResponseSchema);
+registry.register('ProposeGoalRequest', ProposeGoalRequestSchema);
+registry.register('ProposeGoalResponse', ProposeGoalResponseSchema);
+registry.register('SelfRatingRequest', SelfRatingRequestSchema);
+registry.register('SelfRatingResponse', SelfRatingResponseSchema);
+registry.register('ManagerRatingRequest', ManagerRatingRequestSchema);
+registry.register('ManagerRatingResponse', ManagerRatingResponseSchema);
+registry.register('DistributionBucket', DistributionBucketSchema);
+registry.register('DistributionReportResponse', DistributionReportResponseSchema);
+registry.register('MissingReviewItem', MissingReviewItemSchema);
+registry.register('MissingReviewsResponse', MissingReviewsResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/performance/cycles',
+  tags: ['Performance'],
+  summary: 'Create a performance cycle (Admin)',
+  description:
+    'Creates a new fiscal-half cycle in Open status. Identifies participants ' +
+    '(Active employees with joinDate <= fyStart). Mid-cycle joiners get ' +
+    'isMidCycleJoiner=true. Option B: adminPeerReviewers map pairs each Admin ' +
+    'with a peer-Admin reviewer.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: CreateCycleRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Cycle created.',
+      content: { 'application/json': { schema: CreateCycleResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED or INVALID_DATE_RANGE.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — not Admin.'),
+    ...errorResponse(409, 'Cycle code already exists.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/cycles',
+  tags: ['Performance'],
+  summary: 'List performance cycles',
+  description: 'Paginated list of cycles. All authenticated users may query.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    query: CycleListQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Cycle list.',
+      content: { 'application/json': { schema: CycleListResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/cycles/{id}',
+  tags: ['Performance'],
+  summary: 'Get cycle detail',
+  description:
+    'Returns cycle + scoped reviews. Admin sees all; Manager sees team; Employee sees own.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  responses: {
+    200: {
+      description: 'Cycle detail.',
+      content: { 'application/json': { schema: CycleDetailResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/performance/cycles/{id}/close',
+  tags: ['Performance'],
+  summary: 'Close a performance cycle (Admin)',
+  description:
+    'Two-step destructive confirm (body must contain confirm: "CLOSE"). ' +
+    'Locks all final ratings (BL-041). Returns 409 CYCLE_CLOSED if already closed.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: CloseCycleRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Cycle closed.',
+      content: { 'application/json': { schema: CloseCycleResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'CYCLE_CLOSED or VERSION_MISMATCH.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/cycles/{id}/reports/distribution',
+  tags: ['Performance'],
+  summary: 'Rating distribution report (A-22)',
+  description: 'Rating distribution bucketed by department × rating 1–5 + notRated. Admin only.',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'Distribution report.',
+      content: { 'application/json': { schema: DistributionReportResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/cycles/{id}/reports/missing',
+  tags: ['Performance'],
+  summary: 'Missing reviews report (A-23)',
+  description: 'Employees with no submitted manager rating in this cycle. Admin only.',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'Missing reviews.',
+      content: { 'application/json': { schema: MissingReviewsResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/reviews',
+  tags: ['Performance'],
+  summary: 'List performance reviews',
+  description:
+    'Scoped: Admin → all; Manager → own-managed or subordinates; Employee → own only.',
+  security: [{ sessionCookie: [] }],
+  request: { query: ReviewListQuerySchema },
+  responses: {
+    200: {
+      description: 'Review list.',
+      content: { 'application/json': { schema: ReviewListResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/performance/reviews/{id}',
+  tags: ['Performance'],
+  summary: 'Get review detail',
+  security: [{ sessionCookie: [] }],
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: 'Review detail.',
+      content: { 'application/json': { schema: ReviewDetailResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(404, 'NOT_FOUND — or not visible to caller.'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/performance/reviews/{id}/goals',
+  tags: ['Performance'],
+  summary: 'Create a goal (Manager or Admin)',
+  description:
+    'Manager (assigned) or Admin adds a goal to a review. Cycle must not be Closed. ' +
+    'Hard cap: 20 goals per review.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: CreateGoalRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Goal created.',
+      content: { 'application/json': { schema: CreateGoalResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — not assigned manager or Admin.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'CYCLE_CLOSED or CYCLE_PHASE (mid-cycle joiner).'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/performance/reviews/{id}/goals/propose',
+  tags: ['Performance'],
+  summary: 'Propose a goal (Employee)',
+  description:
+    'Employee may propose additional goals during the self-review window (BL-038). ' +
+    'Outcome stays Pending until the manager rates it.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: ProposeGoalRequestSchema } },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Goal proposed.',
+      content: { 'application/json': { schema: ProposeGoalResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — not the review owner.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'CYCLE_CLOSED or CYCLE_PHASE (outside self-review window).'),
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/performance/reviews/{id}/self-rating',
+  tags: ['Performance'],
+  summary: 'Submit self-rating (Employee)',
+  description:
+    'Employee submits / updates self-rating and note. Editable until selfReviewDeadline (BL-039).',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: SelfRatingRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Self-rating saved.',
+      content: { 'application/json': { schema: SelfRatingResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — not the review owner.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'CYCLE_CLOSED, CYCLE_PHASE (outside deadline), or VERSION_MISMATCH.'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/performance/reviews/{id}/manager-rating',
+  tags: ['Performance'],
+  summary: 'Submit manager rating (Manager or Admin)',
+  description:
+    'Manager (assigned) or Admin submits the manager rating and per-goal outcomes. ' +
+    'Sets managerOverrodeSelf when rating differs from selfRating (BL-040). ' +
+    'Editable until managerReviewDeadline.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: ManagerRatingRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Manager rating saved.',
+      content: { 'application/json': { schema: ManagerRatingResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+    ...errorResponse(403, 'FORBIDDEN — not assigned manager or Admin.'),
+    ...errorResponse(404, 'NOT_FOUND.'),
+    ...errorResponse(409, 'CYCLE_CLOSED, CYCLE_PHASE (outside deadline), or VERSION_MISMATCH.'),
+  },
+});
+
+// ── Phase 6 — Notifications ──────────────────────────────────────────────────
+
+registry.register('NotificationCategory', NotificationCategorySchema);
+registry.register('Notification', NotificationSchema);
+registry.register('NotificationListQuery', NotificationListQuerySchema);
+registry.register('NotificationListResponse', NotificationListResponseSchema);
+registry.register('MarkReadRequest', MarkReadRequestSchema);
+registry.register('MarkReadResponse', MarkReadResponseSchema);
+registry.register('UnreadCountResponse', UnreadCountResponseSchema);
+
+// GET /notifications
+registry.registerPath({
+  method: 'get',
+  path: '/notifications',
+  tags: ['Notifications'],
+  summary: 'List own notification feed',
+  description:
+    'Returns the authenticated user\'s notification feed, newest first. ' +
+    'BL-044: always scoped to recipientId = current user — no cross-user exposure. ' +
+    'Cursor-paginated. Supports ?category, ?unread, and ?since filters.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    query: NotificationListQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Notification feed returned.',
+      content: { 'application/json': { schema: NotificationListResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+  },
+});
+
+// POST /notifications/mark-read
+registry.registerPath({
+  method: 'post',
+  path: '/notifications/mark-read',
+  tags: ['Notifications'],
+  summary: 'Mark notifications as read',
+  description:
+    'Mark specific notification IDs or ALL unread items as read. ' +
+    'BL-044: intersection with recipientId = current user is always enforced — ' +
+    'a caller cannot affect another user\'s feed. Returns the number of rows updated.',
+  security: [{ sessionCookie: [] }],
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: MarkReadRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Notifications marked as read.',
+      content: { 'application/json': { schema: MarkReadResponseSchema } },
+    },
+    ...errorResponse(400, 'VALIDATION_FAILED — body does not match schema.'),
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
+  },
+});
+
+// GET /notifications/unread-count
+registry.registerPath({
+  method: 'get',
+  path: '/notifications/unread-count',
+  tags: ['Notifications'],
+  summary: 'Get unread notification count',
+  description:
+    'Lightweight count(*) query for the header bell icon. ' +
+    'BL-044: always scoped to the authenticated user.',
+  security: [{ sessionCookie: [] }],
+  responses: {
+    200: {
+      description: 'Unread count returned.',
+      content: { 'application/json': { schema: UnreadCountResponseSchema } },
+    },
+    ...errorResponse(401, 'UNAUTHENTICATED.'),
   },
 });
 

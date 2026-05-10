@@ -99,6 +99,20 @@ model Employee {
   regularisations         RegularisationRequest[] @relation("EmployeeRegularisations")
   regularisationsApproving RegularisationRequest[] @relation("RegularisationApprover")
   lateLedger              AttendanceLateLedger[] @relation("EmployeeLateLedger")
+  // Phase 4 — Payroll
+  payrollRunsInitiated    PayrollRun[]           @relation("PayrollInitiator")
+  payrollRunsFinalised    PayrollRun[]           @relation("PayrollFinaliser")
+  payrollRunsReversed     PayrollRun[]           @relation("PayrollReverser")
+  payslips                Payslip[]              @relation("EmployeePayslips")
+  idempotencyKeys         IdempotencyKey[]       @relation("EmployeeIdempotencyKeys")
+  // Phase 5 — Performance Reviews
+  performanceCyclesCreated  PerformanceCycle[]   @relation("CycleCreatedBy")
+  performanceCyclesClosed   PerformanceCycle[]   @relation("CycleClosedBy")
+  reviewsAsEmployee         PerformanceReview[]  @relation("ReviewEmployee")
+  reviewsAsManager          PerformanceReview[]  @relation("ReviewManager")
+  reviewsAsPreviousManager  PerformanceReview[]  @relation("ReviewPreviousManager")
+  // Phase 6 — Notifications
+  notifications             Notification[]       @relation("EmployeeNotifications")
 
   @@index([email])
   @@index([reportingManagerId])
@@ -518,4 +532,303 @@ model Holiday {
   @@unique([year, date])
   @@index([date])
   @@map("holidays")
+}
+
+// ── Phase 4 — Payroll Processing ─────────────────────────────────────────────
+
+/// BL-034: run lifecycle status.
+/// Draft → Review → Finalised → (Reversed via a new reversal run record)
+enum PayrollRunStatusDb {
+  Draft
+  Review
+  Finalised
+  Reversed
+}
+
+/// Mirrors PayrollRunStatusDb — payslips track the same lifecycle.
+/// Reversal payslip records carry Reversed; originals stay Finalised (BL-031 / BL-032).
+enum PayslipStatusDb {
+  Draft
+  Review
+  Finalised
+  Reversed
+}
+
+/// Payroll run. One per month per origination (original has reversalOfRunId=NULL;
+/// reversal records have reversalOfRunId set to the source).
+/// BL-034: UNIQUE (month, year, reversalOfRunId) allows original + reversal to coexist.
+model PayrollRun {
+  id              String             @id @default(cuid())
+  /// RUN-YYYY-MM for originals; RUN-YYYY-MM-R<n> for reversal records.
+  code            String             @unique
+  month           Int                // 1–12
+  year            Int
+  status          PayrollRunStatusDb @default(Review)
+  workingDays     Int
+  periodStart     DateTime           @db.Date
+  periodEnd       DateTime           @db.Date
+  initiatedBy     String
+  initiator       Employee           @relation("PayrollInitiator", fields: [initiatedBy], references: [id])
+  finalisedBy     String?
+  finaliser       Employee?          @relation("PayrollFinaliser", fields: [finalisedBy], references: [id])
+  finalisedAt     DateTime?
+  reversedBy      String?
+  reverser        Employee?          @relation("PayrollReverser", fields: [reversedBy], references: [id])
+  reversedAt      DateTime?
+  reversalReason  String?            @db.Text
+  /// Points to the original run when this is a reversal record. Null on originals.
+  reversalOfRunId String?
+  reversalOf      PayrollRun?        @relation("PayrollReversal", fields: [reversalOfRunId], references: [id])
+  reversalRuns    PayrollRun[]       @relation("PayrollReversal")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  /// Optimistic concurrency token (BL-034).
+  version         Int                @default(0)
+
+  payslips        Payslip[]
+
+  /// BL-034: original (NULL reversalOfRunId) is unique per month+year;
+  /// multiple reversal records per month+year are allowed (n can increment).
+  @@unique([month, year, reversalOfRunId])
+  @@index([year, status])
+  @@map("payroll_runs")
+}
+
+/// Payslip. One per employee per run. Immutable once Finalised (BL-031).
+/// Reversal creates new rows; originals are never modified (BL-032).
+model Payslip {
+  id                   String          @id @default(cuid())
+  /// P-YYYY-MM-NNNN — globally unique across all payslips.
+  code                 String          @unique
+  runId                String
+  run                  PayrollRun      @relation(fields: [runId], references: [id])
+  employeeId           String
+  employee             Employee        @relation("EmployeePayslips", fields: [employeeId], references: [id])
+  month                Int
+  year                 Int
+  status               PayslipStatusDb @default(Review)
+  periodStart          DateTime        @db.Date
+  periodEnd            DateTime        @db.Date
+  workingDays          Int
+  /// Days actually worked — used for BL-036 proration.
+  daysWorked           Int
+  /// Loss of pay days (BL-035).
+  lopDays              Int             @default(0)
+  /// Snapshot of the active salary structure (BL-030).
+  basicPaise           Int
+  allowancesPaise      Int
+  /// Pro-rated gross for this period (BL-036).
+  grossPaise           Int
+  /// LOP deduction paise (BL-035).
+  lopDeductionPaise    Int             @default(0)
+  /// Reference tax = gross × standardRate (BL-036a).
+  referenceTaxPaise    Int             @default(0)
+  /// Final tax — editable by PO until run is Finalised (BL-036a).
+  finalTaxPaise        Int             @default(0)
+  /// Other deductions (PF, etc.) — zero in v1.
+  otherDeductionsPaise Int             @default(0)
+  /// Net pay = gross − lop − finalTax − other; never negative (BL-035).
+  netPayPaise          Int
+  finalisedAt          DateTime?
+  /// Set on reversal payslips — points to the original payslip (BL-032).
+  reversalOfPayslipId  String?
+  reversalOfPayslip    Payslip?        @relation("PayslipReversal", fields: [reversalOfPayslipId], references: [id])
+  reversalPayslips     Payslip[]       @relation("PayslipReversal")
+  /// Set on original payslip when a reversal row exists.
+  reversedByPayslipId  String?         @unique
+  reversedByPayslip    Payslip?        @relation("PayslipReversedBy", fields: [reversedByPayslipId], references: [id])
+  reversedByPayslipRef Payslip[]       @relation("PayslipReversedBy")
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  /// Optimistic concurrency token.
+  version              Int             @default(0)
+
+  @@index([employeeId, year, month])
+  @@index([runId])
+  @@index([status])
+  @@map("payslips")
+}
+
+/// Counter table for generating RUN and Payslip codes.
+/// kind: 'run' for RUN-YYYY-MM codes, 'payslip' for P-YYYY-MM-NNNN codes.
+/// Indexed on (year, month, kind) — each combination holds its own sequence.
+model PayrollCodeCounter {
+  id      String @id @default(cuid())
+  year    Int
+  month   Int
+  kind    String // 'run' | 'payslip'
+  lastSeq Int    @default(0)
+
+  @@unique([year, month, kind])
+  @@map("payroll_code_counters")
+}
+
+/// Idempotency-Key store (SEC-004-P3 close-out).
+/// One row per (userId, key). TTL: 24 h — cleanup cron deletes stale rows.
+model IdempotencyKey {
+  id           String   @id @default(cuid())
+  userId       String
+  user         Employee @relation("EmployeeIdempotencyKeys", fields: [userId], references: [id], onDelete: Cascade)
+  key          String
+  path         String
+  status       Int
+  responseBody Json
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, key])
+  @@index([userId, key])
+  @@map("idempotency_keys")
+}
+
+// ── Phase 5 — Performance Reviews ────────────────────────────────────────────
+
+/// BL-041: lifecycle of a performance cycle.
+/// Enum values match the DB storage (no hyphens); mapped to contract enum at boundary.
+enum CycleStatusDb {
+  Open
+  SelfReview
+  ManagerReview
+  Closed
+}
+
+/// Goal outcome — set by Manager (BL-038). Pending until rated.
+enum GoalOutcomeDb {
+  Met
+  Partial
+  Missed
+  Pending
+}
+
+/// Performance cycle. One per fiscal half (H1 = Apr–Sep, H2 = Oct–Mar).
+/// Code format: C-YYYY-H1 or C-YYYY-H2 (unique, derived from fyStart).
+model PerformanceCycle {
+  id                   String         @id @default(cuid())
+  /// C-YYYY-H1 or C-YYYY-H2 — unique per fiscal half year
+  code                 String         @unique
+  fyStart              DateTime       @db.Date
+  fyEnd                DateTime       @db.Date
+  status               CycleStatusDb  @default(Open)
+  selfReviewDeadline   DateTime       @db.Date
+  managerReviewDeadline DateTime      @db.Date
+  closedAt             DateTime?
+  closedBy             String?
+  closedByEmployee     Employee?      @relation("CycleClosedBy", fields: [closedBy], references: [id], onDelete: SetNull)
+  createdBy            String
+  createdByEmployee    Employee       @relation("CycleCreatedBy", fields: [createdBy], references: [id])
+  /// Count of participants (excludes mid-cycle joiners — BL-037)
+  participants         Int            @default(0)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  /// Optimistic concurrency token (BL-034)
+  version              Int            @default(0)
+
+  reviews              PerformanceReview[]
+
+  @@index([status])
+  @@index([fyStart])
+  @@map("performance_cycles")
+}
+
+// ── Phase 6 — Notifications ──────────────────────────────────────────────────
+
+/// Category enum — mirrors NotificationCategorySchema in @nexora/contracts/notifications.
+/// Stored without hyphens; mapped at the application boundary.
+enum NotificationCategoryDb {
+  Leave
+  Attendance
+  Payroll
+  Performance
+  Status
+  Configuration
+  Auth
+  System
+}
+
+/// In-app notification feed. BL-043: system-generated only (no public POST).
+/// BL-044: every query MUST filter recipientId = user.id.
+/// BL-045: archived after NOTIFICATION_RETENTION_DAYS (default 90) by a daily cron.
+/// BL-046: in-app only — no email/SMS/push integration.
+model Notification {
+  id           String                  @id @default(cuid())
+  recipientId  String
+  recipient    Employee                @relation("EmployeeNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  category     NotificationCategoryDb
+  /// ≤ 120 chars — enforced at the application layer before insert
+  title        String                  @db.VarChar(120)
+  /// ≤ 600 chars — plain text only (BL-046)
+  body         String                  @db.VarChar(600)
+  /// Deep link to the originating record, e.g. /employee/leave/L-2026-0118
+  link         String?
+  unread       Boolean                 @default(true)
+  /// References the audit_log row that produced this notification (BL-047 link)
+  auditLogId   String?
+  createdAt    DateTime                @default(now())
+
+  /// BL-044: unread feed sorted by newest first
+  @@index([recipientId, unread])
+  /// Cursor-pagination / feed queries
+  @@index([recipientId, createdAt(sort: Desc)])
+  /// Retention sweep — daily cron deletes rows older than retentionDays (BL-045)
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// Performance review. One per employee per cycle.
+/// BL-042: when a manager is reassigned mid-cycle, previousManagerId captures the
+/// old manager so the audit retains both.
+model PerformanceReview {
+  id                   String         @id @default(cuid())
+  cycleId              String
+  cycle                PerformanceCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId           String
+  employee             Employee       @relation("ReviewEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  /// BL-042: current manager; may change mid-cycle via reassign-manager endpoint.
+  managerId            String?
+  manager              Employee?      @relation("ReviewManager", fields: [managerId], references: [id], onDelete: SetNull)
+  /// BL-042: previous manager captured on reassignment so both appear in the audit.
+  previousManagerId    String?
+  previousManager      Employee?      @relation("ReviewPreviousManager", fields: [previousManagerId], references: [id], onDelete: SetNull)
+  /// 1–5; editable until selfReviewDeadline (BL-039)
+  selfRating           Int?
+  selfNote             String?        @db.Text
+  selfSubmittedAt      DateTime?
+  /// 1–5; sets managerOverrodeSelf if differs from selfRating (BL-040)
+  managerRating        Int?
+  managerNote          String?        @db.Text
+  managerSubmittedAt   DateTime?
+  /// BL-040: true when managerRating != selfRating
+  managerOverrodeSelf  Boolean        @default(false)
+  /// = managerRating once cycle Closes (BL-041)
+  finalRating          Int?
+  lockedAt             DateTime?
+  /// BL-037: true for employees who joined after fyStart
+  isMidCycleJoiner     Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  /// Optimistic concurrency token
+  version              Int            @default(0)
+
+  goals                Goal[]
+
+  @@unique([cycleId, employeeId])
+  @@index([cycleId, managerId])
+  @@index([employeeId])
+  @@map("performance_reviews")
+}
+
+/// Goal within a review. Manager creates; Employee may propose (BL-038).
+model Goal {
+  id                   String         @id @default(cuid())
+  reviewId             String
+  review               PerformanceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  text                 String         @db.Text
+  outcome              GoalOutcomeDb  @default(Pending)
+  /// BL-038: true when proposed by the Employee during self-review window
+  proposedByEmployee   Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  /// Optimistic concurrency token
+  version              Int            @default(0)
+
+  @@index([reviewId])
+  @@map("goals")
 }
