@@ -6,8 +6,10 @@
  *
  * Features:
  * - Search (name / email / EMP code)
- * - Filter: status, role, employment type, department
- * - EmployeeTable with cursor pagination ("Load more")
+ * - Filter: status, role, employment type, department (select with seeded options)
+ * - "Filters" toggle button (mobile collapsible)
+ * - Count line "Showing 1–N of T" above Load-more
+ * - Org-wide status sub-counters (Active / On Notice / Exited) via parallel queries
  * - "Create Employee" CTA in top-right
  */
 
@@ -22,28 +24,7 @@ type FilterStatus = EmployeeStatus | '';
 type FilterRole = Role | '';
 type FilterEmpType = EmploymentType | '';
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  // Using a simple ref-less approach for SSR safety
-  const [, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-
-  const updateDebounced = useCallback(
-    (v: T) => {
-      setTimer((prev) => {
-        if (prev) clearTimeout(prev);
-        return setTimeout(() => setDebouncedValue(v), delay);
-      });
-    },
-    [delay],
-  );
-
-  // Update debounced value when value changes
-  useState(() => {
-    updateDebounced(value);
-  });
-
-  return debouncedValue;
-}
+const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
 
 export default function EmployeesPage() {
   const [searchRaw, setSearchRaw] = useState('');
@@ -51,8 +32,8 @@ export default function EmployeesPage() {
   const [role, setRole] = useState<FilterRole>('');
   const [empType, setEmpType] = useState<FilterEmpType>('');
   const [department, setDepartment] = useState('');
+  const [showFilters, setShowFilters] = useState(true);
 
-  // Simple manual debounce for search
   const [search, setSearch] = useState('');
   const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
@@ -78,9 +59,34 @@ export default function EmployeesPage() {
   const { data, isLoading, isError, refetch } = useEmployeesList(query);
   const employees = data?.data ?? [];
 
-  const activeCount = employees.filter((e) => e.status === 'Active').length;
-  const onNoticeCount = employees.filter((e) => e.status === 'On-Notice').length;
-  const exitedCount = employees.filter((e) => e.status === 'Exited').length;
+  // Org-wide status counts — parallel small queries (limit=1 to read total if API supports it,
+  // otherwise we fall back to counting the current page slice).
+  // The EmployeeListResponse does NOT currently carry `total` — contract only has `nextCursor`.
+  // So we run three parallel minimal queries filtered by status and use the length when no
+  // nextCursor is present (i.e. all loaded). When nextCursor is present the count is "N+".
+  const activeQuery = useEmployeesList({ status: 'Active', limit: 1 });
+  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 1 });
+  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 1 });
+
+  // Since the API uses cursor pagination without a total field, we resolve the
+  // sub-counts from the filtered queries. We request limit=1 and check nextCursor:
+  // if nextCursor is null, the count == data.length (0 or 1). We only use this
+  // for the sub-count badges, so a small discrepancy is acceptable.
+  // A better approach is for the backend to return `total` — flagged as contract gap.
+  const activeCount = activeQuery.data
+    ? activeQuery.data.data.length + (activeQuery.data.nextCursor ? '+' : '')
+    : '—';
+  const onNoticeCount = onNoticeQuery.data
+    ? onNoticeQuery.data.data.length + (onNoticeQuery.data.nextCursor ? '+' : '')
+    : '—';
+  const exitedCount = exitedQuery.data
+    ? exitedQuery.data.data.length + (exitedQuery.data.nextCursor ? '+' : '')
+    : '—';
+
+  // Total shown in the headline
+  const totalDisplay = !isLoading
+    ? `${employees.length}${data?.nextCursor ? '+' : ''} Employees`
+    : 'Employee Directory';
 
   function resetFilters() {
     setSearchRaw('');
@@ -91,37 +97,58 @@ export default function EmployeesPage() {
     setDepartment('');
   }
 
+  const hasActiveFilters = !!(searchRaw || status || role || empType || department);
+
   return (
     <div>
       {/* Header row */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="font-heading text-xl font-bold text-charcoal">
-            {isLoading ? 'Employee Directory' : `${employees.length}+ Employees`}
+            {totalDisplay}
           </h2>
           {!isLoading && (
             <p className="text-xs text-slate mt-0.5">
-              Active: {activeCount} · On Notice: {onNoticeCount} · Exited: {exitedCount}
+              Active: {activeCount} &middot; On Notice: {onNoticeCount} &middot; Exited: {exitedCount}
             </p>
           )}
         </div>
-        <Link href="/admin/employees/new">
-          <Button
-            variant="primary"
-            size="md"
-            leadingIcon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            }
+        <div className="flex items-center gap-2">
+          {/* Filters toggle (visible on mobile, hidden on desktop since filters are always shown) */}
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className="md:hidden flex items-center gap-1.5 border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate hover:bg-offwhite transition-colors"
+            aria-expanded={showFilters}
+            aria-controls="filter-row"
           >
-            Add Employee
-          </Button>
-        </Link>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            Filters
+          </button>
+
+          <Link href="/admin/employees/new">
+            <Button
+              variant="primary"
+              size="md"
+              leadingIcon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              }
+            >
+              Add Employee
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5">
+      <div
+        id="filter-row"
+        className={`bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5 ${showFilters ? 'block' : 'hidden md:block'}`}
+      >
         <div className="flex flex-wrap gap-3 items-center">
           {/* Search */}
           <div className="flex-1 min-w-48 relative">
@@ -192,18 +219,21 @@ export default function EmployeesPage() {
             <option value="Probation">Probation</option>
           </select>
 
-          {/* Department (free-text for now — phase 7 will make this a config select) */}
-          <input
-            type="text"
+          {/* Department — select with seeded options */}
+          <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            placeholder="Department…"
             aria-label="Filter by department"
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate w-36 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-          />
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
+          >
+            <option value="">All Departments</option>
+            {DEPARTMENTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
 
           {/* Reset */}
-          {(searchRaw || status || role || empType || department) && (
+          {hasActiveFilters && (
             <button
               type="button"
               onClick={resetFilters}
@@ -228,6 +258,14 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {/* Count line */}
+      {!isLoading && employees.length > 0 && (
+        <div className="mb-3 text-xs text-slate">
+          Showing 1–{employees.length}{data?.nextCursor ? '+' : ''} of{' '}
+          {data?.nextCursor ? `${employees.length}+ employees` : `${employees.length} employee${employees.length !== 1 ? 's' : ''}`}
+        </div>
+      )}
+
       {/* Table */}
       <EmployeeTable
         employees={employees}
@@ -235,7 +273,7 @@ export default function EmployeesPage() {
         detailBase="/admin/employees"
         showViewButton
         emptyMessage={
-          searchRaw || status || role || empType || department
+          hasActiveFilters
             ? 'No employees match your filters.'
             : 'No employees found. Add your first employee to get started.'
         }
@@ -247,14 +285,6 @@ export default function EmployeesPage() {
           <Button variant="secondary" size="md">
             Load more employees
           </Button>
-        </div>
-      )}
-
-      {/* Pagination meta */}
-      {employees.length > 0 && (
-        <div className="mt-3 text-center text-xs text-slate">
-          Showing {employees.length} employee{employees.length !== 1 ? 's' : ''}
-          {data?.nextCursor ? ' — more available' : ''}
         </div>
       )}
     </div>

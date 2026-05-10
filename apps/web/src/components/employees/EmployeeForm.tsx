@@ -11,7 +11,7 @@
  * Surfaces 409 VERSION_MISMATCH as a toast.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -57,6 +57,10 @@ interface EmployeeFormEditProps {
 
 type EmployeeFormProps = EmployeeFormCreateProps | EmployeeFormEditProps;
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations', 'Product', 'Sales'];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getInitials(name: string) {
@@ -78,6 +82,9 @@ const TODAY = new Date().toISOString().slice(0, 10);
 export function EmployeeForm(props: EmployeeFormProps) {
   const router = useRouter();
   const isCreate = props.mode === 'create';
+
+  // Track the selected manager name for the preview card (create mode only)
+  const [previewManagerName, setPreviewManagerName] = useState<string | null>(null);
 
   // ── Create mode form ───────────────────────────────────────────────────────
   const createForm = useForm<CreateFormValues>({
@@ -271,14 +278,18 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   <FieldError id="role-error" message={errors.role?.message} />
                 </div>
                 <div>
-                  <Input
+                  <Label htmlFor="department" required>Department</Label>
+                  <select
+                    id="department"
                     {...register('department')}
-                    label="Department"
-                    placeholder="e.g. Engineering"
-                    required
-                    error={errors.department?.message}
-                    maxLength={100}
-                  />
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                  >
+                    <option value="">Select department</option>
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <FieldError id="department-error" message={errors.department?.message} />
                 </div>
                 <div>
                   <Label htmlFor="employment-type" required>Employment Type</Label>
@@ -331,7 +342,10 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 render={({ field }) => (
                   <HierarchyPicker
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(managerId, managerName) => {
+                      field.onChange(managerId);
+                      setPreviewManagerName(managerName ?? null);
+                    }}
                     label="Reporting Manager"
                     error={errors.reportingManagerId?.message}
                   />
@@ -426,12 +440,16 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     <span className="text-xs font-medium text-charcoal">{watchedDept || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate">Employment Type</span>
+                    <span className="text-xs text-slate">Type</span>
                     <span className="text-xs font-medium text-charcoal">{watchedEmpType || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate">Date of Joining</span>
+                    <span className="text-xs text-slate">DoJ</span>
                     <span className="text-xs font-medium text-charcoal">{watchedJoinDate || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate">Manager</span>
+                    <span className="text-xs font-medium text-charcoal">{previewManagerName || '—'}</span>
                   </div>
                   <div className="border-t border-sage/20 pt-2 flex justify-between items-center">
                     <span className="text-xs text-slate">Gross Monthly CTC</span>
@@ -452,7 +470,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 <div>
                   <p className="text-xs font-semibold text-forest mb-1">Invite Email</p>
                   <p className="text-xs text-slate leading-relaxed">
-                    After creation, an invite with login credentials and a first-login link will be sent to the employee&apos;s work email automatically.
+                    After creation, an invite with login credentials will be sent to the employee&apos;s email. They&apos;ll be required to change the password on first login (BL-001).
                   </p>
                 </div>
               </div>
@@ -506,13 +524,18 @@ export function EmployeeForm(props: EmployeeFormProps) {
             <FieldError id="edit-role-error" message={editErrors.role?.message} />
           </div>
           <div>
-            <Input
+            <Label htmlFor="edit-department" required>Department</Label>
+            <select
+              id="edit-department"
               {...editRegister('department')}
-              label="Department"
-              required
-              error={editErrors.department?.message}
-              maxLength={100}
-            />
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select department</option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <FieldError id="edit-department-error" message={editErrors.department?.message} />
           </div>
           <div>
             <Input

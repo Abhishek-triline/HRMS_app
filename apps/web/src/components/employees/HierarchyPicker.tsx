@@ -26,7 +26,11 @@ interface PickedManager {
 interface HierarchyPickerProps {
   /** Currently selected manager id (null = no manager) */
   value: string | null;
-  onChange: (managerId: string | null) => void;
+  /**
+   * Called when the selection changes.
+   * The second argument is the selected manager's display name (or null when cleared).
+   */
+  onChange: (managerId: string | null, managerName?: string | null) => void;
   /** ID of the employee being edited — excluded from results */
   excludeId?: string;
   label?: string;
@@ -109,10 +113,10 @@ export function HierarchyPicker({
   function selectManager(manager: PickedManager | null) {
     if (manager === null) {
       setSelectedDisplay(null);
-      onChange(null);
+      onChange(null, null);
     } else {
       setSelectedDisplay(manager);
-      onChange(manager.id);
+      onChange(manager.id, manager.name);
     }
     setQuery('');
     setOpen(false);
