@@ -11,7 +11,8 @@
     "./auth": "./src/auth.ts",
     "./errors": "./src/errors.ts",
     "./common": "./src/common.ts",
-    "./employees": "./src/employees.ts"
+    "./employees": "./src/employees.ts",
+    "./leave": "./src/leave.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

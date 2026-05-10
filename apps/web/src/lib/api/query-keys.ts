@@ -17,7 +17,12 @@ export const qk = {
   },
 
   leave: {
+    all: () => ['leave'] as const,
+    types: () => ['leave', 'types'] as const,
     balances: (employeeId: string) => ['leave', 'balances', employeeId] as const,
+    list: (q?: Partial<Record<string, unknown>>) => ['leave', 'list', q ?? {}] as const,
+    detail: (id: string) => ['leave', id] as const,
+    // Legacy aliases kept for any existing usage
     requests: (filters?: Record<string, unknown>) => ['leave', 'requests', filters] as const,
     request: (id: string) => ['leave', 'requests', id] as const,
   },
