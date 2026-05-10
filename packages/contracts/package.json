@@ -16,7 +16,9 @@
     "./attendance": "./src/attendance.ts",
     "./payroll": "./src/payroll.ts",
     "./performance": "./src/performance.ts",
-    "./notifications": "./src/notifications.ts"
+    "./notifications": "./src/notifications.ts",
+    "./audit": "./src/audit.ts",
+    "./configuration": "./src/configuration.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

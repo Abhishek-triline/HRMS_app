@@ -69,7 +69,7 @@ Items that are **safe to defer in development** but **MUST** be completed before
 
 | ID | Item | Severity in dev | Status | Owner | Verified |
 |---|---|---|---|---|---|
-| SEC-001 | Audit log REVOKE for app DB user | Crit-for-prod | Open | Ops + DBA | — |
+| SEC-001 / BUG-AUD-001 | Audit log REVOKE for app DB user (BL-047 / BL-048) | **High** — data integrity breach if exploited; MUST complete before any environment handling real employee data | Open | Ops + DBA | — |
 
 When an item closes, append the verification evidence (timestamp + verifier name) and move it out of "Open".
 
