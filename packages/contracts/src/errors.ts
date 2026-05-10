@@ -1,0 +1,81 @@
+/**
+ * Named error codes — canonical catalog from docs/HRMS_API.md § 13.
+ * Backend MUST emit one of these codes; frontend MUST map UI copy from this set.
+ * No generic validation error for the leave/regularisation conflicts (BL-010, DN-19).
+ */
+
+import { z } from 'zod';
+
+export const ErrorCode = {
+  // Generic / transport
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  INVALID_DATE_RANGE: 'INVALID_DATE_RANGE',
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_OWNER: 'NOT_OWNER',
+  NOT_FOUND: 'NOT_FOUND',
+  RATE_LIMITED: 'RATE_LIMITED',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+
+  // Auth
+  LOCKED: 'LOCKED', // 423 — 5-strikes lockout
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_INVALID: 'TOKEN_INVALID',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  PASSWORD_RESET_REQUIRED: 'PASSWORD_RESET_REQUIRED',
+
+  // Concurrency
+  VERSION_MISMATCH: 'VERSION_MISMATCH',
+
+  // Leave (BL-009 / BL-010 / BL-014)
+  LEAVE_OVERLAP: 'LEAVE_OVERLAP',
+  LEAVE_REG_CONFLICT: 'LEAVE_REG_CONFLICT',
+  INSUFFICIENT_BALANCE: 'INSUFFICIENT_BALANCE',
+
+  // Payroll (BL-031 / BL-034)
+  RUN_ALREADY_FINALISED: 'RUN_ALREADY_FINALISED',
+  PAYSLIP_IMMUTABLE: 'PAYSLIP_IMMUTABLE',
+
+  // Performance (BL-041)
+  CYCLE_CLOSED: 'CYCLE_CLOSED',
+  CYCLE_PHASE: 'CYCLE_PHASE',
+
+  // Hierarchy
+  CIRCULAR_REPORTING: 'CIRCULAR_REPORTING',
+} as const;
+
+export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];
+
+/**
+ * Standard error envelope returned by every API failure.
+ * Matches docs/HRMS_API.md § 13 exactly.
+ */
+export const ErrorEnvelopeSchema = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.record(z.unknown()).optional(),
+    ruleId: z.string().optional(), // e.g. "BL-009"
+  }),
+});
+
+export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
+
+/**
+ * Convenience helper for creating envelopes server-side.
+ * Use this — never inline an object literal — to keep shape stable.
+ */
+export function errorEnvelope(
+  code: ErrorCodeValue | string,
+  message: string,
+  options: { details?: Record<string, unknown>; ruleId?: string } = {},
+): ErrorEnvelope {
+  return {
+    error: {
+      code,
+      message,
+      ...(options.details ? { details: options.details } : {}),
+      ...(options.ruleId ? { ruleId: options.ruleId } : {}),
+    },
+  };
+}
