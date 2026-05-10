@@ -171,8 +171,8 @@
       .nx-s5{animation-delay:2.4s;} .nx-s6{animation-delay:1s;}    .nx-s7{animation-delay:2s;}
 
       /* Time-of-day gradient variants */
-      [data-nx-hero][data-tod="morning"] { background: linear-gradient(180deg, #FFD3A8 0%, #FBE4C8 30%, #C8E6DA 65%, #2D7A5F 100%); }
-      [data-nx-hero][data-tod="day"]     { background: linear-gradient(180deg, #87CEEB 0%, #B8E2EF 22%, #C8E6DA 45%, #6FBE9E 70%, #2D7A5F 90%, #1C3D2E 100%); }
+      [data-nx-hero][data-tod="morning"] { background: linear-gradient(180deg, #C97155 0%, #C8804D 22%, #5BAA85 55%, #2D7A5F 85%, #1C3D2E 100%); }
+      [data-nx-hero][data-tod="day"]     { background: linear-gradient(180deg, #3F8AA8 0%, #4A9C88 35%, #2D7A5F 70%, #1C3D2E 100%); }
       [data-nx-hero][data-tod="evening"] { background: linear-gradient(180deg, #5B3D6F 0%, #B85B6F 45%, #F4A56B 80%, #B85B6F 100%); }
       [data-nx-hero][data-tod="night"]   { background: linear-gradient(180deg, #0A1F2E 0%, #112A38 40%, #1C3D2E 100%); }
       /* Sun / moon colour per tod (recoloured shared markup) */
