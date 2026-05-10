@@ -40,3 +40,10 @@ apps/api/prisma/migrations/.tmp/
 
 # dev mail stub (BL email delivery in dev)
 /tmp/mail/
+
+# Claude Code — runtime agent logs (project-scoped, generated per machine).
+# settings.json, agents/, log-agent.sh, and view-log.sh stay tracked so the
+# team shares the hook configuration; only the runtime log artefacts are local.
+.claude/agents.log
+.claude/agents.txt
+.claude/settings.local.json
