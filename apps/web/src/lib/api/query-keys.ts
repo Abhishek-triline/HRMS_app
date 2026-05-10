@@ -6,6 +6,7 @@
 import type { AttendanceListQuery } from '@nexora/contracts/attendance';
 import type { RegularisationListQuery } from '@nexora/contracts/attendance';
 import type { PayrollRunListQuery, PayslipListQuery } from '@nexora/contracts/payroll';
+import type { CycleListQuery, ReviewListQuery } from '@nexora/contracts/performance';
 
 export const qk = {
   auth: {
@@ -69,9 +70,17 @@ export const qk = {
   taxConfig: () => ['config', 'tax'] as const,
 
   performance: {
-    cycles: ['performance', 'cycles'] as const,
-    cycle: (id: string) => ['performance', 'cycles', id] as const,
-    reviews: (cycleId: string) => ['performance', 'cycles', cycleId, 'reviews'] as const,
+    all: () => ['performance'] as const,
+    cycles: (q?: Partial<CycleListQuery>) => ['performance', 'cycles', q ?? {}] as const,
+    cycle: (id: string) => ['performance', 'cycle', id] as const,
+    reports: {
+      distribution: (cycleId: string) =>
+        ['performance', 'reports', 'distribution', cycleId] as const,
+      missing: (cycleId: string) =>
+        ['performance', 'reports', 'missing', cycleId] as const,
+    },
+    reviews: (q?: Partial<ReviewListQuery>) => ['performance', 'reviews', q ?? {}] as const,
+    review: (id: string) => ['performance', 'review', id] as const,
   },
 
   notifications: {
