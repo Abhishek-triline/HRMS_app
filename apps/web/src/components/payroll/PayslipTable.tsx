@@ -7,8 +7,9 @@
  *    In Review status, renders an "Edit Tax" action (PO-only).
  *    Always has a "View" link.
  *
- * 2. Personal payslip history (Employee/Manager): shows month, gross, tax,
- *    net, status, "View" and "Download PDF" actions.
+ * 2. Personal payslip history (Employee/Manager/Admin/PO): shows
+ *    Month / Working Days / LOP Days / Gross / Tax (TDS) / Net Pay / Status / Download
+ *    matching prototype/employee/my-payslips.html column set exactly.
  *
  * Mobile: cards instead of table rows at ≤768 px.
  */
@@ -95,6 +96,73 @@ function PayslipCard({ payslip, actions }: {
         <p className="text-xs text-umber">LOP: {payslip.lopDays} days</p>
       )}
       <div className="flex items-center gap-2 pt-1">{actions}</div>
+    </div>
+  );
+}
+
+// ── Personal history mobile card ──────────────────────────────────────────────
+
+function PersonalPayslipCard({ payslip, basePath, onDownload, downloadingId }: {
+  payslip: PayslipSummary;
+  basePath: string;
+  onDownload: (ps: PayslipSummary) => void;
+  downloadingId?: string;
+}) {
+  const monthLabel = `${MONTH_NAMES[payslip.month]} ${payslip.year}`;
+  return (
+    <div className="bg-white border border-sage/30 rounded-xl p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-semibold text-charcoal text-sm">{monthLabel}</p>
+          {payslip.lopDays > 0 && (
+            <p className="text-xs text-crimson italic mt-0.5">LOP deduction applied</p>
+          )}
+        </div>
+        <PayslipStatusBadge status={payslip.status} />
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <p className="text-slate">Working Days</p>
+          <p className="font-semibold text-charcoal">{payslip.workingDays}</p>
+        </div>
+        <div>
+          <p className="text-slate">LOP Days</p>
+          <p className={clsx('font-semibold', payslip.lopDays > 0 ? 'text-crimson' : 'text-charcoal')}>
+            {payslip.lopDays}
+          </p>
+        </div>
+        <div>
+          <p className="text-slate">Gross</p>
+          <p className="font-semibold text-charcoal"><MoneyDisplay paise={payslip.grossPaise} /></p>
+        </div>
+        <div>
+          <p className="text-slate">Tax (TDS)</p>
+          <p className="font-semibold text-charcoal"><MoneyDisplay paise={payslip.finalTaxPaise} /></p>
+        </div>
+        <div className="col-span-2">
+          <p className="text-slate">Net Pay</p>
+          <p className="font-semibold text-richgreen"><MoneyDisplay paise={payslip.netPayPaise} /></p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-1">
+        <Link
+          href={`${basePath}/${payslip.id}`}
+          className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors flex items-center gap-1"
+        >
+          View
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+        <button
+          type="button"
+          onClick={() => onDownload(payslip)}
+          disabled={downloadingId === payslip.id}
+          className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors disabled:opacity-50"
+        >
+          {downloadingId === payslip.id ? '…' : 'PDF'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -224,65 +292,72 @@ export function PayslipTable(props: PayslipTableProps) {
 
   return (
     <>
-      {/* Desktop table */}
+      {/* Desktop table — prototype column set:
+          Month / Working Days / LOP Days / Gross / Tax (TDS) / Net Pay / Status / Download */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm" aria-label="My payslip history">
           <thead>
             <tr className="bg-offwhite border-b border-sage/20">
-              <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Month</th>
-              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
-              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Tax</th>
-              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net Pay</th>
-              <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
-              <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Actions</th>
+              <th scope="col" className="text-left px-6 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Month</th>
+              <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Working Days</th>
+              <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">LOP Days</th>
+              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Gross</th>
+              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Tax (TDS)</th>
+              <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Net Pay</th>
+              <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Status</th>
+              <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Download</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-sage/10">
+          <tbody className="divide-y divide-sage/20">
             {payslips.length === 0 ? (
               <EmptyState message="No payslips yet. Your payslips will appear here after each pay run is finalised." />
             ) : (
               payslips.map((ps) => (
-                <tr key={ps.id} className="hover:bg-offwhite/60 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <span className="font-medium text-charcoal">
+                <tr key={ps.id} className="hover:bg-offwhite transition-colors">
+                  {/* Month column — with LOP icon + italic note */}
+                  <td className="px-6 py-4">
+                    <div className="font-semibold text-charcoal flex items-center gap-1.5">
+                      {ps.lopDays > 0 && (
+                        <svg className="w-3.5 h-3.5 text-umber shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
                       {MONTH_NAMES[ps.month]} {ps.year}
-                    </span>
+                    </div>
                     {ps.lopDays > 0 && (
-                      <span className="ml-2 text-xs text-umber">{ps.lopDays}d LOP</span>
+                      <p className="text-xs text-crimson italic mt-0.5">LOP deduction applied</p>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-right text-charcoal">
+                  <td className="px-4 py-4 text-slate text-center">{ps.workingDays}</td>
+                  <td className="px-4 py-4 text-center">
+                    {ps.lopDays > 0 ? (
+                      <span className="text-crimson font-bold">{ps.lopDays}</span>
+                    ) : (
+                      <span className="text-slate">0</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-right font-medium text-charcoal">
                     <MoneyDisplay paise={ps.grossPaise} />
                   </td>
-                  <td className="px-4 py-3.5 text-right text-charcoal">
+                  <td className="px-4 py-4 text-right text-slate">
                     <MoneyDisplay paise={ps.finalTaxPaise} />
                   </td>
-                  <td className="px-4 py-3.5 text-right font-semibold text-richgreen">
+                  <td className="px-4 py-4 text-right font-semibold text-richgreen">
                     <MoneyDisplay paise={ps.netPayPaise} />
                   </td>
-                  <td className="px-4 py-3.5 text-center">
+                  <td className="px-4 py-4">
                     <PayslipStatusBadge status={ps.status} />
                   </td>
-                  <td className="px-4 py-3.5 text-center">
-                    <div className="flex items-center justify-center gap-3">
-                      <Link
-                        href={`${basePath}/${ps.id}`}
-                        className="text-forest text-xs font-semibold hover:underline"
-                      >
-                        View
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => onDownload(ps)}
-                        disabled={downloadingId === ps.id}
-                        className={clsx(
-                          'text-xs font-semibold hover:underline',
-                          downloadingId === ps.id ? 'text-slate cursor-wait' : 'text-forest',
-                        )}
-                      >
-                        {downloadingId === ps.id ? 'Downloading…' : 'PDF'}
-                      </button>
-                    </div>
+                  <td className="px-4 py-4">
+                    <Link
+                      href={`${basePath}/${ps.id}`}
+                      className="text-forest font-semibold text-xs hover:text-emerald transition-colors flex items-center gap-1"
+                    >
+                      View
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
                   </td>
                 </tr>
               ))
@@ -299,27 +374,12 @@ export function PayslipTable(props: PayslipTableProps) {
           </p>
         ) : (
           payslips.map((ps) => (
-            <PayslipCard
+            <PersonalPayslipCard
               key={ps.id}
               payslip={ps}
-              actions={
-                <>
-                  <Link
-                    href={`${basePath}/${ps.id}`}
-                    className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors"
-                  >
-                    View
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => onDownload(ps)}
-                    disabled={downloadingId === ps.id}
-                    className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors disabled:opacity-50"
-                  >
-                    {downloadingId === ps.id ? '…' : 'PDF'}
-                  </button>
-                </>
-              }
+              basePath={basePath}
+              onDownload={onDownload}
+              downloadingId={downloadingId}
             />
           ))
         )}
