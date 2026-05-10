@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+ * Custom scrollbar
+ * ========================================================================= */
+@layer base {
+  :root {
+    --scrollbar-thumb: #C0CEC8;
+    --scrollbar-track: #F6F8F7;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+  }
+}
+
+/* ============================================================================
+ * Login page animations (ported from prototype/index.html inline styles)
+ * ========================================================================= */
+@layer utilities {
+  .animate-drift1 {
+    animation: drift1 16s ease-in-out infinite;
+  }
+  .animate-drift2 {
+    animation: drift2 20s ease-in-out infinite;
+  }
+  .animate-drift3 {
+    animation: drift3 18s ease-in-out infinite;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-shine {
+    background: linear-gradient(90deg, #C8E6DA 0%, #FFFFFF 50%, #C8E6DA 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 8s linear infinite;
+  }
+}
+
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.08); }
+}
+
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-35px, 35px) scale(1.1); }
+}
+
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, 40px) scale(0.92); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Card glow */
+.card-glow::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, rgba(200, 230, 218, 0.45), rgba(45, 122, 95, 0.0) 60%);
+  border-radius: 1.1rem;
+  z-index: -1;
+  filter: blur(14px);
+}
+
+.accent-bar {
+  width: 48px;
+  height: 3px;
+  background: linear-gradient(90deg, #C8E6DA, transparent);
+  border-radius: 999px;
+}
+
+/* ============================================================================
+ * Sidebar — forest-green layered background
+ * Sidebar <aside> automatically picks up the brand gradient.
+ * ========================================================================= */
+aside.nx-sidebar {
+  background:
+    linear-gradient(180deg, rgba(28, 61, 46, 0.97) 0%, rgba(20, 44, 33, 1) 100%);
+}
+
+/* ============================================================================
+ * Time-of-Day hero scene — [data-nx-hero][data-tod="..."]
+ * The hero panel changes colour + celestial decoration based on time of day.
+ * Production sets data-tod automatically from wall clock on the server.
+ * ========================================================================= */
+
+/* Base / Day */
+[data-nx-hero] {
+  background: linear-gradient(135deg, #1C3D2E 0%, #2D7A5F 100%);
+  color: white;
+  min-height: 120px;
+}
+
+/* Morning (5–11) — warm amber/green */
+[data-nx-hero][data-tod="morning"] {
+  background: linear-gradient(135deg, #1a3a2a 0%, #3d7a4a 40%, #c8862a 100%);
+}
+
+/* Day (11–17) — bright forest green */
+[data-nx-hero][data-tod="day"] {
+  background: linear-gradient(135deg, #1C3D2E 0%, #2D7A5F 60%, #3a9a6a 100%);
+}
+
+/* Evening (17–19) — deep amber/orange transition */
+[data-nx-hero][data-tod="evening"] {
+  background: linear-gradient(135deg, #1a2a1a 0%, #6b3a1a 50%, #c06020 100%);
+}
+
+/* Night (19–5) — deep charcoal/navy */
+[data-nx-hero][data-tod="night"] {
+  background: linear-gradient(135deg, #0a1a14 0%, #1a2a3a 60%, #1a2420 100%);
+}
+
+/* ============================================================================
+ * Celestial decorations within hero
+ * ========================================================================= */
+.nx-star {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+[data-nx-hero][data-tod="night"] .nx-star {
+  opacity: 1;
+}
+
+[data-nx-hero][data-tod="evening"] .nx-star {
+  opacity: 0.3;
+}
+
+/* Sun — visible in morning + day */
+.nx-sun {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  color: #fcd34d; /* amber-300 */
+}
+
+[data-nx-hero][data-tod="morning"] .nx-sun {
+  opacity: 0.7;
+  color: #f59e0b;
+}
+
+[data-nx-hero][data-tod="day"] .nx-sun {
+  opacity: 0.8;
+  color: #fcd34d;
+}
+
+/* Moon — visible at night */
+.nx-moon {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+[data-nx-hero][data-tod="night"] .nx-moon {
+  opacity: 0.7;
+}
+
+/* Hero blobs */
+.nx-b1 { animation: nx-blob1 14s ease-in-out infinite; }
+.nx-b2 { animation: nx-blob2 18s ease-in-out infinite; }
+
+@keyframes nx-blob1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(28px, -22px) scale(1.08); }
+}
+
+@keyframes nx-blob2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-32px, 18px) scale(1.10); }
+}
+
+/* Star twinkle */
+.nx-s2 { animation: twinkle 3.2s ease-in-out infinite; }
+.nx-s3 { animation: twinkle 4.1s ease-in-out infinite 0.7s; }
+.nx-s4 { animation: twinkle 2.8s ease-in-out infinite 1.4s; }
+.nx-s5 { animation: twinkle 3.7s ease-in-out infinite 0.3s; }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* Sun pulse */
+.nx-celestial {
+  animation: nx-sun-pulse 5s ease-in-out infinite;
+}
+
+@keyframes nx-sun-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+
+/* ============================================================================
+ * Reduced motion — gates ALL animations
+ * ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift1,
+  .animate-drift2,
+  .animate-drift3,
+  .animate-float,
+  .animate-shine,
+  .nx-b1,
+  .nx-b2,
+  .nx-s2,
+  .nx-s3,
+  .nx-s4,
+  .nx-s5,
+  .nx-celestial {
+    animation: none !important;
+  }
+
+  .animate-shine {
+    background: #C8E6DA;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
