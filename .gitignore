@@ -38,6 +38,9 @@ Thumbs.db
 # Prisma
 apps/api/prisma/migrations/.tmp/
 
+# API runtime logs (JSONL — viewable via .claude/view-api-log.sh)
+apps/api/logs/
+
 # dev mail stub (BL email delivery in dev)
 /tmp/mail/
 
