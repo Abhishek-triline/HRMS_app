@@ -7,6 +7,7 @@ import type { AttendanceListQuery } from '@nexora/contracts/attendance';
 import type { RegularisationListQuery } from '@nexora/contracts/attendance';
 import type { PayrollRunListQuery, PayslipListQuery } from '@nexora/contracts/payroll';
 import type { CycleListQuery, ReviewListQuery } from '@nexora/contracts/performance';
+import type { NotificationFilters } from './notifications';
 
 export const qk = {
   auth: {
@@ -84,7 +85,8 @@ export const qk = {
   },
 
   notifications: {
-    list: ['notifications'] as const,
-    unreadCount: ['notifications', 'unread-count'] as const,
+    all: ['notifications'] as const,
+    list: (filters?: NotificationFilters) => ['notifications', 'list', filters ?? {}] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
   },
 } as const;

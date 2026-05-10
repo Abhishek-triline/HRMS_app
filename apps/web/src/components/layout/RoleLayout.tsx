@@ -10,6 +10,10 @@ interface RoleLayoutProps {
   currentPath: string;
   /** Page title shown in the TopBar left slot */
   pageTitle?: string;
+  /**
+   * @deprecated Phase 0 compat shim — no longer used.
+   * The bell now reads count live from useUnreadCount.
+   */
   hasUnread?: boolean;
 }
 
@@ -18,6 +22,17 @@ function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return (parts[0]?.[0] ?? '').toUpperCase();
   return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
+}
+
+/** Derive the notifications page path from the user's role. */
+function notificationsPath(role: Role): string {
+  switch (role) {
+    case 'Admin':         return '/admin/notifications';
+    case 'Manager':       return '/manager/notifications';
+    case 'Employee':      return '/employee/notifications';
+    case 'PayrollOfficer': return '/payroll/notifications';
+    default:              return '/notifications';
+  }
 }
 
 /**
@@ -30,10 +45,10 @@ export function RoleLayout({
   children,
   currentPath,
   pageTitle,
-  hasUnread = false,
 }: RoleLayoutProps) {
   const role = user.role as Role;
   const initials = getInitials(user.name);
+  const notifHref = notificationsPath(role);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -52,7 +67,7 @@ export function RoleLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar
           user={user}
-          hasUnread={hasUnread}
+          notificationsHref={notifHref}
           burgerSlot={
             <MobileDrawerWrapper
               role={role}

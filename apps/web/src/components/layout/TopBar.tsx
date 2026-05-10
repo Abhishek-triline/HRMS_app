@@ -1,3 +1,12 @@
+'use client';
+
+/**
+ * TopBar — dashboard header (client component, Phase 6+).
+ *
+ * Now a client component because NotificationBell uses useUnreadCount (client hook).
+ * Renders the live bell + user avatar cluster on the right.
+ */
+
 import Link from 'next/link';
 import type { AuthUser } from '@nexora/contracts/auth';
 import { NotificationBell } from './NotificationBell';
@@ -6,8 +15,8 @@ interface TopBarProps {
   user: AuthUser;
   /** Page title displayed on the left */
   children?: React.ReactNode;
-  /** Show unread dot on notification bell */
-  hasUnread?: boolean;
+  /** Role-prefixed href for the notification bell, e.g. "/admin/notifications" */
+  notificationsHref: string;
   /** The burger button rendered by MobileDrawer */
   burgerSlot?: React.ReactNode;
 }
@@ -19,7 +28,7 @@ function getInitials(name: string): string {
   return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
 }
 
-export function TopBar({ user, children, hasUnread = false, burgerSlot }: TopBarProps) {
+export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBarProps) {
   const initials = getInitials(user.name);
 
   return (
@@ -41,8 +50,8 @@ export function TopBar({ user, children, hasUnread = false, burgerSlot }: TopBar
 
       {/* Right cluster */}
       <div className="flex items-center gap-2.5 flex-shrink-0">
-        {/* Notification bell */}
-        <NotificationBell hasUnread={hasUnread} />
+        {/* Live notification bell */}
+        <NotificationBell href={notificationsHref} />
 
         {/* Avatar + name */}
         <Link
