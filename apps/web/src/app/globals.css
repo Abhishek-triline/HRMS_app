@@ -101,12 +101,44 @@
 }
 
 /* ============================================================================
- * Sidebar — forest-green layered background
- * Sidebar <aside> automatically picks up the brand gradient.
+ * Sidebar — forest-green layered atmospheric background
+ * Ported from prototype/assets/theme.js sidebarCSS block.
  * ========================================================================= */
-aside.nx-sidebar {
+aside {
+  position: relative;
+  isolation: isolate;
   background:
-    linear-gradient(180deg, rgba(28, 61, 46, 0.97) 0%, rgba(20, 44, 33, 1) 100%);
+    linear-gradient(115deg, transparent 35%, rgba(200, 230, 218, 0.06) 50%, transparent 65%),
+    radial-gradient(ellipse 80% 45% at 50% 0%, rgba(111, 190, 158, 0.22), transparent 70%),
+    radial-gradient(ellipse 90% 40% at 50% 100%, rgba(15, 46, 34, 0.55), transparent 65%),
+    linear-gradient(180deg, #1C3D2E 0%, #163528 50%, #0F2E22 100%) !important;
+}
+
+aside::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+aside::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 240px;
+  background: radial-gradient(ellipse at top, rgba(200, 230, 218, 0.15), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+aside > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ============================================================================
