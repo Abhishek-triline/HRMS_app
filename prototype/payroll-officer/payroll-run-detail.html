@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payroll Run Detail — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+</head>
+<body class="font-body bg-offwhite">
+<div class="flex h-screen overflow-hidden">
+
+  <aside class="w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">
+    <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/10"><div class="w-8 h-8 bg-mint rounded-lg flex items-center justify-center"><svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div><span class="font-heading text-base font-bold">Nexora HRMS</span></div>
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+      <a href="payroll-runs.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald/20 text-white border-l-2 border-mint font-medium text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Payroll Runs</a>
+      <a href="reversal-history.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Reversals</a>
+      <a href="reports.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Reports</a>
+      <div class="px-3 pt-4 pb-1"><p class="text-white/40 text-xs font-semibold uppercase tracking-widest">My Records</p></div>
+      <a href="my-leave.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>My Leave</a>
+      <a href="my-attendance.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>My Attendance</a>
+      <a href="my-payslips.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>My Payslips</a>
+      <a href="my-reviews.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>My Review</a>
+      <div class="my-3 border-t border-white/10"></div>
+      <a href="../index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-crimson/20 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Sign Out</a>
+    </nav>
+    <div class="px-4 py-4 border-t border-white/10"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold">NV</div><div class="min-w-0"><div class="text-xs font-semibold text-white truncate">Neha Verma</div></div></div></div>
+  </aside>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b border-sage/30 flex items-center justify-between px-6" style="height:60px;">
+      <div class="flex items-center gap-3"><a href="payroll-runs.html" class="text-slate hover:text-forest"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a><div><h1 class="font-heading text-lg font-bold text-charcoal">May 2026 Payroll Run</h1><p class="text-xs text-slate">Run ID PR-2026-05 · Draft</p></div></div>
+      <div class="flex items-center gap-3">
+        <span class="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Draft</span>
+        <div class="w-8 h-8 rounded-full bg-forest flex items-center justify-center text-white text-xs font-bold">NV</div>
+        <div class="hidden sm:block">
+          <div class="text-sm font-semibold text-charcoal leading-tight">Neha Verma</div>
+          <span class="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">Payroll Officer</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-6 py-6">
+
+      <!-- Summary tiles -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-4"><div class="text-xs font-semibold text-slate uppercase mb-1">Period</div><div class="font-heading text-base font-bold text-charcoal">1–31 May</div><p class="text-xs text-slate mt-1">22 working days</p></div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-4"><div class="text-xs font-semibold text-slate uppercase mb-1">Employees</div><div class="font-heading text-2xl font-bold text-charcoal">247</div><p class="text-xs text-slate mt-1">3 pro-rated</p></div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-4"><div class="text-xs font-semibold text-slate uppercase mb-1">Gross</div><div class="font-heading text-xl font-bold text-charcoal">₹2,41,15,200</div></div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-4"><div class="text-xs font-semibold text-slate uppercase mb-1">LOP Deduction</div><div class="font-heading text-xl font-bold text-crimson">₹48,200</div><p class="text-xs text-slate mt-1">14 LOP days · 7 emp</p></div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-4"><div class="text-xs font-semibold text-slate uppercase mb-1">Net (estimated)</div><div class="font-heading text-xl font-bold text-richgreen">₹2,02,12,490</div></div>
+      </div>
+
+      <!-- Locked banner -->
+      <div class="bg-umberbg/40 border border-umber/30 rounded-xl px-5 py-4 mb-5 flex items-start gap-3">
+        <svg class="w-5 h-5 text-umber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <div class="flex-1"><div class="text-sm font-semibold text-charcoal">Awaiting Admin finalisation</div><div class="text-xs text-slate mt-0.5">You can review, recalculate, and adjust this run. Only <strong>Admin (Priya Sharma)</strong> can finalise. Finalisation locks all 247 payslips permanently.</div></div>
+        <button class="border border-sage/50 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate hover:bg-white">Recalculate</button>
+        <button class="border border-sage/50 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate hover:bg-white">Notify Admin</button>
+      </div>
+
+      <!-- Filters + Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-sage/20">
+          <h3 class="text-sm font-semibold text-charcoal">Employee Payslips</h3>
+          <div class="flex gap-2">
+            <input placeholder="Search…" class="border border-sage/50 rounded-lg px-3 py-1.5 text-xs bg-white" />
+            <select class="border border-sage/50 rounded-lg px-3 py-1.5 text-xs bg-white"><option>All</option><option>With LOP</option><option>Pro-rated</option></select>
+          </div>
+        </div>
+        <table class="w-full">
+          <thead><tr class="bg-offwhite border-b border-sage/20"><th class="text-left text-xs font-semibold text-slate px-5 py-3 uppercase">Employee</th><th class="text-left text-xs font-semibold text-slate px-3 py-3 uppercase">EMP Code</th><th class="text-right text-xs font-semibold text-slate px-3 py-3 uppercase">Gross</th><th class="text-center text-xs font-semibold text-slate px-3 py-3 uppercase">LOP</th><th class="text-right text-xs font-semibold text-slate px-3 py-3 uppercase">LOP Deduction</th><th class="text-right text-xs font-semibold text-slate px-3 py-3 uppercase">Tax</th><th class="text-right text-xs font-semibold text-slate px-3 py-3 uppercase">Net</th><th class="text-center text-xs font-semibold text-slate px-3 py-3 uppercase">Slip</th></tr></thead>
+          <tbody class="divide-y divide-sage/10 text-sm">
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3 font-medium text-charcoal">Arjun Kapoor</td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2024-0001</td><td class="px-3 py-3 text-right text-charcoal">₹98,000</td><td class="px-3 py-3 text-center text-slate">0</td><td class="px-3 py-3 text-right text-slate">—</td><td class="px-3 py-3 text-right text-slate">₹9,383</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹88,417</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3"><div class="flex items-center gap-2"><span class="font-medium text-charcoal">Pooja Reddy</span><span class="bg-mint text-forest text-xs font-bold px-2 py-0.5 rounded">Pro-rated</span></div><p class="text-xs text-slate mt-0.5">Joined 15 May</p></td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2025-0003</td><td class="px-3 py-3 text-right text-charcoal">₹43,548</td><td class="px-3 py-3 text-center text-slate">0</td><td class="px-3 py-3 text-right text-slate">—</td><td class="px-3 py-3 text-right text-slate">₹2,100</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹41,248</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3 font-medium text-charcoal">Rahul Verma</td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2022-0044</td><td class="px-3 py-3 text-right text-charcoal">₹1,45,000</td><td class="px-3 py-3 text-center text-crimson font-semibold">2</td><td class="px-3 py-3 text-right text-crimson font-semibold">₹11,290</td><td class="px-3 py-3 text-right text-slate">₹18,200</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹1,15,310</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3 font-medium text-charcoal">Sneha Patel</td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2024-0015</td><td class="px-3 py-3 text-right text-charcoal">₹85,000</td><td class="px-3 py-3 text-center text-crimson font-semibold">3</td><td class="px-3 py-3 text-right text-crimson font-semibold">₹11,591</td><td class="px-3 py-3 text-right text-slate">₹7,200</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹66,209</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3 font-medium text-charcoal">Vikram Nair</td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2023-0008</td><td class="px-3 py-3 text-right text-charcoal">₹1,12,000</td><td class="px-3 py-3 text-center text-slate">0</td><td class="px-3 py-3 text-right text-slate">—</td><td class="px-3 py-3 text-right text-slate">₹13,150</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹98,850</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+            <tr class="hover:bg-offwhite/50"><td class="px-5 py-3 font-medium text-charcoal">Dhruv Singh</td><td class="px-3 py-3 font-mono text-xs text-forest">EMP-2023-0021</td><td class="px-3 py-3 text-right text-charcoal">₹95,000</td><td class="px-3 py-3 text-center text-slate">0</td><td class="px-3 py-3 text-right text-slate">—</td><td class="px-3 py-3 text-right text-slate">₹9,100</td><td class="px-3 py-3 text-right font-semibold text-richgreen">₹85,900</td><td class="px-3 py-3 text-center"><a href="payslip.html" class="text-xs text-emerald font-semibold hover:underline">View</a></td></tr>
+          </tbody>
+        </table>
+        <div class="flex justify-between items-center px-5 py-3 border-t border-sage/20 text-xs text-slate">
+          <span>Showing 6 of 247 payslips</span>
+          <div class="flex gap-1.5"><button class="border border-sage/50 px-3 py-1.5 rounded hover:bg-white">Prev</button><button class="bg-forest text-white px-3 py-1.5 rounded">1</button><button class="border border-sage/50 px-3 py-1.5 rounded hover:bg-white">2</button><button class="border border-sage/50 px-3 py-1.5 rounded hover:bg-white">Next</button></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>

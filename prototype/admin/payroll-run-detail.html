@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payroll Run Detail — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+</head>
+<body class="font-body bg-offwhite text-charcoal">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 h-full w-60 bg-forest text-white flex flex-col z-30">
+    <div class="px-6 py-5 border-b border-white/10">
+      <span class="font-heading font-bold text-lg tracking-tight">Nexora HRMS</span>
+    </div>
+    <nav class="flex-1 py-4 overflow-y-auto">
+      <a href="dashboard.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="employees.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-5-3.5M9 20H4v-2a4 4 0 015-3.5m0 0a4 4 0 118 0m-8 0V17m8 0V17M12 12a4 4 0 100-8 4 4 0 000 8z"/></svg>
+        Employees
+      </a>
+      <a href="leave-queue.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Leave
+      </a>
+      <a href="attendance.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Attendance
+      </a>
+      <a href="payroll-runs.html" class="flex items-center gap-3 px-5 py-2.5 text-white text-sm bg-white/10 border-l-2 border-mint font-medium">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Payroll
+      </a>
+      <a href="performance-cycles.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Performance
+      </a>
+      <a href="config.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        Configuration
+      </a>
+      <div class="my-3 mx-5 border-t border-white/10"></div>
+      <a href="#" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        My Profile
+      </a>
+      <a href="../index.html" class="flex items-center gap-3 px-5 py-2.5 text-white/70 hover:bg-white/5 hover:text-white transition-colors text-sm">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Top Bar -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white shadow-sm flex items-center justify-between px-8 z-20">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-slate mb-0.5">
+        <a href="payroll-runs.html" class="hover:text-forest transition-colors">Payroll</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="text-charcoal font-medium">PR-2026-05</span>
+      </div>
+      <h1 class="font-heading font-bold text-xl text-charcoal leading-tight">Payroll Run — May 2026</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-medium text-charcoal">Priya Sharma</span>
+      <span class="bg-mint text-forest px-2 py-0.5 rounded-full text-xs font-bold">Admin</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="ml-60 pt-16 min-h-screen bg-offwhite">
+    <div class="p-8">
+
+      <!-- Summary Stat Cards -->
+      <div class="grid grid-cols-4 gap-5 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+          <p class="text-xs text-slate font-semibold uppercase tracking-wider mb-2">Run Status</p>
+          <div class="flex items-center gap-2">
+            <span class="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Draft</span>
+          </div>
+          <p class="text-xs text-slate mt-2">Initiated: 28 May 2026</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+          <p class="text-xs text-slate font-semibold uppercase tracking-wider mb-2">Employees</p>
+          <p class="font-heading font-bold text-3xl text-charcoal">231</p>
+          <p class="text-xs text-slate mt-1">3 pro-rated</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+          <p class="text-xs text-slate font-semibold uppercase tracking-wider mb-2">Gross Total</p>
+          <p class="font-heading font-bold text-2xl text-charcoal">₹1,24,37,850</p>
+          <p class="text-xs text-slate mt-1">Before deductions</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+          <p class="text-xs text-slate font-semibold uppercase tracking-wider mb-2">Net Total</p>
+          <p class="font-heading font-bold text-xl text-slate italic">Pending</p>
+          <p class="text-xs text-slate mt-1">Available after finalise</p>
+        </div>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="flex gap-6">
+
+        <!-- Left — Payslip Table -->
+        <div class="flex-1 min-w-0">
+          <div class="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden mb-4">
+            <div class="px-6 py-4 border-b border-sage/20 flex items-center justify-between">
+              <h3 class="font-heading font-semibold text-base text-charcoal">Employee Payslips</h3>
+              <span class="text-xs text-slate">Showing 1–6 of 231</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-offwhite border-b border-sage/20">
+                    <th class="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">#</th>
+                    <th class="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employee</th>
+                    <th class="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">EMP Code</th>
+                    <th class="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
+                    <th class="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">LOP Days</th>
+                    <th class="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">LOP Deduction</th>
+                    <th class="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Tax</th>
+                    <th class="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net Pay</th>
+                    <th class="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Payslip</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sage/20">
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">1</td>
+                    <td class="px-4 py-3.5 font-medium text-charcoal">Arjun Kapoor</td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2024-0001</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹98,000</td>
+                    <td class="px-4 py-3.5 text-center text-slate">0</td>
+                    <td class="px-4 py-3.5 text-right text-slate">—</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹9,383</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹88,417</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">2</td>
+                    <td class="px-4 py-3.5 font-medium text-charcoal">Meera Nair</td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2023-0008</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹1,12,000</td>
+                    <td class="px-4 py-3.5 text-center text-slate">0</td>
+                    <td class="px-4 py-3.5 text-right text-slate">—</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹13,150</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹98,650</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">3</td>
+                    <td class="px-4 py-3.5">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-charcoal">Pooja Reddy</span>
+                        <span class="bg-mint text-forest text-xs font-bold px-2 py-0.5 rounded">Pro-rated</span>
+                      </div>
+                      <p class="text-xs text-slate mt-0.5">Joined 15 May 2026</p>
+                    </td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2025-0003</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹43,548</td>
+                    <td class="px-4 py-3.5 text-center text-slate">0</td>
+                    <td class="px-4 py-3.5 text-right text-slate">—</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹2,100</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹41,248</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">4</td>
+                    <td class="px-4 py-3.5 font-medium text-charcoal">Rahul Verma</td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2022-0044</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹1,45,000</td>
+                    <td class="px-4 py-3.5 text-center text-crimson font-semibold">2</td>
+                    <td class="px-4 py-3.5 text-right text-crimson font-semibold">₹11,290</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹18,200</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹1,15,310</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">5</td>
+                    <td class="px-4 py-3.5 font-medium text-charcoal">Kiran Desai</td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2023-0061</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹76,000</td>
+                    <td class="px-4 py-3.5 text-center text-slate">0</td>
+                    <td class="px-4 py-3.5 text-right text-slate">—</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹5,820</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹69,980</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-4 py-3.5 text-slate text-xs">6</td>
+                    <td class="px-4 py-3.5 font-medium text-charcoal">Ananya Iyer</td>
+                    <td class="px-4 py-3.5 font-mono text-xs text-forest">EMP-2024-0089</td>
+                    <td class="px-4 py-3.5 text-right text-charcoal">₹88,500</td>
+                    <td class="px-4 py-3.5 text-center text-slate">0</td>
+                    <td class="px-4 py-3.5 text-right text-slate">—</td>
+                    <td class="px-4 py-3.5 text-right text-slate">₹8,100</td>
+                    <td class="px-4 py-3.5 text-right font-semibold text-richgreen">₹80,200</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <a href="payslip.html" class="text-forest text-xs font-semibold hover:underline">View</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t border-sage/20 flex items-center justify-between">
+              <p class="text-xs text-slate">Showing 1–6 of 231 employees</p>
+              <div class="flex items-center gap-1">
+                <button class="px-3 py-1.5 rounded text-xs border border-sage text-slate hover:border-forest hover:text-forest transition-colors">&larr; Prev</button>
+                <button class="px-3 py-1.5 rounded text-xs bg-forest text-white font-semibold">1</button>
+                <button class="px-3 py-1.5 rounded text-xs border border-sage text-slate hover:border-forest hover:text-forest transition-colors">2</button>
+                <button class="px-3 py-1.5 rounded text-xs border border-sage text-slate hover:border-forest hover:text-forest transition-colors">3</button>
+                <span class="px-2 text-slate text-xs">...</span>
+                <button class="px-3 py-1.5 rounded text-xs border border-sage text-slate hover:border-forest hover:text-forest transition-colors">39</button>
+                <button class="px-3 py-1.5 rounded text-xs border border-sage text-slate hover:border-forest hover:text-forest transition-colors">Next &rarr;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="w-72 shrink-0 flex flex-col gap-5">
+
+          <!-- Run Summary Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+            <h3 class="font-heading font-semibold text-sm text-charcoal mb-4">Run Summary</h3>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-slate">Total Employees</span>
+                <span class="text-sm font-semibold text-charcoal">231</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-slate">LOP Days (total)</span>
+                <span class="text-sm font-semibold text-crimson">47</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-slate">Total Tax (TDS)</span>
+                <span class="text-sm font-semibold text-charcoal">₹14,55,510</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-slate">Pro-rated Payslips</span>
+                <span class="text-sm font-semibold text-charcoal">3</span>
+              </div>
+              <div class="pt-2 border-t border-sage/20 flex justify-between items-center">
+                <span class="text-sm text-slate">Initiated By</span>
+                <span class="text-sm font-semibold text-charcoal">Priya Sharma</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+            <h3 class="font-heading font-semibold text-sm text-charcoal mb-3">Review &amp; Finalise</h3>
+            <p class="text-xs text-slate leading-relaxed mb-4">
+              Once finalised, this run is <span class="font-semibold text-umber">permanently locked</span>. All payslips become immutable records and cannot be edited.
+            </p>
+            <button onclick="document.getElementById('finaliseModal').classList.remove('hidden')"
+              class="w-full bg-forest hover:bg-emerald text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+              Finalise Payroll
+            </button>
+          </div>
+
+          <!-- Fiscal Note Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
+            <h3 class="font-heading font-semibold text-sm text-charcoal mb-2">Fiscal Note</h3>
+            <p class="text-xs text-slate leading-relaxed">
+              Fiscal Year: <span class="font-semibold text-forest">April 2026 – March 2027</span><br/>
+              Indian Fiscal Calendar — Fixed. Payroll months are locked to this cycle.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Finalise Modal Overlay -->
+  <div id="finaliseModal" class="hidden fixed inset-0 bg-charcoal/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="p-6 border-b border-sage/20">
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-9 h-9 rounded-full bg-umberbg flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-umber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          </div>
+          <h2 class="font-heading font-bold text-lg text-charcoal">Finalise Payroll Run?</h2>
+        </div>
+        <p class="text-sm text-slate ml-12">This action is permanent and cannot be undone.</p>
+      </div>
+      <div class="p-6">
+        <div class="bg-offwhite rounded-xl p-4 mb-5 space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate">Run ID</span>
+            <span class="font-mono font-semibold text-forest">PR-2026-05</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate">Month</span>
+            <span class="font-semibold text-charcoal">May 2026</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate">Employees</span>
+            <span class="font-semibold text-charcoal">231</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate">Gross Total</span>
+            <span class="font-semibold text-charcoal">₹1,24,37,850</span>
+          </div>
+          <div class="flex justify-between text-sm pt-2 border-t border-sage/20">
+            <span class="text-slate">Initiated By</span>
+            <span class="font-semibold text-charcoal">Priya Sharma</span>
+          </div>
+        </div>
+        <p class="text-xs text-slate mb-3 leading-relaxed">
+          By confirming, all 231 payslips will be locked. Net totals will be computed and recorded. This run will appear as <span class="font-bold text-richgreen">Finalised</span> in all future reports.
+        </p>
+        <div class="bg-mint/40 border border-emerald/30 rounded-lg p-3 mb-5 flex items-start gap-2">
+          <svg class="w-4 h-4 text-emerald mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <p class="text-[11px] text-charcoal leading-relaxed">
+            <span class="font-semibold">Concurrent finalisation guard:</span> if another Admin or PayrollOfficer
+            submits this run at the same time, only one submission succeeds. The other will be safely rejected with
+            a clear notice — the run is never double-locked.
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <button class="flex-1 bg-forest hover:bg-emerald text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+            Confirm Finalise
+          </button>
+          <button onclick="document.getElementById('finaliseModal').classList.add('hidden')"
+            class="flex-1 border border-sage text-slate hover:border-forest hover:text-forest px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>

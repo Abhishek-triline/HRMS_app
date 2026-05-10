@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+</head>
+<body class="font-body bg-offwhite">
+
+  <!-- Layout wrapper -->
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">
+      <!-- Logo -->
+      <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+        <div class="w-8 h-8 bg-mint rounded-lg flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+        <span class="font-heading text-base font-bold">Nexora HRMS</span>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 px-3 py-4 space-y-0.5">
+        <!-- Dashboard — active -->
+        <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald/20 text-white border-l-2 border-mint font-medium text-sm">
+          <svg class="w-4.5 h-4.5 w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Dashboard
+        </a>
+        <!-- Employees -->
+        <a href="employees.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Employees
+        </a>
+        <!-- Leave -->
+        <a href="leave-queue.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Leave
+        </a>
+        <!-- Attendance -->
+        <a href="attendance.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Attendance
+        </a>
+        <!-- Payroll -->
+        <a href="payroll-runs.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Payroll
+        </a>
+        <!-- Performance -->
+        <a href="performance-cycles.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Performance
+        </a>
+        <!-- Configuration -->
+        <a href="config.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Configuration
+        </a>
+
+        <!-- Divider -->
+        <div class="my-3 border-t border-white/10"></div>
+
+        <!-- My Profile -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          My Profile
+        </a>
+        <!-- Sign Out -->
+        <a href="../index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-crimson/20 text-sm transition-colors">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          Sign Out
+        </a>
+      </nav>
+
+      <!-- Bottom user info -->
+      <div class="px-4 py-4 border-t border-white/10">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">PS</div>
+          <div class="min-w-0">
+            <div class="text-xs font-semibold text-white truncate">Priya Sharma</div>
+            <div class="text-xs text-white/50 truncate">priya@nexora.in</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- TOP BAR -->
+      <header class="h-15 bg-white border-b border-sage/30 flex items-center justify-between px-6 flex-shrink-0" style="height:60px;">
+        <div>
+          <h1 class="font-heading text-lg font-bold text-charcoal">Dashboard</h1>
+          <p class="text-xs text-slate">Wednesday, 7 May 2026</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Notification bell -->
+          <button class="relative w-9 h-9 rounded-lg border border-sage/40 flex items-center justify-center text-slate hover:bg-offwhite transition-colors">
+            <svg class="w-4.5 h-4.5 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-crimson rounded-full"></span>
+          </button>
+          <!-- User -->
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-forest flex items-center justify-center text-white text-xs font-bold">PS</div>
+            <div class="hidden sm:block">
+              <div class="text-sm font-semibold text-charcoal leading-tight">Priya Sharma</div>
+              <div class="flex items-center gap-1.5">
+                <span class="bg-mint text-forest text-xs font-bold px-2 py-0.5 rounded">Admin</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PAGE CONTENT -->
+      <main class="flex-1 overflow-y-auto px-6 py-6">
+
+        <!-- Greeting hero (forest scene, time-of-day aware) -->
+        <div data-nx-hero data-tod="day" class="relative rounded-2xl overflow-hidden mb-6 shadow-lg shadow-forest/10">
+          <!-- Decorative scene -->
+          <svg class="nx-dotgrid absolute inset-0 w-full h-full opacity-[0.10] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+            <defs><pattern id="nxGreetDots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.4" fill="#FFFFFF"/></pattern></defs>
+            <rect width="100%" height="100%" fill="url(#nxGreetDots)"/>
+          </svg>
+          <div class="nx-b1 absolute -top-16 -left-12 w-[18rem] h-[18rem] rounded-full bg-emerald/40 blur-3xl pointer-events-none"></div>
+          <div class="nx-b2 absolute -bottom-20 -right-16 w-[20rem] h-[20rem] rounded-full bg-mint/25 blur-3xl pointer-events-none"></div>
+          <div class="nx-sun absolute -top-6 -right-6 pointer-events-none">
+            <svg width="160" height="160" viewBox="0 0 220 220" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="nx-celestial">
+              <circle cx="110" cy="110" r="40" fill="currentColor" fill-opacity="0.30"/>
+              <circle cx="110" cy="110" r="55" stroke-opacity="0.4"/>
+              <circle cx="110" cy="110" r="74" stroke-opacity="0.18"/>
+              <g stroke-opacity="0.35">
+                <line x1="110" y1="20"  x2="110" y2="40"/><line x1="110" y1="180" x2="110" y2="200"/>
+                <line x1="20"  y1="110" x2="40"  y2="110"/><line x1="180" y1="110" x2="200" y2="110"/>
+                <line x1="46"  y1="46"  x2="60"  y2="60"/><line x1="160" y1="160" x2="174" y2="174"/>
+                <line x1="160" y1="60"  x2="174" y2="46"/><line x1="46"  y1="174" x2="60"  y2="160"/>
+              </g>
+            </svg>
+          </div>
+          <!-- Stars (visible at night) -->
+          <div class="nx-stars absolute inset-0 pointer-events-none">
+            <span class="nx-star      absolute top-[24%] left-[14%] w-1   h-1   rounded-full bg-white"></span>
+            <span class="nx-star nx-s2 absolute top-[40%] left-[30%] w-0.5 h-0.5 rounded-full bg-white"></span>
+            <span class="nx-star nx-s3 absolute top-[20%] left-[48%] w-1   h-1   rounded-full bg-white"></span>
+            <span class="nx-star nx-s4 absolute top-[44%] left-[68%] w-0.5 h-0.5 rounded-full bg-white"></span>
+            <span class="nx-star nx-s5 absolute top-[28%] left-[80%] w-1   h-1   rounded-full bg-white"></span>
+          </div>
+          <!-- Foreground -->
+          <div class="relative px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 class="font-heading text-2xl font-bold text-white">Good morning, Priya</h2>
+              <p class="text-sm text-mint/80 mt-0.5">Wednesday · 7 May 2026</p>
+            </div>
+            <span class="bg-white/15 backdrop-blur-sm border border-white/30 text-white text-xs uppercase tracking-widest font-semibold px-3 py-1.5 rounded-full">May 2026 · FY 2026-27</span>
+          </div>
+        </div>
+
+        <!-- KPI strip — 4 minimal tiles -->
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+
+          <a href="employees.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="text-[11px] font-semibold text-slate uppercase tracking-widest mb-2">Employees</div>
+            <div class="font-heading text-3xl font-bold text-charcoal leading-none">247</div>
+            <div class="text-xs text-slate mt-2">231 active · 12 on notice · 4 exited</div>
+          </a>
+
+          <a href="leave-queue.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="text-[11px] font-semibold text-slate uppercase tracking-widest mb-2">On Leave Today</div>
+            <div class="font-heading text-3xl font-bold text-charcoal leading-none">18</div>
+            <div class="text-xs text-slate mt-2">7 starting today</div>
+          </a>
+
+          <a href="leave-queue.html" class="block bg-white rounded-xl border border-umber/30 px-5 py-4 hover:border-umber/60 transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="text-[11px] font-semibold text-umber uppercase tracking-widest">Pending Approvals</div>
+              <span class="w-1.5 h-1.5 bg-umber rounded-full"></span>
+            </div>
+            <div class="font-heading text-3xl font-bold text-charcoal leading-none">7</div>
+            <div class="text-xs text-slate mt-2">2 escalated past deadline</div>
+          </a>
+
+          <a href="payroll-runs.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="text-[11px] font-semibold text-slate uppercase tracking-widest mb-2">Payroll · May 2026</div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Draft</span>
+              <span class="text-xs text-slate">Not yet finalised</span>
+            </div>
+            <div class="text-xs text-slate mt-2">Cycle 1 · FY 2026-27 review active</div>
+          </a>
+
+        </div>
+
+        <!-- Two-panel row: Approvals + Activity -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+
+          <!-- Pending Leave Approvals -->
+          <div class="lg:col-span-3 bg-white rounded-xl border border-sage/30 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-sage/20">
+              <h3 class="text-sm font-semibold text-charcoal">Pending Leave Approvals</h3>
+              <a href="leave-queue.html" class="text-xs text-emerald font-semibold hover:underline">View all →</a>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="bg-offwhite">
+                    <th class="text-left text-xs font-semibold text-slate px-5 py-2.5">Employee</th>
+                    <th class="text-left text-xs font-semibold text-slate px-3 py-2.5">Leave Type</th>
+                    <th class="text-left text-xs font-semibold text-slate px-3 py-2.5">Dates</th>
+                    <th class="text-left text-xs font-semibold text-slate px-3 py-2.5">Days</th>
+                    <th class="text-left text-xs font-semibold text-slate px-3 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sage/10">
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-5 py-3">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">AK</div>
+                        <div>
+                          <div class="text-xs font-semibold text-charcoal">Arjun Kapoor</div>
+                          <div class="text-xs text-slate">EMP-2024-0001</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-3 py-3 text-xs text-slate">Casual Leave</td>
+                    <td class="px-3 py-3 text-xs text-slate">12–14 May</td>
+                    <td class="px-3 py-3 text-xs font-medium text-charcoal">3</td>
+                    <td class="px-3 py-3">
+                      <span class="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Pending</span>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-5 py-3">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-softmint flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">SP</div>
+                        <div>
+                          <div class="text-xs font-semibold text-charcoal">Sneha Patel</div>
+                          <div class="text-xs text-slate">EMP-2024-0015</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-3 py-3 text-xs text-slate">Sick Leave</td>
+                    <td class="px-3 py-3 text-xs text-slate">9 May</td>
+                    <td class="px-3 py-3 text-xs font-medium text-charcoal">1</td>
+                    <td class="px-3 py-3">
+                      <div class="flex items-center gap-1.5">
+                        <span class="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Pending</span>
+                        <span class="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">Escalated</span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-offwhite/60 transition-colors">
+                    <td class="px-5 py-3">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold flex-shrink-0">DS</div>
+                        <div>
+                          <div class="text-xs font-semibold text-charcoal">Dhruv Singh</div>
+                          <div class="text-xs text-slate">EMP-2023-0021</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-3 py-3 text-xs text-slate">Earned Leave</td>
+                    <td class="px-3 py-3 text-xs text-slate">19–23 May</td>
+                    <td class="px-3 py-3 text-xs font-medium text-charcoal">5</td>
+                    <td class="px-3 py-3">
+                      <span class="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Pending</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-sage/30">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-sage/20">
+              <h3 class="text-sm font-semibold text-charcoal">Recent Activity</h3>
+              <a href="audit-log.html" class="text-xs text-emerald font-semibold hover:underline">Audit log →</a>
+            </div>
+            <div class="px-5 py-4 space-y-4">
+
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-greenbg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs text-charcoal font-medium">Payroll for Apr 2026 finalised</p>
+                  <p class="text-xs text-slate mt-0.5">246 employees processed · ₹2.3Cr disbursed</p>
+                  <p class="text-xs text-sage mt-0.5">2 days ago</p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-greenbg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs text-charcoal font-medium">Leave approved — Vikram Nair</p>
+                  <p class="text-xs text-slate mt-0.5">5 days · 5–9 May 2026 · Earned Leave</p>
+                  <p class="text-xs text-sage mt-0.5">Yesterday, 4:12 PM</p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-softmint flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs text-charcoal font-medium">New employee created</p>
+                  <p class="text-xs text-slate mt-0.5">Pooja Reddy · EMP-2025-0003 · Designer</p>
+                  <p class="text-xs text-sage mt-0.5">Yesterday, 11:30 AM</p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-umberbg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5 text-umber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs text-charcoal font-medium">Leave escalated — Sneha Patel</p>
+                  <p class="text-xs text-slate mt-0.5">No manager action for 3 days</p>
+                  <p class="text-xs text-sage mt-0.5">Today, 9:00 AM</p>
+                </div>
+              </div>
+
+              <div class="flex gap-3">
+                <div class="w-7 h-7 rounded-full bg-softmint flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <div>
+                  <p class="text-xs text-charcoal font-medium">Performance Cycle 1 launched</p>
+                  <p class="text-xs text-slate mt-0.5">Apr–Sep 2026 · 231 employees enrolled</p>
+                  <p class="text-xs text-sage mt-0.5">3 days ago</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Needs attention strip — late marks / review cycle / upcoming exits -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <a href="attendance.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-slate uppercase tracking-widest">Late Marks</span>
+              <span class="bg-crimsonbg text-crimson text-[10px] font-bold px-1.5 py-0.5 rounded">14</span>
+            </div>
+            <p class="text-sm text-charcoal mt-2">14 employees with ≥3 late marks this month · 3 require manager review.</p>
+          </a>
+          <a href="performance-cycles.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-slate uppercase tracking-widest">Review Cycle</span>
+              <span class="bg-greenbg text-richgreen text-[10px] font-bold px-1.5 py-0.5 rounded">Active</span>
+            </div>
+            <p class="text-sm text-charcoal mt-2">Cycle 1 · Apr–Sep 2026</p>
+            <p class="text-xs text-slate mt-1">Self-review by 30 Jun · Manager review by 15 Jul</p>
+          </a>
+          <a href="employees.html" class="block bg-white rounded-xl border border-sage/30 px-5 py-4 hover:border-forest/50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-slate uppercase tracking-widest">Upcoming Exits</span>
+              <span class="bg-umberbg text-umber text-[10px] font-bold px-1.5 py-0.5 rounded">3</span>
+            </div>
+            <p class="text-sm text-charcoal mt-2">Deepa Joshi · 31 May</p>
+            <p class="text-xs text-slate mt-0.5">Rohan Das · 15 Jun &nbsp;·&nbsp; Anita Pillai · 30 Jun</p>
+          </a>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>

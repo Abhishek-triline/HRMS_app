@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Approval Queue — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sidebar.js"></script>  
+</head>
+<body class="font-body bg-offwhite">
+<div class="flex h-screen overflow-hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">
+    <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+      <div class="w-8 h-8 bg-mint rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      </div>
+      <span class="font-heading text-base font-bold">Nexora HRMS</span>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+      <a href="employees.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Employees</a>
+      <a href="leave-queue.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald/20 text-white border-l-2 border-mint font-medium text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Leave</a>
+      <a href="attendance.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Attendance</a>
+      <a href="payroll-runs.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Payroll</a>
+      <a href="performance-cycles.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Performance</a>
+      <a href="config.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-emerald/10 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Configuration</a>
+      <div class="my-3 border-t border-white/10"></div>
+      <a href="../index.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-crimson/20 text-sm transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Sign Out</a>
+    </nav>
+    <div class="px-4 py-4 border-t border-white/10">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold">PS</div>
+        <div class="min-w-0">
+          <div class="text-xs font-semibold text-white truncate">Priya Sharma</div>
+          <div class="text-xs text-white/50 truncate">priya@nexora.in</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b border-sage/30 flex items-center justify-between px-6" style="height:60px;">
+      <div>
+        <h1 class="font-heading text-lg font-bold text-charcoal">Leave Approval Queue</h1>
+        <p class="text-xs text-slate">Escalated requests &amp; maternity approvals</p>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-full bg-forest flex items-center justify-center text-white text-xs font-bold">PS</div>
+        <span class="bg-mint text-forest text-xs font-bold px-2 py-0.5 rounded">Admin</span>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto px-6 py-6">
+
+      <!-- Tabs -->
+      <div id="lq-tabs" class="flex items-center gap-1 mb-5 border-b border-sage/30 overflow-x-auto">
+        <button data-tab="all" class="lq-tab is-active px-4 py-2.5 text-sm font-semibold text-forest border-b-2 border-forest -mb-px whitespace-nowrap">All Pending <span class="ml-1.5 bg-forest text-white text-xs px-1.5 py-0.5 rounded">7</span></button>
+        <button data-tab="escalated" class="lq-tab px-4 py-2.5 text-sm font-medium text-slate hover:text-charcoal transition-colors whitespace-nowrap">Escalated <span class="ml-1.5 bg-crimsonbg text-crimson text-xs px-1.5 py-0.5 rounded">2</span></button>
+        <button data-tab="maternity" class="lq-tab px-4 py-2.5 text-sm font-medium text-slate hover:text-charcoal transition-colors whitespace-nowrap">Maternity <span class="ml-1.5 bg-umberbg text-umber text-xs px-1.5 py-0.5 rounded">1</span></button>
+        <button data-tab="approved" class="lq-tab px-4 py-2.5 text-sm font-medium text-slate hover:text-charcoal transition-colors whitespace-nowrap">Approved (Today) <span class="ml-1.5 bg-greenbg text-richgreen text-xs px-1.5 py-0.5 rounded">2</span></button>
+        <button data-tab="rejected" class="lq-tab px-4 py-2.5 text-sm font-medium text-slate hover:text-charcoal transition-colors whitespace-nowrap">Rejected (Today) <span class="ml-1.5 bg-crimsonbg text-crimson text-xs px-1.5 py-0.5 rounded">1</span></button>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5">
+        <div class="flex flex-wrap gap-3 items-center">
+          <div class="flex-1 min-w-48 relative">
+            <svg class="w-4 h-4 text-sage absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" placeholder="Search by name or EMP code..." class="w-full border border-sage/50 rounded-lg pl-9 pr-4 py-2 text-sm placeholder-sage focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest" />
+          </div>
+          <select class="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"><option>All Leave Types</option><option>Annual</option><option>Sick</option><option>Casual</option><option>Maternity</option><option>Paternity</option><option>Unpaid</option></select>
+          <select class="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"><option>All Departments</option><option>Engineering</option><option>Design</option><option>Finance</option></select>
+          <input type="date" value="2026-05-07" class="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white" />
+        </div>
+      </div>
+
+      <!-- Queue Cards -->
+      <div id="lq-cards" class="space-y-3">
+
+        <!-- Card 1: escalated -->
+        <div class="lq-card bg-white rounded-xl shadow-sm border-l-4 border-crimson border-y border-r border-sage/30 px-5 py-4" data-status="pending escalated">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-softmint flex items-center justify-center text-forest text-sm font-bold">SP</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Sneha Patel</span>
+                  <span class="text-xs text-slate">EMP-2024-0015 · Engineering</span>
+                  <span class="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Escalated</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Sick Leave · <strong class="text-charcoal">9 May 2026</strong> · 1 day</div>
+                <div class="text-xs text-slate">"Fever and body ache, will get medical certificate."</div>
+                <div class="text-xs text-slate mt-2">Submitted 4 May · Manager Rajan Mehta did not act for 3 days</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex gap-2">
+                <button class="bg-richgreen text-white hover:bg-emerald px-3.5 py-1.5 rounded-lg text-xs font-semibold">Approve</button>
+                <button class="border border-crimson text-crimson hover:bg-crimsonbg px-3.5 py-1.5 rounded-lg text-xs font-semibold">Reject</button>
+              </div>
+              <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline">View details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: maternity -->
+        <div class="lq-card bg-white rounded-xl shadow-sm border-l-4 border-umber border-y border-r border-sage/30 px-5 py-4" data-status="pending maternity">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-forest text-sm font-bold">RD</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Riya Desai</span>
+                  <span class="text-xs text-slate">EMP-2022-0034 · Marketing</span>
+                  <span class="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Maternity</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Maternity Leave · <strong class="text-charcoal">1 Jun – 30 Nov 2026</strong> · 26 weeks</div>
+                <div class="text-xs text-slate">Eligibility: 80 days continuous service · Medical certificate uploaded</div>
+                <div class="text-xs text-slate mt-2">Maternity routes directly to Admin (manager bypass)</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex gap-2">
+                <button class="bg-richgreen text-white hover:bg-emerald px-3.5 py-1.5 rounded-lg text-xs font-semibold">Approve</button>
+                <button class="border border-crimson text-crimson hover:bg-crimsonbg px-3.5 py-1.5 rounded-lg text-xs font-semibold">Reject</button>
+              </div>
+              <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline">View details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: standard -->
+        <div class="lq-card bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4" data-status="pending">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-forest text-sm font-bold">AK</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Arjun Kapoor</span>
+                  <span class="text-xs text-slate">EMP-2024-0001 · Engineering</span>
+                  <span class="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Pending</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Casual Leave · <strong class="text-charcoal">12–14 May 2026</strong> · 3 days</div>
+                <div class="text-xs text-slate">"Family wedding in Pune."</div>
+                <div class="text-xs text-slate mt-2">Awaiting Manager Rajan Mehta · 1 day in queue</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex gap-2">
+                <button class="bg-richgreen text-white hover:bg-emerald px-3.5 py-1.5 rounded-lg text-xs font-semibold">Approve</button>
+                <button class="border border-crimson text-crimson hover:bg-crimsonbg px-3.5 py-1.5 rounded-lg text-xs font-semibold">Reject</button>
+              </div>
+              <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline">View details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: escalated -->
+        <div class="lq-card bg-white rounded-xl shadow-sm border-l-4 border-crimson border-y border-r border-sage/30 px-5 py-4" data-status="pending escalated">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-softmint flex items-center justify-center text-forest text-sm font-bold">DS</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Dhruv Singh</span>
+                  <span class="text-xs text-slate">EMP-2023-0021 · Operations</span>
+                  <span class="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Escalated</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Annual Leave · <strong class="text-charcoal">19–23 May 2026</strong> · 5 days</div>
+                <div class="text-xs text-slate">"Vacation booked with family."</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex gap-2">
+                <button class="bg-richgreen text-white hover:bg-emerald px-3.5 py-1.5 rounded-lg text-xs font-semibold">Approve</button>
+                <button class="border border-crimson text-crimson hover:bg-crimsonbg px-3.5 py-1.5 rounded-lg text-xs font-semibold">Reject</button>
+              </div>
+              <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline">View details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5: standard -->
+        <div class="lq-card bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4" data-status="pending">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-forest text-sm font-bold">VN</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Vikram Nair</span>
+                  <span class="text-xs text-slate">EMP-2023-0008 · Design</span>
+                  <span class="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Pending</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Paternity Leave · <strong class="text-charcoal">20 May – 2 Jun 2026</strong> · 10 working days (single block)</div>
+                <div class="text-xs text-slate">"New baby — paternity leave (event-based)."</div>
+                <div class="text-xs text-slate mt-2">Within 6 months of birth window · Routes to Admin (event-based)</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <div class="flex gap-2">
+                <button class="bg-richgreen text-white hover:bg-emerald px-3.5 py-1.5 rounded-lg text-xs font-semibold">Approve</button>
+                <button class="border border-crimson text-crimson hover:bg-crimsonbg px-3.5 py-1.5 rounded-lg text-xs font-semibold">Reject</button>
+              </div>
+              <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline">View details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Approved (Today) — hidden by default, shown by Approved tab -->
+        <div class="lq-card hidden bg-white rounded-xl shadow-sm border-l-4 border-richgreen border-y border-r border-sage/30 px-5 py-4" data-status="approved">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-greenbg flex items-center justify-center text-richgreen text-sm font-bold">PR</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Pooja Reddy</span>
+                  <span class="text-xs text-slate">EMP-2025-0003 · Design</span>
+                  <span class="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Approved</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Casual Leave · <strong class="text-charcoal">8 May 2026</strong> · 1 day</div>
+                <div class="text-xs text-slate">"Doctor appointment."</div>
+                <div class="text-xs text-slate mt-2">Approved by Priya Sharma · 9:42 AM today</div>
+              </div>
+            </div>
+            <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline self-start">View details →</a>
+          </div>
+        </div>
+
+        <div class="lq-card hidden bg-white rounded-xl shadow-sm border-l-4 border-richgreen border-y border-r border-sage/30 px-5 py-4" data-status="approved">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-greenbg flex items-center justify-center text-richgreen text-sm font-bold">VK</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Vivek Kumar</span>
+                  <span class="text-xs text-slate">EMP-2024-0019 · Engineering</span>
+                  <span class="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Approved</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Annual Leave · <strong class="text-charcoal">15–17 May 2026</strong> · 3 days</div>
+                <div class="text-xs text-slate">"Family trip to Goa."</div>
+                <div class="text-xs text-slate mt-2">Approved by Rajan Mehta · 11:15 AM today</div>
+              </div>
+            </div>
+            <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline self-start">View details →</a>
+          </div>
+        </div>
+
+        <!-- Rejected (Today) — hidden by default, shown by Rejected tab -->
+        <div class="lq-card hidden bg-white rounded-xl shadow-sm border-l-4 border-crimson border-y border-r border-sage/30 px-5 py-4" data-status="rejected">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 flex-1">
+              <div class="w-10 h-10 rounded-full bg-crimsonbg flex items-center justify-center text-crimson text-sm font-bold">KN</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-semibold text-charcoal">Kavya Nair</span>
+                  <span class="text-xs text-slate">EMP-2024-0042 · Operations</span>
+                  <span class="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Rejected</span>
+                </div>
+                <div class="text-sm text-slate mb-2">Casual Leave · <strong class="text-charcoal">12 May 2026</strong> · 1 day</div>
+                <div class="text-xs text-slate">"Personal work."</div>
+                <div class="text-xs text-slate mt-2">Rejected by Priya Sharma · 10:08 AM today · Reason: insufficient balance</div>
+              </div>
+            </div>
+            <a href="leave-detail.html" class="text-xs text-emerald font-semibold hover:underline self-start">View details →</a>
+          </div>
+        </div>
+
+        <!-- Empty state placeholder (shown via JS when a tab has no matches) -->
+        <div id="lq-empty" class="hidden bg-white rounded-xl border border-dashed border-sage/40 px-6 py-10 text-center">
+          <p class="text-sm text-slate">No requests in this view.</p>
+        </div>
+
+      </div>
+
+      <div id="lq-pagination" class="mt-6 flex justify-between items-center text-xs text-slate">
+        <span id="lq-count">Showing 5 of 7 pending requests</span>
+        <div class="flex gap-1.5">
+          <button class="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Prev</button>
+          <button class="bg-forest text-white px-3 py-1.5 rounded">1</button>
+          <button class="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">2</button>
+          <button class="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Next</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Leave Queue tab switcher -->
+<script>
+(function(){
+  var tabs    = document.querySelectorAll('#lq-tabs .lq-tab');
+  var cards   = document.querySelectorAll('#lq-cards .lq-card');
+  var empty   = document.getElementById('lq-empty');
+  var countEl = document.getElementById('lq-count');
+
+  // Counts driving the right-hand label "Showing X of Y …"
+  var labels = {
+    all:       'pending requests',
+    escalated: 'escalated requests',
+    maternity: 'maternity requests',
+    approved:  'approved today',
+    rejected:  'rejected today'
+  };
+  var totals = { all: 7, escalated: 2, maternity: 1, approved: 2, rejected: 1 };
+
+  function setActive(btn){
+    tabs.forEach(function(t){
+      var on = t === btn;
+      t.classList.toggle('is-active', on);
+      t.classList.toggle('text-forest', on);
+      t.classList.toggle('font-semibold', on);
+      t.classList.toggle('border-b-2', on);
+      t.classList.toggle('border-forest', on);
+      t.classList.toggle('-mb-px', on);
+      t.classList.toggle('text-slate', !on);
+      t.classList.toggle('font-medium', !on);
+      t.classList.toggle('hover:text-charcoal', !on);
+    });
+  }
+
+  function apply(tab){
+    var visible = 0;
+    cards.forEach(function(c){
+      var statuses = (c.getAttribute('data-status') || '').split(/\s+/);
+      var match = (tab === 'all')
+        ? statuses.indexOf('pending') !== -1
+        : statuses.indexOf(tab) !== -1;
+      c.classList.toggle('hidden', !match);
+      if (match) visible++;
+    });
+    if (empty) empty.classList.toggle('hidden', visible !== 0);
+    if (countEl) countEl.textContent = 'Showing ' + visible + ' of ' + (totals[tab] || visible) + ' ' + (labels[tab] || '');
+  }
+
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      setActive(btn);
+      apply(btn.getAttribute('data-tab'));
+    });
+  });
+})();
+</script>
+
+<script>
+/* Nexora HRMS — auto-wired filters (inline, per page).
+   Finds every <table> / card-list <div class="grid"> and the closest
+   preceding filter-bar containing <input>/<select>; live-filters by
+   substring match (text + selects), date range (From/To), and an Apply/
+   Reset button if present. Pages can opt out with data-nx-no-filter. */
+(function(){
+  if (window.__nxF) return; window.__nxF = 1;
+  var norm = function(s){ return (s||'').replace(/\s+/g,' ').trim().toLowerCase(); };
+  var isDef = function(t){ return /^(all\b|any\b|—|-+$|select\b)/i.test((t||'').trim()); };
+  function pd(t){ if(!t) return null; t=t.trim();
+    var m=t.match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+    var mo={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    m=t.match(/(\d{1,2})[\s-]+([A-Za-z]{3,9})[\s-]+(\d{4})/);
+    if(m){ var k=mo[m[2].slice(0,3).toLowerCase()]; if(k!=null) return new Date(+m[3],k,+m[1]); }
+    m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+    return null; }
+  function rd(text){ var c=(text||'').match(/\d{4}-\d{2}-\d{2}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4}/g)||[];
+    for(var i=0;i<c.length;i++){ var d=pd(c[i]); if(d) return d; } return null; }
+  function ctls(el){ if(!el||!el.querySelectorAll) return [];
+    return Array.prototype.slice.call(el.querySelectorAll('input, select')).filter(function(c){
+      return c.tagName==='SELECT' || /^(text|search|email|date|number|tel)$/i.test(c.type); }); }
+  function findBar(t){ var c=t.previousElementSibling;
+    while(c){ if(ctls(c).length) return c; c=c.previousElementSibling; }
+    var p=t.parentElement, root=t.closest('main')||document.body;
+    while(p && p!==root){ var pv=p.previousElementSibling;
+      while(pv){ if(ctls(pv).length) return pv; pv=pv.previousElementSibling; }
+      p=p.parentElement; } return null; }
+  function isCard(g){ if(!g.classList.contains('grid')||g.children.length<2) return false;
+    if(g.dataset.nxNoFilter) return false;
+    var s=g.children[0];
+    if(s){ var n=s.querySelector('.font-heading.text-2xl,.font-heading.text-3xl,.font-heading.text-4xl');
+      var w=(s.textContent||'').trim().split(/\s+/).length;
+      if(n && w<12) return false; } return true; }
+  function rows(t){ if(t.tagName==='TABLE'){ var b=t.tBodies[0]; return b?Array.prototype.slice.call(b.rows):[]; }
+    return Array.prototype.slice.call(t.children).filter(function(c){ return c.nodeType===1; }); }
+  function dateRole(c){ var cs=[c.previousElementSibling, c.parentElement&&c.parentElement.previousElementSibling];
+    for(var i=0;i<cs.length;i++){ var e=cs[i]; if(!e) continue;
+      var x=norm(e.textContent);
+      if(/^from\b|^start\b|^begin/.test(x)) return 'from';
+      if(/^to\b|^until\b|^end\b|^through/.test(x)) return 'to'; } return null; }
+  function apply(t,cs){
+    var preds=[], di=cs.filter(function(c){ return c.type==='date'; });
+    if(di.length===1 && di[0].value){ var d=new Date(di[0].value);
+      preds.push(function(it){ var r=rd(it.textContent); return r? r.toDateString()===d.toDateString():true; }); }
+    else if(di.length>=2){ var a=di[0],b=di[1], ar=dateRole(a)||'from', br=dateRole(b)||'to';
+      var f=ar==='from'?a:b, T=ar==='from'?b:a;
+      var fv=f.value?new Date(f.value):null, tv=T.value?new Date(T.value):null;
+      if(fv||tv) preds.push(function(it){ var r=rd(it.textContent); if(!r) return true;
+        if(fv && r<fv) return false; if(tv && r>tv) return false; return true; }); }
+    cs.forEach(function(c){ if(c.type==='date') return;
+      if(c.tagName==='INPUT'){ var v=norm(c.value); if(v) preds.push(function(it){ return norm(it.textContent).indexOf(v)!==-1; }); }
+      else if(c.tagName==='SELECT'){ var o=c.options[c.selectedIndex], txt=o?o.text:'';
+        if(txt && !isDef(txt)){ var lc=norm(txt); preds.push(function(it){ return norm(it.textContent).indexOf(lc)!==-1; }); } } });
+    var visible=0;
+    rows(t).forEach(function(r){ var ok=preds.every(function(p){ return p(r); });
+      r.style.display=ok?'':'none'; if(ok) visible++; });
+    var emp=t.__nxE;
+    if(visible===0 && rows(t).length>0){
+      if(!emp){ if(t.tagName==='TABLE'){ var tb=t.tBodies[0], cc=(t.tHead&&t.tHead.rows[0])?t.tHead.rows[0].cells.length:1;
+          var tr=tb.insertRow(); tr.className='__nxE'; var td=tr.insertCell(); td.colSpan=cc;
+          td.className='text-center text-sm text-slate py-6'; td.textContent='No matching results.'; t.__nxE=tr; }
+        else { emp=document.createElement('div'); emp.className='text-center text-sm text-slate py-6 col-span-full';
+          emp.textContent='No matching results.'; t.appendChild(emp); t.__nxE=emp; } }
+      t.__nxE.style.display=''; } else if(emp){ emp.style.display='none'; } }
+  function deb(fn,ms){ var to; return function(){ clearTimeout(to); var a=arguments,th=this; to=setTimeout(function(){ fn.apply(th,a); },ms); }; }
+  function wire(t,bar){ var cs=ctls(bar); if(!cs.length) return;
+    var go=deb(function(){ apply(t,cs); },80);
+    cs.forEach(function(c){ c.addEventListener('input',go); c.addEventListener('change',go); });
+    Array.prototype.slice.call(bar.querySelectorAll('button')).forEach(function(b){
+      var lab=(b.textContent||'').trim().toLowerCase();
+      if(/^apply\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault(); go(); });
+      else if(/^(reset|clear)\b/.test(lab)) b.addEventListener('click',function(e){ e.preventDefault();
+        cs.forEach(function(c){ if(c.tagName==='SELECT') c.selectedIndex=0; else c.value=''; }); go(); });
+    }); }
+  function init(){ var ts=[];
+    document.querySelectorAll('table').forEach(function(t){
+      if(t.dataset.nxNoFilter) return;
+      if(!t.tBodies[0]||t.tBodies[0].rows.length<2) return; ts.push(t); });
+    document.querySelectorAll('.grid').forEach(function(g){ if(isCard(g)) ts.push(g); });
+    ts.forEach(function(t){ var b=findBar(t); if(b) wire(t,b); }); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+
+</body>
+</html>

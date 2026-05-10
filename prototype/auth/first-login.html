@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Set Your Password — Nexora HRMS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../assets/theme.js"></script>
+  
+</head>
+<body class="font-body bg-offwhite min-h-screen flex flex-col items-center justify-center px-4 py-12">
+
+  <!-- Logo bar -->
+  <div class="flex items-center gap-2.5 mb-8">
+    <div class="w-9 h-9 bg-forest rounded-lg flex items-center justify-center">
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+      </svg>
+    </div>
+    <span class="font-heading text-xl font-bold text-forest">Nexora HRMS</span>
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white rounded-2xl shadow-sm border border-sage/30 w-full max-w-md px-8 py-10">
+
+    <!-- Welcome badge -->
+    <div class="inline-flex items-center gap-2 bg-greenbg text-richgreen text-xs font-bold px-3 py-1 rounded-full mb-5">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      First Login
+    </div>
+
+    <h1 class="font-heading text-2xl font-bold text-charcoal mb-1">Welcome to Nexora HRMS</h1>
+    <p class="text-slate text-sm mb-6 leading-relaxed">
+      Your account has been created. Please set your password to get started.
+    </p>
+
+    <!-- EMP Code Display -->
+    <div class="bg-softmint border border-mint rounded-lg px-4 py-3 flex items-center gap-3 mb-7">
+      <div class="w-9 h-9 bg-forest rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        EMP
+      </div>
+      <div>
+        <div class="text-xs text-slate">Your Employee Code</div>
+        <div class="font-heading text-base font-bold text-forest">EMP-2024-0042</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <form class="space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1.5">New Password</label>
+        <input
+          type="password"
+          placeholder="Create a strong password"
+          class="w-full border border-sage rounded-lg px-4 py-2.5 text-sm text-charcoal placeholder-sage/70 focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition"
+        />
+      </div>
+
+      <!-- Strength indicator -->
+      <div>
+        <div class="flex justify-between items-center mb-1.5">
+          <span class="text-xs text-slate">Password strength</span>
+          <span class="text-xs font-semibold text-umber">Moderate</span>
+        </div>
+        <div class="flex gap-1">
+          <div class="flex-1 h-1.5 rounded-full bg-crimson"></div>
+          <div class="flex-1 h-1.5 rounded-full bg-umber"></div>
+          <div class="flex-1 h-1.5 rounded-full bg-umber"></div>
+          <div class="flex-1 h-1.5 rounded-full bg-sage/30"></div>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1.5">Confirm Password</label>
+        <input
+          type="password"
+          placeholder="Re-enter your password"
+          class="w-full border border-sage rounded-lg px-4 py-2.5 text-sm text-charcoal placeholder-sage/70 focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition"
+        />
+      </div>
+
+      <!-- Requirements checklist -->
+      <div class="bg-offwhite rounded-lg px-4 py-4 space-y-2.5">
+        <p class="text-xs font-semibold text-charcoal mb-2">Password requirements</p>
+
+        <!-- Met -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-4 h-4 rounded-full bg-greenbg flex items-center justify-center flex-shrink-0">
+            <svg class="w-2.5 h-2.5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <span class="text-xs text-richgreen font-medium">At least 8 characters</span>
+        </div>
+        <!-- Met -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-4 h-4 rounded-full bg-greenbg flex items-center justify-center flex-shrink-0">
+            <svg class="w-2.5 h-2.5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <span class="text-xs text-richgreen font-medium">At least one uppercase letter</span>
+        </div>
+        <!-- Met -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-4 h-4 rounded-full bg-greenbg flex items-center justify-center flex-shrink-0">
+            <svg class="w-2.5 h-2.5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <span class="text-xs text-richgreen font-medium">At least one number</span>
+        </div>
+        <!-- Not met -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-4 h-4 rounded-full bg-sage/30 flex items-center justify-center flex-shrink-0">
+            <svg class="w-2.5 h-2.5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </div>
+          <span class="text-xs text-slate">At least one special character (!@#$%)</span>
+        </div>
+        <!-- Not met -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-4 h-4 rounded-full bg-sage/30 flex items-center justify-center flex-shrink-0">
+            <svg class="w-2.5 h-2.5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </div>
+          <span class="text-xs text-slate">Passwords match</span>
+        </div>
+      </div>
+
+      <button type="button" class="w-full bg-forest text-white hover:bg-emerald px-4 py-2.5 rounded-lg font-body text-sm font-semibold transition-colors">
+        Set Password &amp; Continue
+      </button>
+    </form>
+
+  </div>
+
+  <p class="text-center text-xs text-slate mt-6">
+    Already set up? <a href="../index.html" class="text-emerald font-medium hover:underline">Back to Sign In</a>
+  </p>
+
+</body>
+</html>
