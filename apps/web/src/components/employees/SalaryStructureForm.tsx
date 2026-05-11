@@ -6,6 +6,16 @@
  * Handles paise conversion via MoneyInput.
  * Shows note per BL-030: "Applies from next payroll run only — historical payslips unchanged."
  *
+ * Salary breakdown (prototype-aligned):
+ *   - Basic Salary          (required)
+ *   - HRA                   (optional component)
+ *   - Transport Allowance   (optional component)
+ *   - Other Allowances      (optional component)
+ *
+ * When any of the three component fields is non-zero the component sum is
+ * auto-written into allowances_paise before submit. The server validates that
+ * the sum equals allowances_paise when all three are present.
+ *
  * Props:
  *   mode         — 'create' | 'edit'
  *   control      — RHF control (caller owns the form)
@@ -14,6 +24,7 @@
  *   errors       — RHF field errors for salary fields
  */
 
+import { useEffect } from 'react';
 import { Controller } from 'react-hook-form';
 import type { Control, FieldErrors, UseFormSetValue, UseFormWatch, FieldValues } from 'react-hook-form';
 import { MoneyInput } from './MoneyInput';
@@ -25,6 +36,9 @@ export interface SalaryFormValues {
   'salaryStructure.basic_paise': number;
   'salaryStructure.allowances_paise': number;
   'salaryStructure.effectiveFrom': string;
+  'salaryStructure.hra_paise': number;
+  'salaryStructure.transport_paise': number;
+  'salaryStructure.other_paise': number;
 }
 
 interface SalaryStructureFormProps {
@@ -48,9 +62,20 @@ export function SalaryStructureForm({
   errors,
 }: SalaryStructureFormProps) {
   const basicPaise: number = watch('salaryStructure.basic_paise') ?? 0;
-  const allowancesPaise: number = watch('salaryStructure.allowances_paise') ?? 0;
-  const grossPaise = basicPaise + allowancesPaise;
+  const hraPaise: number = watch('salaryStructure.hra_paise') ?? 0;
+  const transportPaise: number = watch('salaryStructure.transport_paise') ?? 0;
+  const otherPaise: number = watch('salaryStructure.other_paise') ?? 0;
+
+  // Auto-compute allowances_paise from the three component fields
+  const componentAllowancesPaise = hraPaise + transportPaise + otherPaise;
+  const grossPaise = basicPaise + componentAllowancesPaise;
   const grossRupees = Math.floor(grossPaise / 100);
+  const componentRupees = Math.floor(componentAllowancesPaise / 100);
+
+  // Keep allowances_paise in sync with the component sum
+  useEffect(() => {
+    setValue('salaryStructure.allowances_paise', componentAllowancesPaise);
+  }, [componentAllowancesPaise, setValue]);
 
   return (
     <div className="space-y-4">
@@ -84,22 +109,64 @@ export function SalaryStructureForm({
           />
         </div>
 
-        {/* Allowances */}
+        {/* HRA */}
         <div>
           <Controller
-            name="salaryStructure.allowances_paise"
+            name="salaryStructure.hra_paise"
             control={control}
             render={({ field }) => (
               <MoneyInput
-                id="salary-allowances"
-                label="Total Allowances (HRA + Others)"
+                id="salary-hra"
+                label="HRA"
                 valuePaise={field.value ?? 0}
                 onChangePaise={(paise) => field.onChange(paise)}
-                error={(errors?.salaryStructure as { allowances_paise?: { message?: string } })?.allowances_paise?.message}
+                error={(errors?.salaryStructure as { hra_paise?: { message?: string } })?.hra_paise?.message}
               />
             )}
           />
         </div>
+
+        {/* Transport Allowance */}
+        <div>
+          <Controller
+            name="salaryStructure.transport_paise"
+            control={control}
+            render={({ field }) => (
+              <MoneyInput
+                id="salary-transport"
+                label="Transport Allowance"
+                valuePaise={field.value ?? 0}
+                onChangePaise={(paise) => field.onChange(paise)}
+                error={(errors?.salaryStructure as { transport_paise?: { message?: string } })?.transport_paise?.message}
+              />
+            )}
+          />
+        </div>
+
+        {/* Other Allowances */}
+        <div>
+          <Controller
+            name="salaryStructure.other_paise"
+            control={control}
+            render={({ field }) => (
+              <MoneyInput
+                id="salary-other"
+                label="Other Allowances"
+                valuePaise={field.value ?? 0}
+                onChangePaise={(paise) => field.onChange(paise)}
+                error={(errors?.salaryStructure as { other_paise?: { message?: string } })?.other_paise?.message}
+              />
+            )}
+          />
+        </div>
+      </div>
+
+      {/* Live "Total Allowances" line */}
+      <div className="text-xs text-slate flex items-center justify-between px-1">
+        <span>Total Allowances (HRA + Transport + Other)</span>
+        <span className="font-semibold text-charcoal">
+          {componentRupees > 0 ? `₹${fmt.format(componentRupees)}` : '₹ 0'}
+        </span>
       </div>
 
       {/* Effective From */}

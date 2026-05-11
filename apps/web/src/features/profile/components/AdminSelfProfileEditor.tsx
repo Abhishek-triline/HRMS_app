@@ -28,6 +28,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { FieldError } from '@/components/ui/FieldError';
 import { Button } from '@/components/ui/Button';
 import { showToast } from '@/components/ui/Toast';
 import { useUpdateEmployee } from '@/lib/hooks/useEmployees';
@@ -44,10 +46,21 @@ const SelfEditSchema = z.object({
     .regex(/^[^\x00-\x08\x0A-\x1F\x7F]*$/u, 'Name must not contain control characters'),
   designation: z.string().min(1, 'Designation is required').max(150),
   department: z.string().min(1, 'Department is required').max(100),
+  /** Optional personal info — now exposed once the API contract includes them. */
+  phone: z.string().max(20).nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(), // YYYY-MM-DD date string
+  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
   version: z.number().int().nonnegative(),
 });
 
 type SelfEditValues = z.infer<typeof SelfEditSchema>;
+
+const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Other' },
+  { value: 'PreferNotToSay', label: 'Prefer not to say' },
+];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -72,6 +85,9 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
       name: employee.name,
       designation: employee.designation ?? '',
       department: employee.department ?? '',
+      phone: employee.phone ?? null,
+      dateOfBirth: employee.dateOfBirth ?? null,
+      gender: employee.gender ?? null,
       version: employee.version,
     },
   });
@@ -82,6 +98,9 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
       name: employee.name,
       designation: employee.designation ?? '',
       department: employee.department ?? '',
+      phone: employee.phone ?? null,
+      dateOfBirth: employee.dateOfBirth ?? null,
+      gender: employee.gender ?? null,
       version: employee.version,
     });
   }, [employee, reset]);
@@ -183,18 +202,45 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
           </div>
         </div>
 
-        {/*
-          API GAP — phone / address / emergency contact / DOB fields are not yet
-          in the UpdateEmployeeRequest contract. They will appear here once the
-          API contract is extended to include them. See handoff open questions.
-        */}
-        <div className="mt-4 rounded-lg bg-offwhite border border-sage/30 px-4 py-3">
-          <p className="text-xs text-slate">
-            <span className="font-medium text-charcoal">Coming soon:</span>{' '}
-            Phone, address, emergency contact, and date-of-birth fields will be
-            editable once the backend contract is extended (open question — see
-            handoff notes).
-          </p>
+        {/* Phone + Date of Birth + Gender */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <Input
+              {...register('phone')}
+              type="tel"
+              label="Phone Number"
+              placeholder="+91 98765 43210"
+              error={errors.phone?.message}
+              maxLength={20}
+            />
+          </div>
+          <div>
+            <Label htmlFor="self-dob">Date of Birth</Label>
+            <input
+              id="self-dob"
+              type="date"
+              {...register('dateOfBirth')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+            />
+            <FieldError id="self-dob-error" message={errors.dateOfBirth?.message} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Gender</Label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+              {GENDER_OPTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    value={opt.value}
+                    {...register('gender')}
+                    className="accent-forest"
+                  />
+                  <span className="text-sm text-charcoal">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <FieldError id="self-gender-error" message={errors.gender?.message} />
+          </div>
         </div>
       </div>
 
@@ -287,6 +333,9 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
               name: employee.name,
               designation: employee.designation ?? '',
               department: employee.department ?? '',
+              phone: employee.phone ?? null,
+              dateOfBirth: employee.dateOfBirth ?? null,
+              gender: employee.gender ?? null,
               version: employee.version,
             })
           }

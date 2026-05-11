@@ -42,6 +42,14 @@ const EditFormSchema = UpdateEmployeeRequestSchema;
 type CreateFormValues = z.infer<typeof CreateFormSchema>;
 type EditFormValues = z.infer<typeof EditFormSchema>;
 
+// Gender options for the radio group
+const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Other' },
+  { value: 'PreferNotToSay', label: 'Prefer not to say' },
+];
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EmployeeFormCreateProps {
@@ -93,6 +101,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
       ? {
           name: '',
           email: '',
+          phone: null,
+          dateOfBirth: null,
+          gender: null,
           role: 'Employee',
           department: '',
           designation: '',
@@ -103,6 +114,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
             basic_paise: 0,
             allowances_paise: 0,
             effectiveFrom: TODAY,
+            hra_paise: 0,
+            transport_paise: 0,
+            other_paise: 0,
           },
         }
       : undefined,
@@ -114,6 +128,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
     defaultValues: !isCreate
       ? {
           name: (props as EmployeeFormEditProps).employee.name,
+          phone: (props as EmployeeFormEditProps).employee.phone ?? null,
+          dateOfBirth: (props as EmployeeFormEditProps).employee.dateOfBirth ?? null,
+          gender: (props as EmployeeFormEditProps).employee.gender ?? null,
           role: (props as EmployeeFormEditProps).employee.role,
           department: (props as EmployeeFormEditProps).employee.department ?? '',
           designation: (props as EmployeeFormEditProps).employee.designation ?? '',
@@ -135,6 +152,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
       const emp = (props as EmployeeFormEditProps).employee;
       editForm.reset({
         name: emp.name,
+        phone: emp.phone ?? null,
+        dateOfBirth: emp.dateOfBirth ?? null,
+        gender: emp.gender ?? null,
         role: emp.role,
         department: emp.department ?? '',
         designation: emp.designation ?? '',
@@ -200,9 +220,14 @@ export function EmployeeForm(props: EmployeeFormProps) {
   const watchedDesignation = isCreate ? createForm.watch('designation') : '';
   const watchedEmpType = isCreate ? createForm.watch('employmentType') : '';
   const watchedJoinDate = isCreate ? createForm.watch('joinDate') : '';
+  const watchedPhone = isCreate ? createForm.watch('phone') : null;
+  const watchedDob = isCreate ? createForm.watch('dateOfBirth') : null;
+  const watchedGender = isCreate ? createForm.watch('gender') : null;
   const watchedBasicPaise = isCreate ? (createForm.watch('salaryStructure.basic_paise') ?? 0) : 0;
-  const watchedAllowancesPaise = isCreate ? (createForm.watch('salaryStructure.allowances_paise') ?? 0) : 0;
-  const grossPaise = watchedBasicPaise + watchedAllowancesPaise;
+  const watchedHraPaise = isCreate ? (createForm.watch('salaryStructure.hra_paise') ?? 0) : 0;
+  const watchedTransportPaise = isCreate ? (createForm.watch('salaryStructure.transport_paise') ?? 0) : 0;
+  const watchedOtherPaise = isCreate ? (createForm.watch('salaryStructure.other_paise') ?? 0) : 0;
+  const grossPaise = watchedBasicPaise + watchedHraPaise + watchedTransportPaise + watchedOtherPaise;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -231,6 +256,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 Personal Information
               </h3>
               <div className="grid grid-cols-2 gap-4">
+                {/* Full Name — spans both columns */}
                 <div className="col-span-2">
                   <Input
                     {...register('name')}
@@ -241,6 +267,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     maxLength={200}
                   />
                 </div>
+                {/* Work Email */}
                 <div>
                   <Input
                     {...register('email')}
@@ -250,6 +277,46 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     required
                     error={errors.email?.message}
                   />
+                </div>
+                {/* Phone Number */}
+                <div>
+                  <Input
+                    {...register('phone')}
+                    type="tel"
+                    label="Phone Number"
+                    placeholder="+91 98765 43210"
+                    error={errors.phone?.message}
+                    maxLength={20}
+                  />
+                </div>
+                {/* Date of Birth */}
+                <div>
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <input
+                    id="dob"
+                    type="date"
+                    {...register('dateOfBirth')}
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+                  />
+                  <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
+                </div>
+                {/* Gender — radio group */}
+                <div>
+                  <Label>Gender</Label>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                    {GENDER_OPTIONS.map((opt) => (
+                      <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          value={opt.value}
+                          {...register('gender')}
+                          className="accent-forest"
+                        />
+                        <span className="text-sm text-charcoal">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <FieldError id="gender-error" message={errors.gender?.message} />
                 </div>
               </div>
             </div>
@@ -435,6 +502,26 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 </div>
 
                 <div className="space-y-2.5">
+                  {watchedPhone && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate">Phone</span>
+                      <span className="text-xs font-medium text-charcoal">{watchedPhone}</span>
+                    </div>
+                  )}
+                  {watchedDob && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate">DoB</span>
+                      <span className="text-xs font-medium text-charcoal">{watchedDob}</span>
+                    </div>
+                  )}
+                  {watchedGender && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate">Gender</span>
+                      <span className="text-xs font-medium text-charcoal">
+                        {watchedGender === 'PreferNotToSay' ? 'Prefer not to say' : watchedGender}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Department</span>
                     <span className="text-xs font-medium text-charcoal">{watchedDept || '—'}</span>
@@ -508,6 +595,46 @@ export function EmployeeForm(props: EmployeeFormProps) {
               error={editErrors.name?.message}
               maxLength={200}
             />
+          </div>
+          {/* Phone Number */}
+          <div>
+            <Input
+              {...editRegister('phone')}
+              type="tel"
+              label="Phone Number"
+              placeholder="+91 98765 43210"
+              error={editErrors.phone?.message}
+              maxLength={20}
+            />
+          </div>
+          {/* Date of Birth */}
+          <div>
+            <Label htmlFor="edit-dob">Date of Birth</Label>
+            <input
+              id="edit-dob"
+              type="date"
+              {...editRegister('dateOfBirth')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+            />
+            <FieldError id="edit-dob-error" message={editErrors.dateOfBirth?.message} />
+          </div>
+          {/* Gender */}
+          <div className="col-span-2">
+            <Label>Gender</Label>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+              {GENDER_OPTIONS.map((opt) => (
+                <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    value={opt.value}
+                    {...editRegister('gender')}
+                    className="accent-forest"
+                  />
+                  <span className="text-sm text-charcoal">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <FieldError id="edit-gender-error" message={editErrors.gender?.message} />
           </div>
           <div>
             <Label htmlFor="edit-role" required>System Role</Label>
@@ -583,7 +710,20 @@ export function EmployeeForm(props: EmployeeFormProps) {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => editForm.reset()}
+            onClick={() =>
+              editForm.reset({
+                name: emp.name,
+                phone: emp.phone ?? null,
+                dateOfBirth: emp.dateOfBirth ?? null,
+                gender: emp.gender ?? null,
+                role: emp.role,
+                department: emp.department ?? '',
+                designation: emp.designation ?? '',
+                employmentType: emp.employmentType,
+                joinDate: emp.joinDate,
+                version: emp.version,
+              })
+            }
             disabled={updateEmployee.isPending}
           >
             Reset
