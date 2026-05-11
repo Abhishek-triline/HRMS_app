@@ -46,6 +46,14 @@ export const SalaryStructureSchema = z.object({
   basic_paise: PaiseSchema,
   allowances_paise: PaiseSchema,
   effectiveFrom: ISODateOnlySchema,
+  /**
+   * Optional component breakdown. When any of these three fields is present,
+   * ALL three must be present and hra_paise + transport_paise + other_paise
+   * MUST equal allowances_paise (enforced server-side).
+   */
+  hra_paise:        PaiseSchema.nullable().optional(),
+  transport_paise:  PaiseSchema.nullable().optional(),
+  other_paise:      PaiseSchema.nullable().optional(),
 });
 export type SalaryStructure = z.infer<typeof SalaryStructureSchema>;
 
@@ -60,6 +68,10 @@ export const EmployeeDetailSchema = z.object({
   code: EmployeeCodeSchema,
   name: z.string(),
   email: z.string().email(),
+  /** Optional personal contact information. */
+  phone: z.string().max(20).nullable().optional(),
+  dateOfBirth: ISODateOnlySchema.nullable().optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
   role: RoleSchema,
   status: EmployeeStatusSchema,
   department: z.string().nullable(),
@@ -111,6 +123,10 @@ const employeeNameSchema = z
 export const CreateEmployeeRequestSchema = z.object({
   name: employeeNameSchema,
   email: z.string().email(),
+  /** Optional personal information fields. */
+  phone: z.string().max(20).nullable().optional(),
+  dateOfBirth: ISODateOnlySchema.nullable().optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
   role: RoleSchema,
   department: z.string().min(1).max(100),
   designation: z.string().min(1).max(150),
@@ -166,6 +182,10 @@ export type EmployeeDetailResponse = z.infer<typeof EmployeeDetailResponseSchema
  */
 export const UpdateEmployeeRequestSchema = z.object({
   name: employeeNameSchema.optional(),
+  /** Optional personal information — editable on self-edit and Admin edit. */
+  phone: z.string().max(20).nullable().optional(),
+  dateOfBirth: ISODateOnlySchema.nullable().optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
   role: RoleSchema.optional(),
   department: z.string().min(1).max(100).optional(),
   designation: z.string().min(1).max(150).optional(),
@@ -184,6 +204,9 @@ export type UpdateEmployeeResponse = z.infer<typeof UpdateEmployeeResponseSchema
 export const UpdateSalaryRequestSchema = SalaryStructureSchema.extend({
   version: VersionSchema,
 });
+// Note: SalaryStructureSchema already includes the optional hra_paise /
+// transport_paise / other_paise breakdown fields; UpdateSalaryRequestSchema
+// inherits them via .extend().
 export type UpdateSalaryRequest = z.infer<typeof UpdateSalaryRequestSchema>;
 
 export const UpdateSalaryResponseSchema = EmployeeDetailResponseSchema;

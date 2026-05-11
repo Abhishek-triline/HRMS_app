@@ -1,24 +1,20 @@
 'use client';
 
 /**
- * ProfileView — read-only profile display used by SELF / Admin profile pages.
+ * ProfileView — read-only profile display used by SELF / non-Admin role profile pages.
  *
  * "Profile details are read-only. To update, contact your HR Administrator."
  *
  * Calls useProfile(id) and renders a rich profile card matching
- * prototype/admin/profile.html visual language.
+ * prototype/manager/profile.html and prototype/employee/profile.html visual language.
+ * The top card now uses <ProfileHero> matching the forest-gradient design exactly.
  */
 
 import { useProfile } from '@/lib/hooks/useEmployees';
+import { ProfileHero } from './ProfileHero';
 import { EmployeeStatusBadge } from './EmployeeStatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return (parts[0]?.[0] ?? '').toUpperCase();
-  return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
-}
 
 const fmtInr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 function formatRupees(paise: number) {
@@ -68,113 +64,132 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
     );
   }
 
-  const initials = getInitials(profile.name);
   const salary = profile.salaryStructure;
 
   return (
     <div className="space-y-5">
-      {/* Read-only notice */}
-      <div className="bg-softmint border border-mint rounded-xl px-5 py-3 flex items-start gap-3">
-        <svg className="w-4 h-4 text-forest mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      {/* Forest-gradient hero card — matches prototype/manager/profile.html */}
+      <ProfileHero
+        name={profile.name}
+        empCode={profile.code}
+        designation={profile.designation}
+        department={profile.department}
+        status={profile.status}
+        role={profile.role}
+        joinDate={profile.joinDate}
+      />
+
+      {/* Read-only notice — small inline help line under the hero per spec */}
+      <p className="text-xs text-slate flex items-start gap-2">
+        <svg
+          className="w-3.5 h-3.5 text-umber mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
-        <p className="text-sm text-forest leading-relaxed">
-          Profile details are read-only. To update, contact your HR Administrator.
-        </p>
-      </div>
+        Profile details are read-only. To update, contact your HR Administrator.
+      </p>
 
-      <div className="flex gap-5 items-start">
-        {/* LEFT — Profile details */}
-        <div className="flex-1 space-y-5 min-w-0">
+      <div className="space-y-5">
 
-          {/* Profile Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-6 py-6">
-            <div className="flex items-start gap-5">
-              {/* Avatar */}
-              <div className="w-16 h-16 rounded-full bg-forest flex items-center justify-center text-white font-heading text-xl font-bold flex-shrink-0">
-                {initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="font-heading text-xl font-bold text-charcoal">{profile.name}</h2>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-sm text-slate">{profile.designation ?? '—'}</span>
-                      <span className="text-sage">·</span>
-                      <EmployeeStatusBadge status={profile.status} />
-                      <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">
-                        {profile.role}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-mono text-xs text-slate bg-offwhite px-2.5 py-1.5 rounded-lg">
-                      {profile.code}
-                    </div>
-                  </div>
+          {/* Personal + Employment detail cards (dl blocks) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+            {/* Personal card */}
+            <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
+              <h3 className="font-heading text-sm font-bold text-charcoal mb-4 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-forest"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                Personal
+              </h3>
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Full name</dt>
+                  <dd className="text-charcoal font-medium text-right">{profile.name}</dd>
                 </div>
-
-                {/* Details grid */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-5">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-xs text-slate">{profile.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="text-xs text-slate">{profile.department ?? '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-xs text-slate">{profile.employmentType}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-xs text-slate">Joined: {formatDate(profile.joinDate)}</span>
-                  </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Email</dt>
+                  <dd className="text-charcoal font-medium text-right break-all">{profile.email}</dd>
                 </div>
-              </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Designation</dt>
+                  <dd className="text-charcoal font-medium text-right">{profile.designation ?? '—'}</dd>
+                </div>
+              </dl>
             </div>
-          </div>
 
-          {/* Reporting Manager */}
-          <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
-            <h3 className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">
-              Reporting Manager
-            </h3>
-            {profile.reportingManagerId ? (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-mint flex items-center justify-center text-forest text-sm font-bold flex-shrink-0">
-                  {profile.reportingManagerName ? getInitials(profile.reportingManagerName) : '?'}
+            {/* Employment card */}
+            <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
+              <h3 className="font-heading text-sm font-bold text-charcoal mb-4 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-forest"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                Employment
+              </h3>
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Employee code</dt>
+                  <dd className="text-forest font-mono font-semibold">{profile.code}</dd>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-charcoal">
-                    {profile.reportingManagerName ?? '—'}
-                  </div>
-                  <div className="text-xs text-slate font-mono">
-                    {profile.reportingManagerCode ?? ''}
-                  </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Role</dt>
+                  <dd className="text-charcoal font-medium">{profile.role}</dd>
                 </div>
-              </div>
-            ) : (
-              <p className="text-sm text-slate">
-                No reporting manager — top of organisation tree.
-              </p>
-            )}
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Department</dt>
+                  <dd className="text-charcoal font-medium">{profile.department ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Employment type</dt>
+                  <dd className="text-charcoal font-medium">{profile.employmentType}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Reporting manager</dt>
+                  <dd className="text-charcoal font-medium">{profile.reportingManagerName ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate">Date joined</dt>
+                  <dd className="text-charcoal font-medium">{formatDate(profile.joinDate)}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
 
           {/* Salary (if applicable) */}
           {showSalary && salary && (
             <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
-              <h3 className="text-xs font-semibold text-slate uppercase tracking-wide mb-4">
+              <h3 className="font-heading text-sm font-bold text-charcoal mb-4">
                 Salary Structure
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-3">
@@ -202,30 +217,20 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
               </p>
             </div>
           )}
-        </div>
 
-        {/* RIGHT — Metadata */}
-        <div className="w-60 flex-shrink-0 space-y-4 sticky top-6">
+          {/* Record metadata */}
           <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-4 py-4">
             <h3 className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">
               Record Info
             </h3>
             <div className="space-y-2.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate">EMP Code</span>
-                <span className="font-mono font-medium text-charcoal">{profile.code}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate">Role</span>
-                <span className="font-medium text-charcoal">{profile.role}</span>
+                <span className="text-slate">Status</span>
+                <EmployeeStatusBadge status={profile.status} />
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate">Employment</span>
                 <span className="font-medium text-charcoal">{profile.employmentType}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-slate">Status</span>
-                <EmployeeStatusBadge status={profile.status} />
               </div>
               <div className="border-t border-sage/20 pt-2 flex justify-between text-xs">
                 <span className="text-slate">Last updated</span>
@@ -233,7 +238,6 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
               </div>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

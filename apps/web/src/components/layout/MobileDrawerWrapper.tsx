@@ -8,9 +8,6 @@ import { MobileDrawer } from './MobileDrawer';
 interface MobileDrawerWrapperProps {
   role: Role;
   currentPath: string;
-  initials: string;
-  name: string;
-  email: string;
 }
 
 export function MobileDrawerWrapper(props: MobileDrawerWrapperProps) {

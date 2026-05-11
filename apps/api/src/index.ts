@@ -23,6 +23,7 @@ import { v1Router } from './router.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { errorEnvelope, ErrorCode } from '@nexora/contracts/errors';
 import { logger } from './lib/logger.js';
+import { startScheduler } from './lib/scheduler.js';
 
 // Load .env before anything else accesses process.env
 // (Prisma, pino-http, and app config all read env at module init time)
@@ -70,11 +71,36 @@ if (FORBIDDEN_SESSION_SECRETS.has(SESSION_SECRET)) {
 // Suppress "unused" lint warning — DATABASE_URL is used by Prisma via process.env
 void DATABASE_URL;
 
+// SEC-P8-010: refuse to boot in production with the default or empty admin password.
+// The seed script sets this account on first run; a default password is a trivial takeover.
+if (process.env['NODE_ENV'] === 'production') {
+  const seedPwd = process.env['SEED_ADMIN_PASSWORD'] ?? '';
+  if (!seedPwd || seedPwd === 'admin@123') {
+    console.error(
+      `\n[FATAL] SEED_ADMIN_PASSWORD is set to the default value ("admin@123") or is empty.\n` +
+        `Set a strong, unique value in your production secrets manager before deploying.\n`,
+    );
+    process.exit(1);
+  }
+}
+
 // ── Rate limiters ─────────────────────────────────────────────────────────────
+
+// Production defaults: tight. Development defaults: looser. Either can be
+// overridden via env (RATE_LIMIT_AUTH_MAX / RATE_LIMIT_GLOBAL_MAX) so an
+// operator can tune for their proxy topology and traffic shape without a
+// code change.
+const IS_DEV = process.env['NODE_ENV'] !== 'production';
+const AUTH_MAX = Number(process.env['RATE_LIMIT_AUTH_MAX'] ?? (IS_DEV ? 50 : 5));
+const GLOBAL_MAX = Number(
+  process.env['RATE_LIMIT_GLOBAL_MAX'] ?? (IS_DEV ? 2000 : 100),
+);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max: 10,
+  // SEC-P8-013: prod aligns with LOCKOUT_THRESHOLD (5) in auth.service.ts.
+  // Dev allows ~50/15min so developers and demos don't hit the wall.
+  max: AUTH_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: errorEnvelope(
@@ -86,7 +112,7 @@ const authLimiter = rateLimit({
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: GLOBAL_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: errorEnvelope(ErrorCode.RATE_LIMITED, 'Too many requests.'),
@@ -164,8 +190,11 @@ app.use(httpLogger as unknown as express.RequestHandler);
 app.use(globalLimiter);
 
 // Tighter rate limit on auth mutation endpoints
+// SEC-P8-002: also cover token-consumption endpoints to prevent brute-forcing reset/first-login flows
 app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/forgot-password', authLimiter);
+app.use('/api/v1/auth/reset-password', authLimiter);
+app.use('/api/v1/auth/first-login/set-password', authLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -186,6 +215,10 @@ app.listen(API_PORT, () => {
     { port: API_PORT, env: process.env['NODE_ENV'] ?? 'development' },
     `Nexora HRMS API listening on port ${API_PORT}`,
   );
+
+  // Start scheduled jobs (Phase 2+) after the server is listening.
+  // Disable in tests via ENABLE_CRON=false.
+  startScheduler();
 });
 
 export { app };

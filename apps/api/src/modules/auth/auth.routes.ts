@@ -176,6 +176,29 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
       return;
     }
 
+    // SEC-002-P2: an Exited employee MUST NOT be allowed to log in even with
+    // a valid password. Same for the placeholder Inactive state — the only
+    // way out of Inactive is the first-login flow, which uses its own
+    // dedicated endpoint. We surface a generic INVALID_CREDENTIALS to avoid
+    // leaking the account-status detail to a brute-forcer.
+    if (employee.status === 'Exited' || employee.status === 'Inactive') {
+      await recordLoginAttempt({ email, ip, success: false, employeeId: employee.id });
+      await audit({
+        actorId: employee.id,
+        actorRole: employee.role,
+        actorIp: ip,
+        action: 'auth.login.blocked-status',
+        targetType: 'Employee',
+        targetId: employee.id,
+        module: 'auth',
+        after: { status: employee.status },
+      });
+      res
+        .status(401)
+        .json(errorEnvelope(ErrorCode.INVALID_CREDENTIALS, 'Invalid email or password.'));
+      return;
+    }
+
     // Success — record, create session, set cookie
     await recordLoginAttempt({ email, ip, success: true, employeeId: employee.id });
 
@@ -271,7 +294,9 @@ router.post(
         where: { email: email.toLowerCase() },
       });
 
-      if (employee && employee.status === 'Active') {
+      // SEC-P8-008: OnNotice employees may also request a password reset —
+      // they still have active employment and should be able to recover access.
+      if (employee && ['Active', 'OnNotice'].includes(employee.status)) {
         const rawToken = generateToken();
         const tokenHash = hashToken(rawToken);
         const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);

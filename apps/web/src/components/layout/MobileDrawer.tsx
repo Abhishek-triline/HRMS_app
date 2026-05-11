@@ -7,12 +7,9 @@ import { Sidebar } from './Sidebar';
 interface MobileDrawerProps {
   role: Role;
   currentPath: string;
-  initials: string;
-  name: string;
-  email: string;
 }
 
-export function MobileDrawer({ role, currentPath, initials, name, email }: MobileDrawerProps) {
+export function MobileDrawer({ role, currentPath }: MobileDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -126,9 +123,6 @@ export function MobileDrawer({ role, currentPath, initials, name, email }: Mobil
         <Sidebar
           role={role}
           currentPath={currentPath}
-          initials={initials}
-          name={name}
-          email={email}
         />
       </div>
     </>

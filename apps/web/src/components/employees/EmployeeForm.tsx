@@ -11,7 +11,7 @@
  * Surfaces 409 VERSION_MISMATCH as a toast.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,6 +42,14 @@ const EditFormSchema = UpdateEmployeeRequestSchema;
 type CreateFormValues = z.infer<typeof CreateFormSchema>;
 type EditFormValues = z.infer<typeof EditFormSchema>;
 
+// Gender options for the select (matches prototype label set; 'Other' → "Non-binary")
+const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Male', label: 'Male' },
+  { value: 'Female', label: 'Female' },
+  { value: 'Other', label: 'Non-binary' },
+  { value: 'PreferNotToSay', label: 'Prefer not to say' },
+];
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EmployeeFormCreateProps {
@@ -56,6 +64,10 @@ interface EmployeeFormEditProps {
 }
 
 type EmployeeFormProps = EmployeeFormCreateProps | EmployeeFormEditProps;
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations', 'Product', 'Sales'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,6 +91,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
   const router = useRouter();
   const isCreate = props.mode === 'create';
 
+  // Track the selected manager name for the preview card (create mode only)
+  const [previewManagerName, setPreviewManagerName] = useState<string | null>(null);
+
   // ── Create mode form ───────────────────────────────────────────────────────
   const createForm = useForm<CreateFormValues>({
     resolver: isCreate ? zodResolver(CreateFormSchema) : undefined,
@@ -86,6 +101,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
       ? {
           name: '',
           email: '',
+          phone: null,
+          dateOfBirth: null,
+          gender: null,
           role: 'Employee',
           department: '',
           designation: '',
@@ -96,6 +114,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
             basic_paise: 0,
             allowances_paise: 0,
             effectiveFrom: TODAY,
+            hra_paise: 0,
+            transport_paise: 0,
+            other_paise: 0,
           },
         }
       : undefined,
@@ -107,6 +128,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
     defaultValues: !isCreate
       ? {
           name: (props as EmployeeFormEditProps).employee.name,
+          phone: (props as EmployeeFormEditProps).employee.phone ?? null,
+          dateOfBirth: (props as EmployeeFormEditProps).employee.dateOfBirth ?? null,
+          gender: (props as EmployeeFormEditProps).employee.gender ?? null,
           role: (props as EmployeeFormEditProps).employee.role,
           department: (props as EmployeeFormEditProps).employee.department ?? '',
           designation: (props as EmployeeFormEditProps).employee.designation ?? '',
@@ -128,6 +152,9 @@ export function EmployeeForm(props: EmployeeFormProps) {
       const emp = (props as EmployeeFormEditProps).employee;
       editForm.reset({
         name: emp.name,
+        phone: emp.phone ?? null,
+        dateOfBirth: emp.dateOfBirth ?? null,
+        gender: emp.gender ?? null,
         role: emp.role,
         department: emp.department ?? '',
         designation: emp.designation ?? '',
@@ -193,9 +220,14 @@ export function EmployeeForm(props: EmployeeFormProps) {
   const watchedDesignation = isCreate ? createForm.watch('designation') : '';
   const watchedEmpType = isCreate ? createForm.watch('employmentType') : '';
   const watchedJoinDate = isCreate ? createForm.watch('joinDate') : '';
+  const watchedPhone = isCreate ? createForm.watch('phone') : null;
+  const watchedDob = isCreate ? createForm.watch('dateOfBirth') : null;
+  const watchedGender = isCreate ? createForm.watch('gender') : null;
   const watchedBasicPaise = isCreate ? (createForm.watch('salaryStructure.basic_paise') ?? 0) : 0;
-  const watchedAllowancesPaise = isCreate ? (createForm.watch('salaryStructure.allowances_paise') ?? 0) : 0;
-  const grossPaise = watchedBasicPaise + watchedAllowancesPaise;
+  const watchedHraPaise = isCreate ? (createForm.watch('salaryStructure.hra_paise') ?? 0) : 0;
+  const watchedTransportPaise = isCreate ? (createForm.watch('salaryStructure.transport_paise') ?? 0) : 0;
+  const watchedOtherPaise = isCreate ? (createForm.watch('salaryStructure.other_paise') ?? 0) : 0;
+  const grossPaise = watchedBasicPaise + watchedHraPaise + watchedTransportPaise + watchedOtherPaise;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -224,6 +256,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 Personal Information
               </h3>
               <div className="grid grid-cols-2 gap-4">
+                {/* Full Name — spans both columns */}
                 <div className="col-span-2">
                   <Input
                     {...register('name')}
@@ -234,6 +267,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     maxLength={200}
                   />
                 </div>
+                {/* Work Email */}
                 <div>
                   <Input
                     {...register('email')}
@@ -243,6 +277,43 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     required
                     error={errors.email?.message}
                   />
+                </div>
+                {/* Phone Number */}
+                <div>
+                  <Input
+                    {...register('phone')}
+                    type="tel"
+                    label="Phone Number"
+                    placeholder="+91 98765 43210"
+                    error={errors.phone?.message}
+                    maxLength={20}
+                  />
+                </div>
+                {/* Date of Birth */}
+                <div>
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <input
+                    id="dob"
+                    type="date"
+                    {...register('dateOfBirth')}
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+                  />
+                  <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
+                </div>
+                {/* Gender — select (matches prototype) */}
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <select
+                    id="gender"
+                    {...register('gender')}
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                  >
+                    <option value="">Select gender</option>
+                    {GENDER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <FieldError id="gender-error" message={errors.gender?.message} />
                 </div>
               </div>
             </div>
@@ -271,14 +342,18 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   <FieldError id="role-error" message={errors.role?.message} />
                 </div>
                 <div>
-                  <Input
+                  <Label htmlFor="department" required>Department</Label>
+                  <select
+                    id="department"
                     {...register('department')}
-                    label="Department"
-                    placeholder="e.g. Engineering"
-                    required
-                    error={errors.department?.message}
-                    maxLength={100}
-                  />
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                  >
+                    <option value="">Select department</option>
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <FieldError id="department-error" message={errors.department?.message} />
                 </div>
                 <div>
                   <Label htmlFor="employment-type" required>Employment Type</Label>
@@ -331,7 +406,10 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 render={({ field }) => (
                   <HierarchyPicker
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(managerId, managerName) => {
+                      field.onChange(managerId);
+                      setPreviewManagerName(managerName ?? null);
+                    }}
                     label="Reporting Manager"
                     error={errors.reportingManagerId?.message}
                   />
@@ -400,17 +478,23 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 <p className="text-mint/70 text-xs">Updates as you fill the form</p>
               </div>
               <div className="px-5 py-5">
-                {/* Avatar */}
+                {/* Avatar — neutral placeholder per prototype */}
                 <div className="flex flex-col items-center mb-5">
-                  <div className="w-16 h-16 rounded-full bg-forest flex items-center justify-center text-white font-heading text-xl font-bold mb-2">
-                    {watchedName ? getInitials(watchedName) : (
-                      <svg className="w-7 h-7 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    )}
+                  <div className="w-16 h-16 rounded-full bg-sage/20 flex items-center justify-center mb-2">
+                    <svg className="w-7 h-7 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
-                  <div className="text-sm font-semibold text-charcoal">{watchedName || <span className="text-sage">Full Name</span>}</div>
-                  <div className="text-xs text-slate mt-0.5">{watchedDesignation || <span className="text-sage/70">Designation</span>}</div>
+                  {watchedName ? (
+                    <div className="text-sm font-semibold text-charcoal">{watchedName}</div>
+                  ) : (
+                    <div className="text-sm font-semibold text-sage">Full Name</div>
+                  )}
+                  {watchedDesignation ? (
+                    <div className="text-xs text-slate mt-0.5">{watchedDesignation}</div>
+                  ) : (
+                    <div className="text-xs text-sage/70 mt-0.5">Designation</div>
+                  )}
                 </div>
 
                 {/* EMP Code */}
@@ -432,6 +516,10 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Date of Joining</span>
                     <span className="text-xs font-medium text-charcoal">{watchedJoinDate || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate">Reporting Manager</span>
+                    <span className="text-xs font-medium text-charcoal">{previewManagerName || '—'}</span>
                   </div>
                   <div className="border-t border-sage/20 pt-2 flex justify-between items-center">
                     <span className="text-xs text-slate">Gross Monthly CTC</span>
@@ -459,7 +547,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
             </div>
 
             <div className="text-xs text-slate px-1">
-              Fields marked <span className="text-crimson font-bold">*</span> are required.
+              Fields marked <span className="text-crimson font-bold">*</span> are required to create the employee record.
             </div>
           </div>
         </div>
@@ -491,6 +579,43 @@ export function EmployeeForm(props: EmployeeFormProps) {
               maxLength={200}
             />
           </div>
+          {/* Phone Number */}
+          <div>
+            <Input
+              {...editRegister('phone')}
+              type="tel"
+              label="Phone Number"
+              placeholder="+91 98765 43210"
+              error={editErrors.phone?.message}
+              maxLength={20}
+            />
+          </div>
+          {/* Date of Birth */}
+          <div>
+            <Label htmlFor="edit-dob">Date of Birth</Label>
+            <input
+              id="edit-dob"
+              type="date"
+              {...editRegister('dateOfBirth')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+            />
+            <FieldError id="edit-dob-error" message={editErrors.dateOfBirth?.message} />
+          </div>
+          {/* Gender */}
+          <div className="col-span-2">
+            <Label htmlFor="edit-gender">Gender</Label>
+            <select
+              id="edit-gender"
+              {...editRegister('gender')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select gender</option>
+              {GENDER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <FieldError id="edit-gender-error" message={editErrors.gender?.message} />
+          </div>
           <div>
             <Label htmlFor="edit-role" required>System Role</Label>
             <select
@@ -506,13 +631,18 @@ export function EmployeeForm(props: EmployeeFormProps) {
             <FieldError id="edit-role-error" message={editErrors.role?.message} />
           </div>
           <div>
-            <Input
+            <Label htmlFor="edit-department" required>Department</Label>
+            <select
+              id="edit-department"
               {...editRegister('department')}
-              label="Department"
-              required
-              error={editErrors.department?.message}
-              maxLength={100}
-            />
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select department</option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <FieldError id="edit-department-error" message={editErrors.department?.message} />
           </div>
           <div>
             <Input
@@ -560,7 +690,20 @@ export function EmployeeForm(props: EmployeeFormProps) {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => editForm.reset()}
+            onClick={() =>
+              editForm.reset({
+                name: emp.name,
+                phone: emp.phone ?? null,
+                dateOfBirth: emp.dateOfBirth ?? null,
+                gender: emp.gender ?? null,
+                role: emp.role,
+                department: emp.department ?? '',
+                designation: emp.designation ?? '',
+                employmentType: emp.employmentType,
+                joinDate: emp.joinDate,
+                version: emp.version,
+              })
+            }
             disabled={updateEmployee.isPending}
           >
             Reset

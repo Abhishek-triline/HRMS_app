@@ -6,8 +6,18 @@
 import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
 
+import { requireSession } from './middleware/requireSession.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { employeesRouter } from './modules/employees/employees.routes.js';
+import { leaveRouter } from './modules/leave/leave.routes.js';
+import { attendanceRouter } from './modules/attendance/attendance.routes.js';
+import { regularisationsRouter } from './modules/attendance/regularisations.routes.js';
+import { holidaysRouter } from './modules/attendance/holidays.routes.js';
+import { payrollRouter, payslipsRouter, taxConfigRouter } from './modules/payroll/payroll.routes.js';
+import { performanceRouter } from './modules/performance/performance.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { auditRouter } from './modules/audit/audit.routes.js';
+import { configurationRouter } from './modules/configuration/configuration.routes.js';
 import { openApiSpec } from './lib/openapi.js';
 
 const v1Router = Router();
@@ -23,24 +33,47 @@ v1Router.get('/health', (_req, res) => {
   });
 });
 
-// OpenAPI 3.1 spec — served as JSON for tooling (Postman, codegen, etc.)
-v1Router.get('/openapi.json', (_req, res) => {
-  res.status(200).json(openApiSpec);
-});
+// SEC-P8-004: gate /openapi.json + /docs behind session auth in production.
+// In dev/staging they remain open for tooling convenience.
+if (process.env['NODE_ENV'] === 'production') {
+  // OpenAPI 3.1 spec — requires a valid session in production
+  v1Router.get('/openapi.json', requireSession(), (_req, res) => {
+    res.status(200).json(openApiSpec);
+  });
 
-// Swagger UI — interactive docs at /api/v1/docs
-v1Router.use(
-  '/docs',
-  swaggerUi.serve,
-  swaggerUi.setup(openApiSpec, {
-    customSiteTitle: 'Nexora HRMS API — docs',
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'list',
-      defaultModelsExpandDepth: 0,
-    },
-  }),
-);
+  // Swagger UI — requires a valid session in production
+  v1Router.use(
+    '/docs',
+    requireSession(),
+    swaggerUi.serve,
+    swaggerUi.setup(openApiSpec, {
+      customSiteTitle: 'Nexora HRMS API — docs',
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 0,
+      },
+    }),
+  );
+} else {
+  // Dev / staging — open mount for tooling, Postman, codegen, etc.
+  v1Router.get('/openapi.json', (_req, res) => {
+    res.status(200).json(openApiSpec);
+  });
+
+  v1Router.use(
+    '/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(openApiSpec, {
+      customSiteTitle: 'Nexora HRMS API — docs',
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 0,
+      },
+    }),
+  );
+}
 
 // Auth module (Phase 0)
 v1Router.use('/auth', authRouter);
@@ -48,13 +81,27 @@ v1Router.use('/auth', authRouter);
 // Phase 1 — Employees & Hierarchy
 v1Router.use('/employees', employeesRouter);
 
-// Phase 2+ modules will be mounted here:
-// v1Router.use('/leave', leaveRouter);
-// v1Router.use('/attendance', attendanceRouter);
-// v1Router.use('/payroll', payrollRouter);
-// v1Router.use('/performance', performanceRouter);
-// v1Router.use('/notifications', notificationsRouter);
-// v1Router.use('/audit', auditRouter);
-// v1Router.use('/config', configRouter);
+// Phase 2 — Leave Management
+v1Router.use('/leave', leaveRouter);
+
+// Phase 3 — Attendance, Regularisation, Holiday Calendar
+v1Router.use('/attendance', attendanceRouter);
+v1Router.use('/regularisations', regularisationsRouter);
+v1Router.use('/config/holidays', holidaysRouter);
+
+// Phase 4 — Payroll Processing
+v1Router.use('/payroll', payrollRouter);
+v1Router.use('/payslips', payslipsRouter);
+v1Router.use('/config/tax', taxConfigRouter);
+
+// Phase 5 — Performance Reviews
+v1Router.use('/performance', performanceRouter);
+
+// Phase 6 — Notifications
+v1Router.use('/notifications', notificationsRouter);
+
+// Phase 7 — Audit Log + Configuration
+v1Router.use('/audit-logs', auditRouter);
+v1Router.use('/config', configurationRouter);
 
 export { v1Router };

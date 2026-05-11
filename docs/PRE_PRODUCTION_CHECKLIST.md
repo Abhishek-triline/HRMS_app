@@ -6,7 +6,7 @@ Items that are **safe to defer in development** but **MUST** be completed before
 
 ## Database Hardening
 
-- [ ] **SEC-001 — Audit log append-only at DB level** (BL-047 / BL-048)
+- [ ] **SEC-001 / SEC-P8-003 (High) — Audit log append-only at DB level** (BL-047 / BL-048) — Phase 8 VAPT SEC-P8-003
   - Create a least-privilege application DB user (e.g. `nexora_app`) — never use `root`.
   - Grant: `SELECT, INSERT, UPDATE, DELETE` on every table EXCEPT `audit_log`.
   - For `audit_log`: grant only `SELECT, INSERT`.
@@ -41,7 +41,8 @@ Items that are **safe to defer in development** but **MUST** be completed before
 - [ ] Default admin `admin@triline.in` rotated to a fresh password (or new admin created and seeded admin disabled) before go-live.
 - [ ] `LOGIN_LOCKOUT_THRESHOLD` and `LOGIN_LOCKOUT_MINUTES` reviewed for the production threat model.
 - [ ] `PASSWORD_RESET_TTL_MINUTES` reviewed (default 30).
-- [ ] If running behind a load balancer / proxy, set `app.set('trust proxy', N)` to the correct hop count. SEC-002 fix relies on `req.ip` reflecting the real client IP.
+- [ ] **SEC-P8-006 (Medium) — Set `trust proxy` once proxy topology is known** — Phase 8 VAPT SEC-P8-006
+  Once the production reverse proxy / load-balancer count is confirmed, add `app.set('trust proxy', N)` in `apps/api/src/index.ts` (replace `N` with the actual hop count — typically `1` for a single nginx/ALB). Without this, `req.ip` returns the socket peer (which is already safe), but WITH it Express correctly strips down the XFF chain so audit logs reflect the real client IP rather than the proxy IP. Do NOT set `trust proxy` to `true` (trusts entire XFF chain) or to a value higher than the actual hop count. The `resolveIp()` helpers in `auth.routes.ts` and `configuration.routes.ts` already use `req.ip` and will benefit automatically once this is configured. SEC-002 fix also relies on `req.ip` reflecting the real client IP.
 
 ## Monitoring / Alerting
 
@@ -69,6 +70,16 @@ Items that are **safe to defer in development** but **MUST** be completed before
 
 | ID | Item | Severity in dev | Status | Owner | Verified |
 |---|---|---|---|---|---|
-| SEC-001 | Audit log REVOKE for app DB user | Crit-for-prod | Open | Ops + DBA | — |
+| SEC-001 / BUG-AUD-001 / SEC-P8-003 | Audit log REVOKE for app DB user (BL-047 / BL-048) — Phase 8 VAPT SEC-P8-003 | **High** — data integrity breach if exploited; MUST complete before any environment handling real employee data | Open | Ops + DBA | — |
+| SEC-P8-006 | `app.set('trust proxy', N)` — set to correct hop count once proxy topology known — Phase 8 VAPT SEC-P8-006 | **Medium** — without this, audit logs record proxy IP instead of real client IP; the no-proxy default is still safe | Open | Ops + Backend | — |
 
 When an item closes, append the verification evidence (timestamp + verifier name) and move it out of "Open".
+
+---
+
+## Phase 6 deferred items
+
+- [ ] **Wire `auditLogId` on notifications (BUG-NOT-004 / SEC-006-P6)**
+  Requires changing the `audit()` helper to return the created row's `id` and threading
+  that return value through every call site (~20 across all modules). Deferred from Phase 6
+  QA to Phase 7 grooming to avoid a broad cross-cutting change late in the release cycle.

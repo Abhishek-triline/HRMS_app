@@ -34,6 +34,8 @@ export const ErrorCode = {
 
   // Payroll (BL-031 / BL-034)
   RUN_ALREADY_FINALISED: 'RUN_ALREADY_FINALISED',
+  // SEC-P8-007: DB unique constraint fallback for concurrent run creates
+  RUN_ALREADY_EXISTS: 'RUN_ALREADY_EXISTS',
   PAYSLIP_IMMUTABLE: 'PAYSLIP_IMMUTABLE',
 
   // Performance (BL-041)
@@ -42,6 +44,10 @@ export const ErrorCode = {
 
   // Hierarchy
   CIRCULAR_REPORTING: 'CIRCULAR_REPORTING',
+
+  // Attendance undo (check-out reversal)
+  UNDO_WINDOW_EXPIRED: 'UNDO_WINDOW_EXPIRED',
+  UNDO_OUTSIDE_DAY: 'UNDO_OUTSIDE_DAY',
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];
