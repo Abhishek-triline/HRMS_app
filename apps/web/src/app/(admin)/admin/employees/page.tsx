@@ -170,18 +170,8 @@ export default function EmployeesPage() {
 
   return (
     <div>
-      {/* ── Header row ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="font-heading text-xl font-bold text-charcoal">
-            {headlineTotal !== null ? `${headlineTotal} Employees` : 'Employee Directory'}
-          </h2>
-          {!mainQuery.isLoading && (
-            <p className="text-xs text-slate mt-0.5">
-              Active: {activeCount} &middot; On Notice: {onNoticeCount} &middot; Exited: {exitedCount}
-            </p>
-          )}
-        </div>
+      {/* ── Header row — Add Employee CTA only (page title comes from TopBar) ── */}
+      <div className="flex items-center justify-end mb-5">
         <Link
           href="/admin/employees/new"
           className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg font-body text-sm font-semibold transition-colors flex items-center gap-2"
