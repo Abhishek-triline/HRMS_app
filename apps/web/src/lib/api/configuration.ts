@@ -29,8 +29,13 @@ export async function getAttendanceConfig(): Promise<AttendanceConfig> {
   return res.data;
 }
 
-/** PUT /api/v1/config/attendance — body: full AttendanceConfig */
-export async function updateAttendanceConfig(body: AttendanceConfig): Promise<AttendanceConfig> {
+/**
+ * PUT /api/v1/config/attendance — body may be partial (server requires at
+ * least one field; remaining keys stay untouched).
+ */
+export async function updateAttendanceConfig(
+  body: Partial<AttendanceConfig>,
+): Promise<AttendanceConfig> {
   const res = await apiClient.put<AttendanceConfigResponse>(ATT_BASE, body);
   return res.data;
 }
@@ -43,8 +48,13 @@ export async function getLeaveConfig(): Promise<LeaveConfig> {
   return res.data;
 }
 
-/** PUT /api/v1/config/leave — body: full LeaveConfig */
-export async function updateLeaveConfig(body: LeaveConfig): Promise<LeaveConfig> {
+/**
+ * PUT /api/v1/config/leave — body may be partial (server requires at least
+ * one field; remaining keys stay untouched).
+ */
+export async function updateLeaveConfig(
+  body: Partial<LeaveConfig>,
+): Promise<LeaveConfig> {
   const res = await apiClient.put<LeaveConfigResponse>(LEAVE_BASE, body);
   return res.data;
 }

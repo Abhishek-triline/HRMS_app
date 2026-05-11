@@ -38,13 +38,22 @@ export type ConfigLeaveType = z.infer<typeof ConfigLeaveTypeSchema>;
 // ── Attendance config ────────────────────────────────────────────────────────
 
 /**
- * AttendanceConfig — values persisted as two separate Configuration rows:
+ * Canonical weekday tokens (Mon..Sun). Used by weeklyOffDays.
+ * Order is the Indian / ISO-8601 convention: week starts Monday.
+ */
+export const WeekdaySchema = z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+export type Weekday = z.infer<typeof WeekdaySchema>;
+
+/**
+ * AttendanceConfig — values persisted as three separate Configuration rows:
  *   ATTENDANCE_LATE_THRESHOLD_TIME  → "HH:MM" string (e.g. "10:30")
  *   ATTENDANCE_STANDARD_DAILY_HOURS → integer 1..24
+ *   ATTENDANCE_WEEKLY_OFF_DAYS      → JSON array of Weekday tokens (e.g. ["Sat","Sun"])
  *
- * Default values (BL-027):
+ * Default values (BL-027 + Indian 5-day work-week standard):
  *   lateThresholdTime  = "10:30"
  *   standardDailyHours = 8
+ *   weeklyOffDays      = ["Sat", "Sun"]
  */
 export const AttendanceConfigSchema = z.object({
   /** HH:MM 24-hour format. Default "10:30". */
@@ -60,6 +69,13 @@ export const AttendanceConfigSchema = z.object({
     ),
   /** Integer hours per working day. Range 1–24. Default 8. */
   standardDailyHours: z.number().int().min(1).max(24),
+  /**
+   * Weekday tokens that are weekly-off days for all employees.
+   * Used by BL-026 status derivation (Holiday/WeeklyOff override) and by leave
+   * working-day counts. Default ['Sat', 'Sun'] — the Indian 5-day work-week.
+   * Duplicates are tolerated by the schema but the API deduplicates on write.
+   */
+  weeklyOffDays: z.array(WeekdaySchema).max(7).default(['Sat', 'Sun']),
 });
 export type AttendanceConfig = z.infer<typeof AttendanceConfigSchema>;
 

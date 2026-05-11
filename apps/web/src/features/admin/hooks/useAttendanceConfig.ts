@@ -25,7 +25,7 @@ export function useAttendanceConfig() {
 export function useUpdateAttendanceConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: AttendanceConfig) => updateAttendanceConfig(body),
+    mutationFn: (body: Partial<AttendanceConfig>) => updateAttendanceConfig(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.config.attendance() });
       showToast({ type: 'success', title: 'Attendance config saved', message: 'Settings updated successfully.' });

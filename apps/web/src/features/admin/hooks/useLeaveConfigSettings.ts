@@ -26,7 +26,7 @@ export function useLeaveConfigSettings() {
 export function useUpdateLeaveConfigSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: LeaveConfig) => updateLeaveConfig(body),
+    mutationFn: (body: Partial<LeaveConfig>) => updateLeaveConfig(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.config.leave() });
       showToast({ type: 'success', title: 'Leave config saved', message: 'Settings updated successfully.' });
