@@ -15,8 +15,8 @@
  */
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useDistribution, useCycle } from '@/lib/hooks/usePerformance';
+import { useParams, useRouter } from 'next/navigation';
+import { useDistribution, useCycle, useCycles } from '@/lib/hooks/usePerformance';
 import { Spinner } from '@/components/ui/Spinner';
 import type { DistributionBucket } from '@nexora/contracts/performance';
 
@@ -48,13 +48,37 @@ function pct(n: number, total: number): number {
   return Math.round((n / total) * 100);
 }
 
+// CSV-safe cell — prefix formula-trigger chars to neutralise spreadsheet injection.
+function csvCell(v: string | number): string {
+  const s = String(v ?? '');
+  const escaped = s.replace(/"/g, '""');
+  const quoted = `"${/^[=+\-@\t\r]/.test(s) ? `'${escaped}` : escaped}"`;
+  return quoted;
+}
+
+function downloadCsv(filename: string, rows: Array<Array<string | number>>): void {
+  const csv = rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+  // BOM so Excel detects UTF-8.
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DistributionReportPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
 
   const { data: cycleData, isLoading: cycleLoading } = useCycle(id);
   const { data, isLoading, isError } = useDistribution(id);
+  const { data: allCycles } = useCycles({});
 
   const isLoadingAny = isLoading || cycleLoading;
   const cycle = cycleData?.cycle;
@@ -116,23 +140,87 @@ export default function DistributionReportPage() {
 
       {!isLoadingAny && !isError && data && (
         <>
-          {/* Cycle selector strip */}
+          {/* Cycle selector strip — dropdown + period + Export Report */}
           <div className="flex items-center gap-3 mb-7 flex-wrap">
-            <label className="text-sm font-semibold text-slate">Cycle:</label>
-            <span className="border border-sage/60 rounded-lg px-4 py-2 text-sm text-charcoal bg-white font-medium">
-              {data.cycleCode ?? cycle?.code ?? 'Current cycle'}
-            </span>
+            <label htmlFor="cycle-select" className="text-sm font-semibold text-slate">Cycle:</label>
+            <select
+              id="cycle-select"
+              value={id}
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next && next !== id) {
+                  router.push(`/admin/performance-cycles/${next}/distribution`);
+                }
+              }}
+              className="border border-sage/60 rounded-lg px-4 py-2 text-sm text-charcoal focus:outline-none focus:border-forest transition-colors bg-white font-medium"
+            >
+              {(allCycles?.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code}
+                </option>
+              ))}
+              {/* Fallback option if the cycle list hasn't loaded but we know the current code */}
+              {(!allCycles?.data?.length) && (
+                <option value={id}>{data.cycleCode ?? cycle?.code ?? 'Current cycle'}</option>
+              )}
+            </select>
             <span className="text-xs text-slate">
               {periodText}
               {periodText && <>&nbsp;|&nbsp;</>}
               {ratedTotal} employee{ratedTotal !== 1 ? 's' : ''} rated
             </span>
-            <Link
-              href={`/admin/performance-cycles/${id}/missing`}
-              className="ml-auto text-xs font-semibold text-emerald hover:text-forest transition-colors"
-            >
-              Missing Reviews →
-            </Link>
+
+            <div className="ml-auto flex items-center gap-3">
+              <Link
+                href={`/admin/performance-cycles/${id}/missing`}
+                className="text-xs font-semibold text-emerald hover:text-forest transition-colors"
+              >
+                Missing Reviews →
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  const cycleCode = data.cycleCode ?? cycle?.code ?? 'cycle';
+                  const rows: Array<Array<string | number>> = [
+                    [`Rating Distribution Report — ${cycleCode}`],
+                    [periodText || ''],
+                    [`Employees rated: ${ratedTotal}`],
+                    [],
+                    ['Summary'],
+                    ['Rating', 'Count', 'Percent'],
+                    ['Rating 5', totals.rating5, `${pct(totals.rating5, ratedTotal)}%`],
+                    ['Rating 4', totals.rating4, `${pct(totals.rating4, ratedTotal)}%`],
+                    ['Rating 3', totals.rating3, `${pct(totals.rating3, ratedTotal)}%`],
+                    ['Rating 2', totals.rating2, `${pct(totals.rating2, ratedTotal)}%`],
+                    ['Rating 1', totals.rating1, `${pct(totals.rating1, ratedTotal)}%`],
+                    ['Total', ratedTotal, '100%'],
+                    [],
+                    ['Department Breakdown'],
+                    ['Department', 'Employees', 'Rating 5', 'Rating 4', 'Rating 3', 'Rating 2', 'Rating 1', 'Avg Rating'],
+                    ...buckets.map((b) => [
+                      b.department,
+                      totalForBucket(b),
+                      b.rating5,
+                      b.rating4,
+                      b.rating3,
+                      b.rating2,
+                      b.rating1,
+                      avgForBucket(b) ?? '—',
+                    ]),
+                    ['All Departments', ratedTotal, totals.rating5, totals.rating4, totals.rating3, totals.rating2, totals.rating1, overallAvg ?? '—'],
+                  ];
+                  const safeName = String(cycleCode).replace(/[^a-zA-Z0-9._-]+/g, '-');
+                  downloadCsv(`rating-distribution_${safeName}.csv`, rows);
+                }}
+                className="inline-flex items-center gap-2 border border-sage/60 text-charcoal bg-white hover:bg-offwhite px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                aria-label="Export rating distribution report as CSV"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Export Report
+              </button>
+            </div>
           </div>
 
           {/* Summary stat tiles — 5, one per rating */}
