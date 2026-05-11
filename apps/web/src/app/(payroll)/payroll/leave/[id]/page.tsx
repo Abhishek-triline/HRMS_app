@@ -87,7 +87,7 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         textColor: 'text-richgreen', subColor: 'text-richgreen/70',
         pillBg: 'bg-greenbg', pillBorder: 'border-richgreen/30', pillText: 'text-richgreen',
         label: 'Approved',
-        sub: request.decidedAt ? `Approved on ${formatDate(request.decidedAt)}` : 'Approved',
+        sub: request.decidedAt ? `Approved on ${formatDateTime(request.decidedAt)}` : 'Approved',
       };
     case 'Rejected':
       return {
