@@ -45,7 +45,7 @@ HRMS_app/
 pnpm install
 
 # 2. Configure environment — two files, one per app
-cp .env.example apps/api/.env                            # backend secrets (DB, SESSION_SECRET, SMTP)
+cp apps/api/.env.example apps/api/.env                   # backend secrets (DB, SESSION_SECRET, SMTP)
 cp apps/web/.env.local.example apps/web/.env.local       # web public vars (API base URL)
 # Edit apps/api/.env — fill DATABASE_URL, SESSION_SECRET, SMTP_* if needed
 
@@ -89,10 +89,10 @@ pnpm --filter @nexora/api test         # API tests only
 
 ## Environment
 
-Two env files, one per app — both gitignored. The single source-of-truth template is `/.env.example` at the repo root.
+Two env files, one per app — both gitignored. Each app has its own template colocated with the code that reads it:
 
-- `apps/api/.env` — backend secrets, read by Express via `dotenv` at startup.
-- `apps/web/.env.local` — Next.js convention; only `NEXT_PUBLIC_*` vars belong here.
+- `apps/api/.env` — backend secrets, read by Express via `dotenv` at startup. Template: `apps/api/.env.example`.
+- `apps/web/.env.local` — Next.js convention; only `NEXT_PUBLIC_*` vars belong here. Template: `apps/web/.env.local.example`.
 
 Backend highlights:
 
