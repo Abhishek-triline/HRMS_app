@@ -136,18 +136,15 @@ export default function EmployeesPage() {
     ? currentPage + 1 // always show at least one more page to navigate to
     : currentPage;
 
-  // ── org-wide status sub-counts (parallel, limit=1) ───────────────────────────
-  // We read nextCursor from these: if nextCursor!=null the count is >1 (show "N+"),
-  // otherwise it equals data.length.
-  const activeQuery = useEmployeesList({ status: 'Active', limit: 1 });
-  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 1 });
-  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 1 });
+  // ── org-wide status sub-counts ────────────────────────────────────────────────
+  // Fetch each status bucket with a generous limit so .data.length reflects
+  // the actual count for typical org sizes (≤500 employees per status).
+  const activeQuery = useEmployeesList({ status: 'Active', limit: 100});
+  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 100});
+  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 100});
 
-  function subCount(
-    q: typeof activeQuery,
-  ): string {
+  function subCount(q: typeof activeQuery): string {
     if (!q.data) return '—';
-    if (q.data.nextCursor) return `${q.data.data.length}+`;
     return String(q.data.data.length);
   }
 
@@ -156,9 +153,16 @@ export default function EmployeesPage() {
   const exitedCount = subCount(exitedQuery);
 
   // ── headline total ───────────────────────────────────────────────────────────
-  const headlineTotal = mainQuery.isLoading
-    ? null
-    : `${knownTotal}${isApproximate ? '+' : ''}`;
+  // Sum of the three known status buckets (Active + On-Notice + Exited).
+  const allLoaded =
+    !!activeQuery.data && !!onNoticeQuery.data && !!exitedQuery.data;
+  const headlineTotal = allLoaded
+    ? String(
+        activeQuery.data.data.length +
+          onNoticeQuery.data.data.length +
+          exitedQuery.data.data.length,
+      )
+    : null;
 
   // ── page navigation ──────────────────────────────────────────────────────────
   function handlePageChange(page: number) {
@@ -170,8 +174,18 @@ export default function EmployeesPage() {
 
   return (
     <div>
-      {/* ── Header row — Add Employee CTA only (page title comes from TopBar) ── */}
-      <div className="flex items-center justify-end mb-5">
+      {/* ── Header row ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="font-heading text-xl font-bold text-charcoal">
+            {headlineTotal !== null ? `${headlineTotal} Employees` : 'Employee Directory'}
+          </h2>
+          {allLoaded && (
+            <p className="text-xs text-slate mt-0.5">
+              Active: {activeCount} &middot; On Notice: {onNoticeCount} &middot; Exited: {exitedCount}
+            </p>
+          )}
+        </div>
         <Link
           href="/admin/employees/new"
           className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg font-body text-sm font-semibold transition-colors flex items-center gap-2"
