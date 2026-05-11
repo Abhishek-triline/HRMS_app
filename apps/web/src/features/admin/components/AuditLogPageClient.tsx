@@ -14,7 +14,7 @@
  * - before/after JSON diff with red/green legend
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
@@ -248,6 +248,22 @@ function exportToCsv(entries: AuditLogEntry[]) {
   URL.revokeObjectURL(url);
 }
 
+// ── Numbered paginator helper — emits up to 7 entries with ellipses ──────────
+
+function buildPageNumbers(current: number, total: number): Array<number | 'ellipsis'> {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const out: Array<number | 'ellipsis'> = [1];
+  if (current > 3) out.push('ellipsis');
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) out.push(i);
+  if (current < total - 2) out.push('ellipsis');
+  out.push(total);
+  return out;
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 const MODULES = ['', 'auth', 'leave', 'attendance', 'payroll', 'performance', 'employees', 'configuration', 'system'] as const;
@@ -264,6 +280,10 @@ export function AuditLogPageClient() {
   // Applied filters (only change on "Apply")
   const [appliedFilters, setAppliedFilters] = useState<AuditLogFilters>({});
 
+  // Numbered pagination — 20 rows per page.
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const {
     data,
     isLoading,
@@ -279,6 +299,29 @@ export function AuditLogPageClient() {
     [data],
   );
   const totalLoaded = allEntries.length;
+
+  // Reset to page 1 whenever filters change.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [appliedFilters]);
+
+  // Lazily fetch the next backend page when the user navigates past loaded data.
+  useEffect(() => {
+    const needed = currentPage * PAGE_SIZE;
+    if (needed > totalLoaded && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [currentPage, totalLoaded, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Slice the current page's rows.
+  const pageEntries = useMemo(
+    () => allEntries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [allEntries, currentPage],
+  );
+
+  // Total pages: known loaded + 1 if more available on the backend.
+  const loadedPages = Math.max(1, Math.ceil(totalLoaded / PAGE_SIZE));
+  const totalPages = hasNextPage ? loadedPages + 1 : loadedPages;
 
   function handleApply() {
     const filters: AuditLogFilters = {};
@@ -573,7 +616,7 @@ export function AuditLogPageClient() {
                   </td>
                 </tr>
               ) : (
-                allEntries.map((entry) => (
+                pageEntries.map((entry) => (
                   <AuditRow key={entry.id} entry={entry} />
                 ))
               )}
@@ -604,7 +647,7 @@ export function AuditLogPageClient() {
               )}
             </div>
           ) : (
-            allEntries.map((entry) => (
+            pageEntries.map((entry) => (
               <div key={entry.id} className="px-4 py-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-mono text-[11px] text-slate">{formatIST(entry.createdAt)}</span>
@@ -625,7 +668,7 @@ export function AuditLogPageClient() {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — numbered paginator + append-only notice */}
         <div className="px-5 py-3 bg-offwhite/60 border-t border-sage/20 flex items-center justify-between flex-wrap gap-3">
           <div className="text-[11px] text-slate flex items-start gap-2">
             <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
@@ -634,16 +677,50 @@ export function AuditLogPageClient() {
             <span>Append-only · entries cannot be edited or deleted by any user, including Admin (BL-047).</span>
           </div>
 
-          {hasNextPage && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => fetchNextPage()}
-              loading={isFetchingNextPage}
-              disabled={isFetchingNextPage}
-            >
-              Load more
-            </Button>
+          {totalLoaded > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, totalLoaded)} of {totalLoaded}
+                {hasNextPage ? '+' : ''}
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="border border-sage/50 px-3 py-1.5 rounded text-xs text-slate hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                {buildPageNumbers(currentPage, totalPages).map((p, i) =>
+                  p === 'ellipsis' ? (
+                    <span key={`e${i}`} className="px-2 py-1.5 text-xs text-slate">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCurrentPage(p)}
+                      className={
+                        p === currentPage
+                          ? 'bg-forest text-white px-3 py-1.5 rounded text-xs font-semibold'
+                          : 'border border-sage/50 px-3 py-1.5 rounded text-xs text-slate hover:bg-white'
+                      }
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages || (isFetchingNextPage && currentPage === totalPages - 1)}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="border border-sage/50 px-3 py-1.5 rounded text-xs text-slate hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
