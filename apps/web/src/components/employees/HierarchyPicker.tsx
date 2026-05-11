@@ -126,7 +126,7 @@ export function HierarchyPicker({
   const displayValue = open ? query : selectedDisplay?.name ?? '';
 
   return (
-    <div className="w-full" ref={containerRef}>
+    <div className="relative w-full" ref={containerRef}>
       {label && (
         <Label htmlFor={inputId} required={required}>
           {label}
