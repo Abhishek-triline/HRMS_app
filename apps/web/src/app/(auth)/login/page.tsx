@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { LoginRequest } from '@nexora/contracts/auth';
 import { LoginRequestSchema } from '@nexora/contracts/auth';
 import { ApiError } from '@/lib/api/client';
@@ -43,19 +43,6 @@ const ROLE_DASHBOARD: Record<string, string> = {
   PayrollOfficer: '/payroll/dashboard',
 };
 
-// Demo role credentials — development convenience for TC-AUTH-006.
-// Pre-fill the form with the selected demo account and submit immediately.
-// Currently only the Admin row is wired against the seeded account
-// (admin@triline.in / admin@123). Manager / Employee / Payroll demo accounts
-// arrive when the Phase 1 employee seed lands; until then those chips will
-// gracefully surface INVALID_CREDENTIALS.
-const DEMO_ROLES = [
-  { label: 'Admin',    email: 'admin@triline.in',    password: 'admin@123', abbr: 'A', bg: 'bg-forest',  text: 'text-mint' },
-  { label: 'Manager',  email: 'manager@triline.in',  password: 'admin@123', abbr: 'M', bg: 'bg-emerald', text: 'text-white' },
-  { label: 'Employee', email: 'employee@triline.in', password: 'admin@123', abbr: 'E', bg: 'bg-mint',    text: 'text-forest' },
-  { label: 'Payroll',  email: 'payroll@triline.in',  password: 'admin@123', abbr: 'P', bg: 'bg-umber',   text: 'text-white' },
-] as const;
-
 export default function LoginPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -63,7 +50,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginRequest>({
     resolver: zodResolver(LoginRequestSchema),
@@ -100,22 +86,6 @@ export default function LoginPage() {
     }
   };
 
-  /**
-   * Demo shortcut — pre-fills email with a known dev credential and
-   * sets a placeholder password, then programmatically submits.
-   * TC-AUTH-006: demo chips must be present.
-   */
-  const handleDemoLogin = useCallback(
-    (email: string, password: string) => {
-      setValue('email', email);
-      setValue('password', password);
-      // Submit on next tick so RHF can update its internal values first
-      setTimeout(() => {
-        document.getElementById('nx-login-submit')?.click();
-      }, 0);
-    },
-    [setValue],
-  );
 
   return (
     <div className="font-body bg-forest text-white min-h-screen flex flex-col relative overflow-hidden">
@@ -336,42 +306,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-6" aria-hidden="true">
-              <div className="flex-1 h-px bg-sage/40" />
-              <span className="text-[10px] text-slate uppercase tracking-[0.15em] font-semibold">Demo as</span>
-              <div className="flex-1 h-px bg-sage/40" />
-            </div>
-
-            {/* Demo role shortcuts — TC-AUTH-006 */}
-            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Demo login shortcuts">
-              {DEMO_ROLES.map((role) => (
-                <button
-                  key={role.label}
-                  type="button"
-                  onClick={() => handleDemoLogin(role.email, role.password)}
-                  className="group flex items-center gap-2 bg-softmint border border-mint hover:border-forest hover:bg-mint rounded-lg px-3 py-2 transition-colors"
-                  aria-label={`Sign in as demo ${role.label}`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-md ${role.bg} ${role.text} flex items-center justify-center text-[10px] font-bold flex-shrink-0`}
-                    aria-hidden="true"
-                  >
-                    {role.abbr}
-                  </div>
-                  <span className="text-xs font-semibold text-forest flex-1 text-left">{role.label}</span>
-                  <svg
-                    className="w-3 h-3 text-emerald group-hover:translate-x-0.5 transition-transform flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Trust micro-line */}
