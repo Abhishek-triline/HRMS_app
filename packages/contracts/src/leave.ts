@@ -159,6 +159,16 @@ export const LeaveRequestSchema = z.object({
   /** Cancellation provenance — null if never cancelled. */
   cancelledAt: ISODateSchema.nullable(),
   cancelledBy: z.string().nullable(),
+  /** Full name of the person who cancelled — null if never cancelled. */
+  cancelledByName: z.string().nullable(),
+  /**
+   * Role label of the canceller at cancel time.
+   * 'Self'    — the employee cancelled their own request
+   * 'Manager' — a manager in the approval chain cancelled it
+   * 'Admin'   — an Admin cancelled it
+   * null      — never cancelled
+   */
+  cancelledByRole: z.enum(['Self', 'Manager', 'Admin']).nullable(),
   /** True if the cancel happened after `fromDate` — BL-020 partial restore branch. */
   cancelledAfterStart: z.boolean(),
   /** Effective deduction recorded on approval (BL-021); null when not yet approved. */

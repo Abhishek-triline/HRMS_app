@@ -97,14 +97,26 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         label: 'Rejected',
         sub: request.decisionNote ? `Reason: ${request.decisionNote}` : 'Request was rejected.',
       };
-    case 'Cancelled':
+    case 'Cancelled': {
+      const cancellerLabel =
+        request.cancelledByRole === 'Self'
+          ? 'by you'
+          : request.cancelledByRole === 'Admin'
+            ? `by Admin${request.cancelledByName ? ` (${request.cancelledByName})` : ''}`
+            : request.cancelledByName
+              ? `by your reporting manager (${request.cancelledByName})`
+              : 'by your reporting manager';
+      const cancelledOnText = request.cancelledAt
+        ? `Cancelled on ${formatDateTime(request.cancelledAt)} ${cancellerLabel}`
+        : `Cancelled ${cancellerLabel}`;
       return {
         bg: 'bg-lockedbg', border: 'border-lockedfg/20', iconColor: 'text-lockedfg',
         textColor: 'text-lockedfg', subColor: 'text-lockedfg/70',
         pillBg: 'bg-lockedbg', pillBorder: 'border-lockedfg/30', pillText: 'text-lockedfg',
         label: 'Cancelled',
-        sub: 'This leave request has been cancelled.',
+        sub: cancelledOnText,
       };
+    }
     case 'Escalated':
       return {
         bg: 'bg-umberbg', border: 'border-umber/20', iconColor: 'text-umber',
@@ -216,27 +228,53 @@ export default function ManagerLeaveDetailPage() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Submitted On</div>
-            <div className="text-sm font-semibold text-charcoal">{formatDate(request.createdAt)}</div>
+            <div className="text-sm font-semibold text-charcoal">{formatDateTime(request.createdAt)}</div>
           </div>
           <div className="sm:col-span-2">
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Reason</div>
             <div className="text-sm text-charcoal">{request.reason}</div>
           </div>
-          {request.approverName && (
-            <div>
-              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">
-                {request.status === 'Pending' || request.status === 'Escalated' ? 'Assigned To' : 'Decided By'}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">
-                  {request.approverName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+          {request.status === 'Cancelled' ? (
+            request.cancelledByName && (
+              <div>
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Cancelled By</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-7 h-7 rounded-full bg-lockedfg text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">
+                    {request.cancelledByName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-charcoal">{request.cancelledByName}</div>
+                    <div className="text-xs text-slate">
+                      {request.cancelledByRole === 'Self'
+                        ? 'You (self-cancelled)'
+                        : request.cancelledByRole === 'Admin'
+                          ? 'Admin'
+                          : 'Reporting Manager'}
+                    </div>
+                    {request.cancelledAt && (
+                      <div className="text-xs text-slate/70 mt-0.5">{formatDateTime(request.cancelledAt)}</div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold text-charcoal">{request.approverName}</div>
-                  <div className="text-xs text-slate">{request.routedTo === 'Admin' ? 'Admin' : 'Reporting Manager'}</div>
+              </div>
+            )
+          ) : (
+            request.approverName && (
+              <div>
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">
+                  {request.status === 'Pending' || request.status === 'Escalated' ? 'Assigned To' : 'Decided By'}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0" aria-hidden="true">
+                    {request.approverName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-charcoal">{request.approverName}</div>
+                    <div className="text-xs text-slate">{request.routedTo === 'Admin' ? 'Admin' : 'Reporting Manager'}</div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           )}
           {(request.status === 'Pending' || request.status === 'Escalated') && (
             <div>
