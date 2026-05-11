@@ -45,8 +45,8 @@ HRMS_app/
 pnpm install
 
 # 2. Configure environment — two files, one per app
-cp .env.example apps/api/.env                    # backend secrets (DB, SESSION_SECRET, SMTP)
-echo 'NEXT_PUBLIC_API_BASE_URL="http://localhost:4000/api/v1"' > apps/web/.env.local
+cp .env.example apps/api/.env                            # backend secrets (DB, SESSION_SECRET, SMTP)
+cp apps/web/.env.local.example apps/web/.env.local       # web public vars (API base URL)
 # Edit apps/api/.env — fill DATABASE_URL, SESSION_SECRET, SMTP_* if needed
 
 # 3. Run database migrations + seed
