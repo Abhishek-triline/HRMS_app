@@ -38,7 +38,7 @@ Items that are **safe to defer in development** but **MUST** be completed before
 
 ## Auth Hardening
 
-- [ ] Default admin `admin@triline.in` rotated to a fresh password (or new admin created and seeded admin disabled) before go-live.
+- [ ] Default admin `admin@triline.co.in` rotated to a fresh password (or new admin created and seeded admin disabled) before go-live.
 - [ ] `LOGIN_LOCKOUT_THRESHOLD` and `LOGIN_LOCKOUT_MINUTES` reviewed for the production threat model.
 - [ ] `PASSWORD_RESET_TTL_MINUTES` reviewed (default 30).
 - [ ] **SEC-P8-006 (Medium) — Set `trust proxy` once proxy topology is known** — Phase 8 VAPT SEC-P8-006

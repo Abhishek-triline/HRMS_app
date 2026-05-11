@@ -46,14 +46,14 @@ const ROLE_DASHBOARD: Record<string, string> = {
 // Demo role credentials — development convenience for TC-AUTH-006.
 // Pre-fill the form with the selected demo account and submit immediately.
 // Currently only the Admin row is wired against the seeded account
-// (admin@triline.in / admin@123). Manager / Employee / Payroll demo accounts
+// (admin@triline.co.in / admin@123). Manager / Employee / Payroll demo accounts
 // arrive when the Phase 1 employee seed lands; until then those chips will
 // gracefully surface INVALID_CREDENTIALS.
 const DEMO_ROLES = [
-  { label: 'Admin',    email: 'admin@triline.in',    password: 'admin@123', abbr: 'A', bg: 'bg-forest',  text: 'text-mint' },
-  { label: 'Manager',  email: 'manager@triline.in',  password: 'admin@123', abbr: 'M', bg: 'bg-emerald', text: 'text-white' },
-  { label: 'Employee', email: 'employee@triline.in', password: 'admin@123', abbr: 'E', bg: 'bg-mint',    text: 'text-forest' },
-  { label: 'Payroll',  email: 'payroll@triline.in',  password: 'admin@123', abbr: 'P', bg: 'bg-umber',   text: 'text-white' },
+  { label: 'Admin',    email: 'admin@triline.co.in',    password: 'admin@123', abbr: 'A', bg: 'bg-forest',  text: 'text-mint' },
+  { label: 'Manager',  email: 'manager@triline.co.in',  password: 'admin@123', abbr: 'M', bg: 'bg-emerald', text: 'text-white' },
+  { label: 'Employee', email: 'employee@triline.co.in', password: 'admin@123', abbr: 'E', bg: 'bg-mint',    text: 'text-forest' },
+  { label: 'Payroll',  email: 'payroll@triline.co.in',  password: 'admin@123', abbr: 'P', bg: 'bg-umber',   text: 'text-white' },
 ] as const;
 
 export default function LoginPage() {

@@ -134,7 +134,7 @@ sessions               (id, employee_id FK, ip, user_agent, expires_at, created_
 
 **Migration discipline:** one migration per phase deliverable. Forward + backward verified. No manual SQL on prod.
 
-**Seed script:** creates `admin@triline.in` (Active, password `admin@123`, `must_reset_password = false`), 6 leave types with default caps, default holiday calendar for the current FY, default configuration values from SRS § 11.
+**Seed script:** creates `admin@triline.co.in` (Active, password `admin@123`, `must_reset_password = false`), 6 leave types with default caps, default holiday calendar for the current FY, default configuration values from SRS § 11.
 
 ---
 
@@ -220,7 +220,7 @@ Team Lead Approval → merge → next module
 
 | Setting | Value |
 |---|---|
-| Default admin email | `admin@triline.in` |
+| Default admin email | `admin@triline.co.in` |
 | Default admin password | `admin@123` (known, dev-only; `must_reset_password = false`) |
 | Workspace name | `nexora-hrms` |
 | Web port | `3000` |
@@ -264,7 +264,7 @@ All clarifying questions raised during planning have been answered by the projec
 
 | # | Question | Resolution |
 |---|---|---|
-| 1 | Email domain spelling | `admin@triline.in` (single 'l', "Triline") |
+| 1 | Email domain spelling | `admin@triline.co.in` (single 'l', "Triline") |
 | 2 | Default admin password | Known: `admin@123` |
 | 3 | Workspace name | `nexora-hrms` |
 | 4 | Email delivery in v1 | dev: filesystem stub, prod: SMTP via env |
