@@ -206,7 +206,7 @@ export default function LeaveDetailPage() {
 
   if (error || !request) {
     return (
-      <div className="p-8">
+      <div>
         <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-6 py-4 text-sm text-crimson" role="alert">
           Could not load leave request. It may not exist or you may not have permission to view it.
         </div>

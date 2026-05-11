@@ -9,7 +9,7 @@ import { RegularisationForm } from '@/components/attendance/RegularisationForm';
 
 export default function ManagerRegularisationPage() {
   return (
-    <div className="p-8">
+    <div>
       <RegularisationForm />
     </div>
   );

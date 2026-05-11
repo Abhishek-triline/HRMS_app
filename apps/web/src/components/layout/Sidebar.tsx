@@ -21,7 +21,7 @@ const ROLE_PANEL_LABELS: Record<Role, string> = {
 function Icon({ path, className }: { path: string; className?: string }) {
   return (
     <svg
-      className={clsx('w-4 h-4 flex-shrink-0', className)}
+      className={clsx('w-5 h-5 flex-shrink-0', className)}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}

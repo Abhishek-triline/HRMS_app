@@ -17,7 +17,7 @@ import { RegularisationForm } from '@/components/attendance/RegularisationForm';
 
 export default function AdminRegularisationPage() {
   return (
-    <div className="p-8">
+    <div>
       <div className="mb-6">
         <h1 className="font-heading text-xl font-semibold text-charcoal">Regularisation Request</h1>
         <nav className="text-xs text-slate flex items-center gap-1 mt-1" aria-label="Breadcrumb">

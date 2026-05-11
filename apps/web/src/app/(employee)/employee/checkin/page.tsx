@@ -44,7 +44,7 @@ export default function CheckInPage() {
   const lateMonthCount = todayData?.lateMonthCount ?? 0;
 
   return (
-    <div className="p-8">
+    <div>
 
       {/* Check-in panel (cinematic hero) */}
       <CheckInPanel firstName={firstName} />

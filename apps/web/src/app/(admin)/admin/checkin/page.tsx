@@ -33,7 +33,7 @@ export default function AdminCheckInPage() {
   const lateMonthCount = todayData?.lateMonthCount ?? 0;
 
   return (
-    <div className="p-8">
+    <div>
       <CheckInPanel firstName={firstName} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">

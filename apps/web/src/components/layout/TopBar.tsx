@@ -40,12 +40,15 @@ const PROFILE_HREFS: Record<Role, string> = {
 // ── Date formatter ────────────────────────────────────────────────────────────
 
 function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat('en-IN', {
+  // Match prototype: "Wednesday, 7 May 2026" — weekday + comma + day + month + year.
+  const parts = new Intl.DateTimeFormat('en-GB', {
     weekday: 'long',
     day:     'numeric',
     month:   'long',
     year:    'numeric',
-  }).format(d);
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${get('weekday')}, ${get('day')} ${get('month')} ${get('year')}`;
 }
 
 // ── Initials helper ───────────────────────────────────────────────────────────

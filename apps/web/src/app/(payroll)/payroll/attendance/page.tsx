@@ -45,7 +45,7 @@ export default function PayrollAttendancePage() {
   }, []);
 
   return (
-    <div className="p-8">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-xl font-semibold text-charcoal">My Attendance</h1>

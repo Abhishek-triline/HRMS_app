@@ -17,7 +17,7 @@ import { RegularisationForm } from '@/components/attendance/RegularisationForm';
 
 export default function RegularisationPage() {
   return (
-    <div className="p-8">
+    <div>
       <RegularisationForm />
     </div>
   );

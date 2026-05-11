@@ -59,7 +59,7 @@ export default function TeamAttendancePage() {
   const lateDays = rows.filter((r) => r.late);
 
   return (
-    <div className="p-8">
+    <div>
       <div className="mb-6">
         <h1 className="font-heading text-xl font-semibold text-charcoal">Team Attendance</h1>
         <p className="text-sm text-slate mt-1">View attendance records for your direct reports.</p>

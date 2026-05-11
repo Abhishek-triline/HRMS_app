@@ -193,7 +193,7 @@ export default function MyAttendancePage() {
   const monthName = MONTH_NAMES[month - 1];
 
   return (
-    <div className="p-8">
+    <div>
 
       {/* Hero band — prototype/employee/my-attendance.html */}
       <div

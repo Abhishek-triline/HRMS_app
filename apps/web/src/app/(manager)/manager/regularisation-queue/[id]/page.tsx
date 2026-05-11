@@ -39,7 +39,7 @@ export default function ManagerRegularisationDetailPage() {
   if (isError) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
     return (
-      <div className="p-8">
+      <div>
         <div role="alert" className="bg-crimsonbg border border-crimson/40 rounded-xl p-6 text-crimson text-sm">
           Failed to load regularisation: {errMsg}
         </div>
@@ -55,7 +55,7 @@ export default function ManagerRegularisationDetailPage() {
   const canDecide = reg.status === 'Pending' && reg.routedTo === 'Manager';
 
   return (
-    <div className="p-8">
+    <div>
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-slate mb-6">
         <Link href="/manager/regularisation-queue" className="hover:text-forest transition-colors">
