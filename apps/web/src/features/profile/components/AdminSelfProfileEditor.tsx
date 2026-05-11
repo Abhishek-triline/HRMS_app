@@ -62,6 +62,10 @@ const GENDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'PreferNotToSay', label: 'Prefer not to say' },
 ];
 
+// Must mirror the list in components/employees/EmployeeForm.tsx so the create
+// and self-edit flows stay in sync. If you add a department here, add it there too.
+const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations', 'Product', 'Sales'];
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface AdminSelfProfileEditorProps {
@@ -192,13 +196,18 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             />
           </div>
           <div>
-            <Input
+            <Label htmlFor="self-department" required>Department</Label>
+            <select
+              id="self-department"
               {...register('department')}
-              label="Department"
-              required
-              error={errors.department?.message}
-              maxLength={100}
-            />
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select department</option>
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <FieldError id="self-department-error" message={errors.department?.message} />
           </div>
         </div>
 

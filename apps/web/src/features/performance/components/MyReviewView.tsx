@@ -31,7 +31,7 @@
 
 import Link from 'next/link';
 import { useMe } from '@/lib/hooks/useAuth';
-import { useReviews, useReview, useCycle, useSubmitSelfRating } from '@/lib/hooks/usePerformance';
+import { useReviews, useReview, useCycle, useCycles, useSubmitSelfRating } from '@/lib/hooks/usePerformance';
 import { MidCycleJoinerNotice } from '@/components/performance/MidCycleJoinerNotice';
 import { RatingScale } from '@/components/performance/RatingScale';
 import { showToast } from '@/components/ui/Toast';
@@ -75,6 +75,51 @@ function fyLabel(fyStart: string): string {
 function daysUntil(dateStr: string): number {
   const diff = new Date(dateStr).getTime() - Date.now();
   return Math.ceil(diff / 86_400_000);
+}
+
+// ── No-reviews empty state (forest hero + contextual subline) ────────────────
+
+interface NoReviewsEmptyStateProps {
+  /** The currently in-flight cycle, if any (Self-Review or Manager-Review). */
+  inFlight?: { code: string; fyStart: string; fyEnd: string; status: string } | null;
+  /** The next cycle (Open, not yet started). */
+  upcoming?: { code: string; fyStart: string; fyEnd: string; selfReviewStart?: string } | null;
+}
+
+function NoReviewsEmptyState({ inFlight, upcoming }: NoReviewsEmptyStateProps) {
+  let subline: string;
+  if (inFlight) {
+    subline = `Cycle ${inFlight.code} (${cyclePeriod(inFlight.fyStart, inFlight.fyEnd)}) is currently in ${inFlight.status.toLowerCase()}. You joined after this cycle started, so your first review will begin with the next cycle (BL-037).`;
+  } else if (upcoming) {
+    subline = `The next performance cycle — ${upcoming.code} (${cyclePeriod(upcoming.fyStart, upcoming.fyEnd)}) — has not started yet. Your review will be created when Self-Review opens.`;
+  } else {
+    subline = 'No performance cycle is active yet. Reviews are created at the start of each cycle. You’ll be notified here when yours opens.';
+  }
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl text-white p-8 mb-6 shadow-2xl shadow-forest/40"
+      style={{ background: 'linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%)' }}
+    >
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'linear-gradient(115deg, transparent 28%, rgba(200,230,218,0.20) 48%, rgba(255,255,255,0.06) 52%, transparent 72%)' }} />
+      <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(255,215,153,0.30) 0%, transparent 60%)', filter: 'blur(24px)' }} />
+      <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(111,190,158,0.45) 0%, transparent 65%)', filter: 'blur(36px)' }} />
+
+      <div className="relative max-w-2xl">
+        <div className="inline-flex items-center gap-2 bg-white/15 border border-white/30 rounded-full px-3 py-1 mb-4">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-[11px] font-bold uppercase tracking-widest">No active review</span>
+        </div>
+        <h2 className="font-heading text-2xl font-bold mb-2">Nothing to review yet</h2>
+        <p className="text-mint/90 text-sm leading-relaxed">{subline}</p>
+      </div>
+    </div>
+  );
 }
 
 // ── Outcome badge ─────────────────────────────────────────────────────────────
@@ -525,6 +570,13 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
     isError: listError,
   } = useReviews({ employeeId: userId || undefined });
 
+  // Cycle queries used only for the empty state to explain *why* there's
+  // no review yet (in-flight cycle the user joined late vs. next cycle
+  // hasn't started). Cheap — small payload, cached for 30s.
+  const { data: selfReviewCycles } = useCycles({ status: 'Self-Review' });
+  const { data: managerReviewCycles } = useCycles({ status: 'Manager-Review' });
+  const { data: openCycles } = useCycles({ status: 'Open' });
+
   const allReviews: PerformanceReviewSummary[] = listData?.data ?? [];
 
   // Active = no finalRating and not mid-cycle joiner
@@ -588,20 +640,23 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
 
   // ── Empty state (no reviews at all) ──────────────────────────────────────
   if (allReviews.length === 0) {
+    const inFlightCycle =
+      selfReviewCycles?.data?.[0] ?? managerReviewCycles?.data?.[0] ?? null;
+    const upcomingCycle = openCycles?.data?.[0] ?? null;
     return (
-      <div className="text-center py-16 border border-sage/30 rounded-xl bg-white">
-        <svg
-          className="w-12 h-12 mx-auto text-sage/40 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-        </svg>
-        <p className="text-sm font-semibold text-charcoal">No performance reviews yet</p>
-        <p className="text-xs text-slate mt-1">Reviews are created at the start of each performance cycle.</p>
-      </div>
+      <NoReviewsEmptyState
+        inFlight={inFlightCycle ? {
+          code: inFlightCycle.code,
+          fyStart: inFlightCycle.fyStart,
+          fyEnd: inFlightCycle.fyEnd,
+          status: inFlightCycle.status,
+        } : null}
+        upcoming={upcomingCycle ? {
+          code: upcomingCycle.code,
+          fyStart: upcomingCycle.fyStart,
+          fyEnd: upcomingCycle.fyEnd,
+        } : null}
+      />
     );
   }
 

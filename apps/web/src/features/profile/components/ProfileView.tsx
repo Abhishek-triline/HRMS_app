@@ -75,16 +75,6 @@ function DlRow({ label, value, mono = false }: { label: string; value: string; m
   );
 }
 
-// ── Contact HR hint used in v1.1 gap sections ─────────────────────────────────
-
-function ContactHRHint() {
-  return (
-    <p className="text-[10px] text-slate mt-1 italic">
-      Contact your HR Administrator to update this field.
-    </p>
-  );
-}
-
 // ── Section card wrapper ──────────────────────────────────────────────────────
 
 function SectionCard({
@@ -214,76 +204,6 @@ function SalarySection({
   );
 }
 
-// ── Bank details (contract gap v1.1 — read-only with hint) ───────────────────
-
-function BankDetailsCard() {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-5">
-      <h3 className="font-heading text-sm font-bold text-charcoal mb-3">Bank Details</h3>
-      <div className="space-y-3 text-sm">
-        <div className="flex justify-between gap-4">
-          <span className="text-slate">Bank &amp; Account</span>
-          <span className="text-slate italic text-xs">— v1.1</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-slate">IFSC</span>
-          <span className="text-slate italic text-xs">— v1.1</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-slate">PAN</span>
-          <span className="text-slate italic text-xs">— v1.1</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-slate">UAN (PF)</span>
-          <span className="text-slate italic text-xs">— v1.1</span>
-        </div>
-      </div>
-      <ContactHRHint />
-    </div>
-  );
-}
-
-// ── Change Password stub (endpoint gap v1.1) ──────────────────────────────────
-
-function ChangePasswordCard() {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-5">
-      <h3 className="font-heading text-sm font-bold text-charcoal mb-3">Change Password</h3>
-      <div className="space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-slate mb-1">Current password</label>
-          <input
-            type="password"
-            disabled
-            placeholder="••••••••"
-            className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate mb-1">New password</label>
-          <input
-            type="password"
-            disabled
-            placeholder="At least 8 characters"
-            className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate mb-1">Confirm new</label>
-          <input
-            type="password"
-            disabled
-            className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
-          />
-        </div>
-        <p className="text-[10px] text-slate">
-          Password change is available via the forgot-password flow (v1.1 — endpoint pending).
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ── Profile Audit log stub (Admin-only, v1.1) ────────────────────────────────
 
 function ProfileAuditCard() {
@@ -378,8 +298,6 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
 
           {/* Right: side cards (1/3) */}
           <div className="space-y-5">
-            <ChangePasswordCard />
-            <BankDetailsCard />
             <ProfileAuditCard />
           </div>
         </div>
@@ -486,9 +404,6 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
           effectiveFrom={salary.effectiveFrom}
         />
       )}
-
-      {/* Bank details stub */}
-      <BankDetailsCard />
 
       {/* Quick links */}
       <QuickLinksCard role={role} />
