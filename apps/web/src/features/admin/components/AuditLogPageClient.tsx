@@ -517,19 +517,33 @@ export function AuditLogPageClient() {
         </div>
       </div>
 
-      {/* Stat tiles — matches prototype */}
+      {/* Stat tiles — counts derived from the loaded entries (API doesn't yet
+          expose pagination.total or todayCount/weekCount aggregates — v1.1). */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
           <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Today</div>
           <div className="font-heading text-2xl font-bold text-charcoal">
-            {isLoading ? '—' : (data?.pages[0] as { todayCount?: number } | undefined)?.todayCount ?? '—'}
+            {isLoading ? '—' : (() => {
+              // Start of "today" in IST (Asia/Kolkata is +05:30).
+              const now = new Date();
+              const istNow = new Date(now.getTime() + (5.5 * 60 - now.getTimezoneOffset()) * 60_000);
+              const istStartUtcMs = Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate())
+                - 5.5 * 60 * 60_000;
+              const todayCount = allEntries.filter((e) => new Date(e.createdAt).getTime() >= istStartUtcMs).length;
+              return todayCount;
+            })()}
           </div>
-          <p className="text-[11px] text-slate mt-0.5">events recorded</p>
+          <p className="text-[11px] text-slate mt-0.5">
+            events recorded{hasNextPage ? ' (loaded)' : ''}
+          </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
           <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Last 7 days</div>
           <div className="font-heading text-2xl font-bold text-charcoal">
-            {isLoading ? '—' : (data?.pages[0] as { weekCount?: number } | undefined)?.weekCount ?? allEntries.length}
+            {isLoading ? '—' : (() => {
+              const cutoff = Date.now() - 7 * 24 * 60 * 60_000;
+              return allEntries.filter((e) => new Date(e.createdAt).getTime() >= cutoff).length;
+            })()}
           </div>
           <p className="text-[11px] text-slate mt-0.5">across all modules</p>
         </div>
@@ -735,7 +749,13 @@ export function AuditLogPageClient() {
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">User</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Module</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
-                <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Target</th>
+                <th
+                  scope="col"
+                  className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider"
+                  title="The specific record this action affected — e.g. the leave request that was approved, the employee whose status changed, etc."
+                >
+                  Target
+                </th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Details</th>
               </tr>
             </thead>
