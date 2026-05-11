@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import type { Role } from '@nexora/contracts/common';
 import { SignOutButton } from './SignOutButton';
@@ -34,10 +37,13 @@ function Icon({ path, className }: { path: string; className?: string }) {
 
 interface SidebarProps {
   role: Role;
-  currentPath: string;
+  /** Optional fallback for SSR / tests; runtime uses usePathname() for live navigation. */
+  currentPath?: string;
 }
 
-export function Sidebar({ role, currentPath }: SidebarProps) {
+export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
+  const livePath = usePathname();
+  const currentPath = livePath ?? currentPathProp ?? '';
   const entries = navByRole[role];
   const panelLabel = ROLE_PANEL_LABELS[role];
 
