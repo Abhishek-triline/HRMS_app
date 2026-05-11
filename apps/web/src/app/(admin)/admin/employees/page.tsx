@@ -31,8 +31,7 @@ import type { EmployeeStatus, Role, EmploymentType } from '@nexora/contracts/com
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-// 100 is the API's max limit — fits typical org sizes on one page.
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 20;
 const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -127,22 +126,13 @@ export default function EmployeesPage() {
     setCursorMap((prev) => ({ ...prev, [currentPage + 1]: nextCursor }));
   }
 
-  // ── total computation ────────────────────────────────────────────────────────
-  // Since the API has no total field, we compute a lower bound:
-  //   known total = pages fully traversed + current page count
-  // isApproximate = true when nextCursor is present (there are more pages)
-  const knownTotal = (currentPage - 1) * PAGE_SIZE + employees.length;
-  const isApproximate = nextCursor !== null;
-  const totalPages = isApproximate
-    ? currentPage + 1 // always show at least one more page to navigate to
-    : currentPage;
-
   // ── org-wide status sub-counts ────────────────────────────────────────────────
-  // Fetch each status bucket with a generous limit so .data.length reflects
-  // the actual count for typical org sizes (≤500 employees per status).
-  const activeQuery = useEmployeesList({ status: 'Active', limit: 100});
-  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 100});
-  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 100});
+  // Fetch each status bucket with limit=100 (API max) so .data.length reflects
+  // the actual count for typical org sizes. These also drive the true total
+  // used by the paginator below.
+  const activeQuery = useEmployeesList({ status: 'Active', limit: 100 });
+  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 100 });
+  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 100 });
 
   function subCount(q: typeof activeQuery): string {
     if (!q.data) return '—';
@@ -153,17 +143,44 @@ export default function EmployeesPage() {
   const onNoticeCount = subCount(onNoticeQuery);
   const exitedCount = subCount(exitedQuery);
 
-  // ── headline total ───────────────────────────────────────────────────────────
-  // Sum of the three known status buckets (Active + On-Notice + Exited).
+  // ── headline + true total ────────────────────────────────────────────────────
+  // Sum of the three status buckets gives the true org-wide count (since every
+  // employee has exactly one status). When a status filter is active the true
+  // total is just that bucket's count.
   const allLoaded =
     !!activeQuery.data && !!onNoticeQuery.data && !!exitedQuery.data;
-  const headlineTotal = allLoaded
-    ? String(
-        activeQuery.data.data.length +
-          onNoticeQuery.data.data.length +
-          exitedQuery.data.data.length,
-      )
+  const orgTotal = allLoaded
+    ? activeQuery.data.data.length +
+      onNoticeQuery.data.data.length +
+      exitedQuery.data.data.length
     : null;
+
+  const bucketCountForStatus = (s: string): number | null => {
+    if (s === 'Active') return activeQuery.data?.data.length ?? null;
+    if (s === 'On-Notice') return onNoticeQuery.data?.data.length ?? null;
+    if (s === 'Exited') return exitedQuery.data?.data.length ?? null;
+    return null;
+  };
+
+  // True total for the *currently filtered* set. We can only compute this
+  // exactly when the only filter applied is `status` (no search/role/dept/type).
+  const onlyStatusFilter =
+    !!status && !searchRaw && !role && !empType && !department;
+  const trueTotal: number | null = onlyStatusFilter
+    ? bucketCountForStatus(status)
+    : !status && !searchRaw && !role && !empType && !department
+      ? orgTotal
+      : null;
+
+  const headlineTotal = orgTotal !== null ? String(orgTotal) : null;
+
+  // Paginator total: prefer the exact trueTotal; fall back to cursor-derived
+  // lower bound so search/role/dept-filtered lists still page through cleanly.
+  const knownTotal = trueTotal ?? (currentPage - 1) * PAGE_SIZE + employees.length;
+  const isApproximate = trueTotal === null && nextCursor !== null;
+  const totalPages = trueTotal !== null
+    ? Math.max(1, Math.ceil(trueTotal / PAGE_SIZE))
+    : (isApproximate ? currentPage + 1 : currentPage);
 
   // ── page navigation ──────────────────────────────────────────────────────────
   function handlePageChange(page: number) {
