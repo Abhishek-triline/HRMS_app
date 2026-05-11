@@ -19,15 +19,6 @@ import type { AuthUser } from '@nexora/contracts/auth';
 import type { Role } from '@nexora/contracts/common';
 import { NotificationBell } from './NotificationBell';
 
-// ── Role display labels ───────────────────────────────────────────────────────
-
-const ROLE_LABELS: Record<Role, string> = {
-  Admin:          'Admin',
-  Manager:        'Manager',
-  Employee:       'Employee',
-  PayrollOfficer: 'Payroll Officer',
-};
-
 // ── Profile href per role ─────────────────────────────────────────────────────
 
 const PROFILE_HREFS: Record<Role, string> = {
@@ -75,7 +66,6 @@ interface TopBarProps {
 
 export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBarProps) {
   const initials = getInitials(user.name);
-  const roleLabel = ROLE_LABELS[user.role as Role] ?? user.role;
   const profileHref = PROFILE_HREFS[user.role as Role] ?? '/profile';
 
   // Compute the date string client-side to avoid SSR/CSR hydration mismatch.
@@ -100,12 +90,12 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
         </div>
       </div>
 
-      {/* Right cluster: bell + avatar + role pill */}
+      {/* Right cluster: bell + avatar + name (NO role pill — sidebar.js strips it
+          because the sidebar brand subtitle "Admin Panel"/etc. already carries
+          the role). */}
       <div className="flex items-center gap-2.5 flex-shrink-0">
-        {/* Live notification bell */}
         <NotificationBell href={notificationsHref} />
 
-        {/* Avatar + name + role pill — links to the user's own profile */}
         <Link
           href={profileHref}
           title="View your profile"
@@ -119,11 +109,6 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
           </div>
           <div className="hidden sm:block text-left">
             <div className="text-sm font-semibold text-charcoal leading-tight">{user.name}</div>
-            <div className="flex items-center gap-1.5">
-              <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">
-                {roleLabel}
-              </span>
-            </div>
           </div>
         </Link>
       </div>

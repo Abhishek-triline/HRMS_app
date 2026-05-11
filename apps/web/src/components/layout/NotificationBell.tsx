@@ -55,11 +55,10 @@ export function NotificationBell({ href }: NotificationBellProps) {
 
       {count > 0 && (
         <span
-          className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-crimson text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none"
+          className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-crimson rounded-full"
           aria-hidden="true"
-        >
-          {displayCount}
-        </span>
+          title={displayCount}
+        />
       )}
     </Link>
   );
