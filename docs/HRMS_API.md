@@ -429,6 +429,7 @@ interface LeaveConfig {
 |---|---|---|---|---|
 | `POST` | `/attendance/check-in` | E | E-06 | Body: `{}` — server stamps `now()`. Computes late-mark per BL-027 and triggers BL-028 deduction if 3rd of the month. Returns updated `AttendanceRecord`. |
 | `POST` | `/attendance/check-out` | E | E-06 | Body: `{}` — server stamps `now()`. Computes `hoursWorked` (BL-025). |
+| `POST` | `/attendance/check-out/undo` | E (SELF) | E-06 | Body: `{}` — reverses today's check-out within a 5-minute window; clears `checkOutTime` + `hoursWorkedMinutes`, increments `version`, writes `attendance.check-out.undo` audit entry. Errors: `409 NOT_CHECKED_IN`, `409 UNDO_WINDOW_EXPIRED`, `409 UNDO_OUTSIDE_DAY`. Beyond the window the user must file a regularisation (BL-029). |
 | `GET` | `/attendance/me` | E (SELF) | E-05 | Filters: `?from`, `?to`, `?status`. Default range = current calendar month. |
 | `GET` | `/attendance/team` | MGR | M-05 | Team scope. Filters: `?date`, `?from`, `?to`, `?status`, `?employeeId`. |
 | `GET` | `/attendance` | A | A-09 | Org-wide. Same filters as team. |
