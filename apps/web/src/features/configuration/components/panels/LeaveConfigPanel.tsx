@@ -1,42 +1,85 @@
 'use client';
 
 /**
- * LeaveConfigPanel — 3 cards matching prototype/admin/config.html lines 180–278.
- *
- * Card order:
- *   1. Carry-Forward & Reset Rules   (3 rows: Annual cap / Casual cap / Sick lock)
- *   2. Entitlement Limits            (2 rows: Maternity / Paternity inline save)
- *   3. Escalation Settings           (1 row: escalation period inline save)
- *
- * Per-row Save buttons call mutateAsync with the full LeaveConfig body so the
- * existing PUT /api/v1/config/leave contract is respected.
+ * LeaveConfigPanel — inline version of /admin/config/leave.
+ * Renders the form without page-level chrome.
+ * Used inside ConfigTabs.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+import { LeaveConfigSchema } from '@nexora/contracts/configuration';
+import type { LeaveConfig } from '@nexora/contracts/configuration';
 import { useLeaveConfigSettings, useUpdateLeaveConfigSettings } from '@/features/admin/hooks/useLeaveConfigSettings';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
-import type { LeaveConfig } from '@nexora/contracts/configuration';
 
-// ── Shared inline Save button ─────────────────────────────────────────────────
+// ── Reusable config row ───────────────────────────────────────────────────────
 
-function InlineSaveButton({
-  onClick,
-  isSaving,
+function ConfigRow({
+  label,
+  hint,
+  unit,
+  id,
+  min,
+  max,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registration,
+  error,
+  locked,
+  lockedReason,
 }: {
-  onClick: () => void;
-  isSaving: boolean;
+  label: string;
+  hint: string;
+  unit: string;
+  id: string;
+  min: number;
+  max: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registration: any;
+  error?: string;
+  locked?: boolean;
+  lockedReason?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={isSaving}
-      className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-    >
-      {isSaving ? 'Saving…' : 'Save'}
-    </button>
+    <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15 last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-charcoal text-sm">{label}</p>
+        <p className="text-xs text-slate mt-0.5">{hint}</p>
+        {error && (
+          <p role="alert" className="text-xs text-crimson mt-1">{error}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        {locked ? (
+          <div className="flex items-center gap-2 bg-offwhite border border-sage/30 rounded-lg px-4 py-2">
+            <svg className="w-4 h-4 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="text-sm text-slate font-medium">{lockedReason}</span>
+          </div>
+        ) : (
+          <>
+            <input
+              id={id}
+              type="number"
+              min={min}
+              max={max}
+              {...registration}
+              aria-label={label}
+              className={`w-20 border rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30 ${
+                error ? 'border-crimson' : 'border-sage/50'
+              }`}
+            />
+            <span className="text-xs text-slate">{unit}</span>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -46,57 +89,38 @@ export default function LeaveConfigPanel() {
   const { data, isLoading, isError } = useLeaveConfigSettings();
   const mutation = useUpdateLeaveConfigSettings();
 
-  // Local state mirrors each configurable field for independent per-row saves
-  const [annualCap, setAnnualCap] = useState<number>(10);
-  const [casualCap, setCasualCap] = useState<number>(5);
-  const [maternityWeeks, setMaternityWeeks] = useState<number>(26);
-  const [paternityDays, setPaternityDays] = useState<number>(10);
-  const [escalationDays, setEscalationDays] = useState<number>(5);
+  const defaultValues: LeaveConfig = {
+    carryForwardCaps: {
+      Annual: 10,
+      Sick: 0,
+      Casual: 5,
+      Unpaid: 0,
+      Maternity: 0,
+      Paternity: 0,
+    },
+    escalationPeriodDays: 5,
+    maternityDays: 182,
+    paternityDays: 10,
+  };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<LeaveConfig>({
+    resolver: zodResolver(LeaveConfigSchema),
+    defaultValues,
+  });
 
   useEffect(() => {
-    if (data) {
-      setAnnualCap(data.carryForwardCaps.Annual);
-      setCasualCap(data.carryForwardCaps.Casual);
-      // maternityDays in contract = calendar days; show weeks (182 → 26)
-      setMaternityWeeks(Math.round(data.maternityDays / 7));
-      setPaternityDays(data.paternityDays);
-      setEscalationDays(data.escalationPeriodDays);
-    }
-  }, [data]);
+    if (data) reset(data);
+  }, [data, reset]);
 
-  // ── Helpers: build full body from current local state ──────────────────────
-
-  function buildBody(overrides: Partial<{
-    annualCap: number;
-    casualCap: number;
-    maternityWeeks: number;
-    paternityDays: number;
-    escalationDays: number;
-  }>): LeaveConfig {
-    const a = overrides.annualCap ?? annualCap;
-    const c = overrides.casualCap ?? casualCap;
-    const mw = overrides.maternityWeeks ?? maternityWeeks;
-    const pd = overrides.paternityDays ?? paternityDays;
-    const esc = overrides.escalationDays ?? escalationDays;
-
-    return {
-      carryForwardCaps: {
-        Annual: a,
-        Casual: c,
-        Sick: 0,
-        Unpaid: 0,
-        Maternity: 0,
-        Paternity: 0,
-      },
-      escalationPeriodDays: esc,
-      maternityDays: mw * 7,
-      paternityDays: pd,
-    };
-  }
-
-  async function save(overrides: Parameters<typeof buildBody>[0]) {
+  async function onSubmit(values: LeaveConfig) {
     try {
-      await mutation.mutateAsync(buildBody(overrides));
+      await mutation.mutateAsync(values);
+      showToast({ type: 'success', title: 'Leave config saved', message: 'Settings updated successfully.' });
     } catch (err) {
       showToast({
         type: 'error',
@@ -105,8 +129,6 @@ export default function LeaveConfigPanel() {
       });
     }
   }
-
-  // ── Loading / error states ─────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -118,212 +140,164 @@ export default function LeaveConfigPanel() {
 
   if (isError) {
     return (
-      <div
-        className="bg-crimsonbg border border-crimson/20 rounded-xl px-5 py-4 text-sm text-crimson"
-        role="alert"
-      >
+      <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-5 py-4 text-sm text-crimson" role="alert">
         Could not load leave configuration. Please refresh.
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-
-      {/* ── Card 1: Carry-Forward & Reset Rules ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Carry-Forward &amp; Reset Rules
-        </h3>
-        <p className="text-xs text-slate mb-5">How unused leave is handled at year-end</p>
-
-        <div className="space-y-1">
-
-          {/* Row 1: Annual carry-forward cap */}
-          <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal text-sm">Annual Leave Carry-Forward Cap</p>
-              <p className="text-xs text-slate mt-0.5">
-                Maximum unused Annual leave that rolls into next year · default 10
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <input
-                type="number"
-                value={annualCap}
-                min={0}
-                max={30}
-                onChange={(e) => setAnnualCap(parseInt(e.target.value, 10))}
-                aria-label="Annual leave carry-forward cap"
-                className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30"
-              />
-              <span className="text-xs text-slate">days</span>
-              <InlineSaveButton
-                onClick={() => save({ annualCap })}
-                isSaving={mutation.isPending}
-              />
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <div className="space-y-5">
+        {/* Carry-forward caps */}
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
+          <h2 className="font-heading text-base font-semibold text-charcoal mb-1">Carry-Forward Caps</h2>
+          <p className="text-xs text-slate mb-5">
+            Maximum unused leave that rolls into the next year (1 January reset — BL-013).
+            Sick, Unpaid, Maternity, and Paternity caps are fixed at zero.
+          </p>
+          <div className="space-y-0">
+            <ConfigRow
+              id="lcp-cf-annual"
+              label="Annual Leave Carry-Forward Cap"
+              hint="Max Annual leave that rolls into next year · default 10"
+              unit="days"
+              min={0}
+              max={365}
+              registration={register('carryForwardCaps.Annual', { valueAsNumber: true })}
+              error={errors.carryForwardCaps?.Annual?.message}
+            />
+            <ConfigRow
+              id="lcp-cf-casual"
+              label="Casual Leave Carry-Forward Cap"
+              hint="Max Casual leave that rolls into next year · default 5"
+              unit="days"
+              min={0}
+              max={365}
+              registration={register('carryForwardCaps.Casual', { valueAsNumber: true })}
+              error={errors.carryForwardCaps?.Casual?.message}
+            />
+            <ConfigRow
+              id="lcp-cf-sick"
+              label="Sick Leave"
+              hint="Resets to zero on 1 January — fixed rule (BL-012)"
+              unit=""
+              min={0}
+              max={0}
+              registration={register('carryForwardCaps.Sick', { valueAsNumber: true })}
+              locked
+              lockedReason="Resets to zero on January 1 — fixed rule"
+            />
+            <ConfigRow
+              id="lcp-cf-unpaid"
+              label="Unpaid Leave"
+              hint="Always available — no accrual or reset"
+              unit=""
+              min={0}
+              max={0}
+              registration={register('carryForwardCaps.Unpaid', { valueAsNumber: true })}
+              locked
+              lockedReason="No carry-forward (unlimited policy)"
+            />
+            <ConfigRow
+              id="lcp-cf-maternity"
+              label="Maternity Leave"
+              hint="Event-based — not affected by annual reset (BL-014)"
+              unit=""
+              min={0}
+              max={0}
+              registration={register('carryForwardCaps.Maternity', { valueAsNumber: true })}
+              locked
+              lockedReason="Event-based — no carry-forward"
+            />
+            <ConfigRow
+              id="lcp-cf-paternity"
+              label="Paternity Leave"
+              hint="Event-based — not affected by annual reset (BL-014)"
+              unit=""
+              min={0}
+              max={0}
+              registration={register('carryForwardCaps.Paternity', { valueAsNumber: true })}
+              locked
+              lockedReason="Event-based — no carry-forward"
+            />
           </div>
-
-          {/* Row 2: Casual carry-forward cap */}
-          <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal text-sm">Casual Leave Carry-Forward Cap</p>
-              <p className="text-xs text-slate mt-0.5">
-                Maximum unused Casual leave that rolls into next year · default 5
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <input
-                type="number"
-                value={casualCap}
-                min={0}
-                max={20}
-                onChange={(e) => setCasualCap(parseInt(e.target.value, 10))}
-                aria-label="Casual leave carry-forward cap"
-                className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30"
-              />
-              <span className="text-xs text-slate">days</span>
-              <InlineSaveButton
-                onClick={() => save({ casualCap })}
-                isSaving={mutation.isPending}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Sick leave — fixed, no input */}
-          <div className="flex items-center justify-between gap-4 py-4">
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal text-sm">Sick Leave</p>
-              <p className="text-xs text-slate mt-0.5">Reset policy for sick leave</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 bg-offwhite border border-sage/30 rounded-lg px-4 py-2">
-                <svg
-                  className="w-4 h-4 text-slate"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <span className="text-sm text-slate font-medium">
-                  Resets to zero on January 1 — fixed rule
-                </span>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      {/* ── Card 2: Entitlement Limits ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Entitlement Limits
-        </h3>
-        <p className="text-xs text-slate mb-5">
-          Maximums for statutory event-based leave types
-        </p>
-
-        <div className="space-y-1">
-
-          {/* Maternity */}
-          <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal text-sm">Maternity Leave Maximum</p>
-              <p className="text-xs text-slate mt-0.5">Per event · Admin-approved · default 26 weeks</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <input
-                type="number"
-                value={maternityWeeks}
-                min={1}
-                max={52}
-                onChange={(e) => setMaternityWeeks(parseInt(e.target.value, 10))}
-                aria-label="Maternity leave maximum in weeks"
-                className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30"
-              />
-              <span className="text-xs text-slate">weeks</span>
-              <InlineSaveButton
-                onClick={() => save({ maternityWeeks })}
-                isSaving={mutation.isPending}
-              />
-            </div>
+        {/* Escalation */}
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
+          <h2 className="font-heading text-base font-semibold text-charcoal mb-1">Leave Escalation</h2>
+          <p className="text-xs text-slate mb-5">
+            If a Manager doesn&apos;t act on a leave request within this period, it auto-escalates to Admin (BL-018).
+            The system never auto-approves.
+          </p>
+          <div className="space-y-0">
+            <ConfigRow
+              id="lcp-escalation-days"
+              label="Escalation Period"
+              hint="Working days before a pending request escalates to Admin · default 5"
+              unit="working days"
+              min={1}
+              max={30}
+              registration={register('escalationPeriodDays', { valueAsNumber: true })}
+              error={errors.escalationPeriodDays?.message}
+            />
           </div>
-
-          {/* Paternity */}
-          <div className="flex items-center justify-between gap-4 py-4">
-            <div className="flex-1">
-              <p className="font-semibold text-charcoal text-sm">Paternity Leave Maximum</p>
-              <p className="text-xs text-slate mt-0.5">
-                Per event · single block · within 6 months of birth · Admin-approved · default 10
-                working days
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <input
-                type="number"
-                value={paternityDays}
-                min={1}
-                max={60}
-                onChange={(e) => setPaternityDays(parseInt(e.target.value, 10))}
-                aria-label="Paternity leave maximum in working days"
-                className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30"
-              />
-              <span className="text-xs text-slate">working days</span>
-              <InlineSaveButton
-                onClick={() => save({ paternityDays })}
-                isSaving={mutation.isPending}
-              />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── Card 3: Escalation Settings ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Escalation Settings
-        </h3>
-        <p className="text-xs text-slate mb-5">
-          Auto-escalation of un-actioned leave requests
-        </p>
-
-        <div className="flex items-center justify-between gap-4 py-2">
-          <div className="flex-1">
-            <p className="font-semibold text-charcoal text-sm">Escalation Period</p>
-            <p className="text-xs text-slate mt-0.5">
-              Working days before a request escalates to Admin · default 5 working days · never
-              auto-approves
+          <div className="mt-4 bg-crimsonbg/40 border border-crimson/30 rounded-lg px-4 py-3">
+            <div className="text-xs font-semibold text-crimson mb-1">No Auto-Approval</div>
+            <p className="text-xs text-charcoal">
+              Escalated leaves stay <strong>pending</strong> in the Admin queue.
+              The system never auto-approves leave requests.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <input
-              type="number"
-              value={escalationDays}
+        </div>
+
+        {/* Event-based leaves */}
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
+          <h2 className="font-heading text-base font-semibold text-charcoal mb-1">Event-Based Leave Maximums</h2>
+          <p className="text-xs text-slate mb-5">
+            Maternity and Paternity are event-based (one allocation per life event; no balance tracked).
+            Both are Admin-approved (BL-015, BL-016).
+          </p>
+          <div className="space-y-0">
+            <ConfigRow
+              id="lcp-maternity-days"
+              label="Maternity Leave Maximum"
+              hint="Calendar days per event · Admin-approved · default 182 (26 weeks)"
+              unit="calendar days"
               min={1}
-              max={14}
-              onChange={(e) => setEscalationDays(parseInt(e.target.value, 10))}
-              aria-label="Escalation period in working days"
-              className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30"
+              max={730}
+              registration={register('maternityDays', { valueAsNumber: true })}
+              error={errors.maternityDays?.message}
             />
-            <span className="text-xs text-slate">working days</span>
-            <InlineSaveButton
-              onClick={() => save({ escalationDays })}
-              isSaving={mutation.isPending}
+            <ConfigRow
+              id="lcp-paternity-days"
+              label="Paternity Leave Maximum"
+              hint="Working days per event · single block · within 6 months of birth · Admin-approved · default 10"
+              unit="working days"
+              min={1}
+              max={90}
+              registration={register('paternityDays', { valueAsNumber: true })}
+              error={errors.paternityDays?.message}
             />
           </div>
         </div>
-      </div>
 
-    </div>
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          {!isDirty && data && (
+            <span className="text-xs text-slate">No changes</span>
+          )}
+          <Button
+            type="submit"
+            variant="primary"
+            loading={mutation.isPending}
+            disabled={mutation.isPending || !isDirty}
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }
