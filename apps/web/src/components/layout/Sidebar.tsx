@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import type { Role } from '@nexora/contracts/common';
 import { SignOutButton } from './SignOutButton';
 import { navByRole } from './roleNavConfig';
+import { useTodayAttendance } from '@/lib/hooks/useAttendance';
 
 // ── Role panel subtitle labels ────────────────────────────────────────────────
 
@@ -46,6 +47,12 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
   const currentPath = livePath ?? currentPathProp ?? '';
   const entries = navByRole[role];
   const panelLabel = ROLE_PANEL_LABELS[role];
+
+  // Live check-in state — label flips between "Check In" / "Check Out".
+  // Matches prototype/assets/sidebar.js setupCheckinState behaviour.
+  const today = useTodayAttendance();
+  const checkinLabel =
+    today.data?.panelState === 'Working' ? 'Check Out' : 'Check In';
 
   return (
     <aside className="nx-sidebar w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">
@@ -114,6 +121,11 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
               currentPath === entry.href ||
               (entry.href !== '/' && currentPath.startsWith(entry.href + '/'));
 
+            // Dynamic label for the check-in/out link.
+            const liveLabel = entry.href.endsWith('/checkin')
+              ? checkinLabel
+              : entry.label;
+
             return (
               <li key={entry.href}>
                 <Link
@@ -127,7 +139,7 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <Icon path={entry.iconPath} />
-                  {entry.label}
+                  {liveLabel}
                 </Link>
               </li>
             );
