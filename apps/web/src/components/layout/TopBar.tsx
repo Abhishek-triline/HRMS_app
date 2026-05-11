@@ -15,9 +15,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { AuthUser } from '@nexora/contracts/auth';
 import type { Role } from '@nexora/contracts/common';
 import { NotificationBell } from './NotificationBell';
+import { resolvePageMeta } from './pageMeta';
 
 // ── Profile href per role ─────────────────────────────────────────────────────
 
@@ -72,21 +74,30 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
   // useState initialiser runs only on the client after hydration.
   const [dateString] = useState(() => formatDate(new Date()));
 
+  // Resolve title + subtitle for this route. Falls back to `children` for the
+  // title and no subtitle if the pathname isn't registered in pageMeta.
+  const pathname = usePathname() ?? '';
+  const meta = resolvePageMeta(pathname);
+  const title = meta?.title ?? children;
+  const subtitle = meta?.subtitle?.replace('{date}', dateString) ?? null;
+
   return (
     <header
       className="bg-white border-b border-sage/30 flex items-center justify-between px-4 md:px-6 flex-shrink-0"
       style={{ height: 60 }}
     >
-      {/* Left: burger (mobile) + page title + date */}
+      {/* Left: burger (mobile) + page title + subtitle */}
       <div className="flex items-center gap-3 min-w-0">
         {burgerSlot}
         <div className="min-w-0">
-          {children && (
+          {title && (
             <h1 className="font-heading text-lg font-bold text-charcoal leading-tight truncate">
-              {children}
+              {title}
             </h1>
           )}
-          <p className="text-xs text-slate leading-tight">{dateString}</p>
+          {subtitle && (
+            <p className="text-xs text-slate leading-tight">{subtitle}</p>
+          )}
         </div>
       </div>
 
