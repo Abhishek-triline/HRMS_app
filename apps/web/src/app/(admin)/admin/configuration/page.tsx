@@ -26,10 +26,8 @@ function ConfigTabsFallback() {
 
 export default function ConfigurationPage() {
   return (
-    <div className="px-6 py-6">
-      <Suspense fallback={<ConfigTabsFallback />}>
-        <ConfigTabs />
-      </Suspense>
-    </div>
+    <Suspense fallback={<ConfigTabsFallback />}>
+      <ConfigTabs />
+    </Suspense>
   );
 }
