@@ -221,6 +221,78 @@ export function useEmployeesCount(
   return { count, isLoading: false };
 }
 
+// ── NAME LOOKUP (ID → display name) ──────────────────────────────────────────
+//
+// Walks the same 10-page chain as useEmployeesCount but across **all** statuses
+// (Active + On-Notice + Exited) so the resulting Map covers every employee.
+// Used by the audit log to translate ULIDs in "Acted by" / "Finalised by" /
+// "Approved by" fields into human names.
+//
+// React Rules-of-Hooks safe: fixed-length useQuery chain per status, with
+// enabled flags driven by each prior page's cursor.
+
+function useEmployeesByStatus(status: 'Active' | 'On-Notice' | 'Exited') {
+  const filtersKey = status;
+  const p1 = useQuery({
+    queryKey: ['employee-names', filtersKey, 1],
+    queryFn: () =>
+      listEmployees({ status, limit: 100 } as Partial<EmployeeListQuery>),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const p2cur = p1.data?.nextCursor ?? null;
+  const p2 = useQuery({
+    queryKey: ['employee-names', filtersKey, 2, p2cur],
+    queryFn: () => listEmployees({ status, limit: 100, cursor: p2cur! } as Partial<EmployeeListQuery>),
+    staleTime: 60_000,
+    retry: 1,
+    enabled: Boolean(p2cur),
+  });
+  const p3cur = p2.data?.nextCursor ?? null;
+  const p3 = useQuery({
+    queryKey: ['employee-names', filtersKey, 3, p3cur],
+    queryFn: () => listEmployees({ status, limit: 100, cursor: p3cur! } as Partial<EmployeeListQuery>),
+    staleTime: 60_000,
+    retry: 1,
+    enabled: Boolean(p3cur),
+  });
+  const p4cur = p3.data?.nextCursor ?? null;
+  const p4 = useQuery({
+    queryKey: ['employee-names', filtersKey, 4, p4cur],
+    queryFn: () => listEmployees({ status, limit: 100, cursor: p4cur! } as Partial<EmployeeListQuery>),
+    staleTime: 60_000,
+    retry: 1,
+    enabled: Boolean(p4cur),
+  });
+  const p5cur = p4.data?.nextCursor ?? null;
+  const p5 = useQuery({
+    queryKey: ['employee-names', filtersKey, 5, p5cur],
+    queryFn: () => listEmployees({ status, limit: 100, cursor: p5cur! } as Partial<EmployeeListQuery>),
+    staleTime: 60_000,
+    retry: 1,
+    enabled: Boolean(p5cur),
+  });
+  return [p1, p2, p3, p4, p5];
+}
+
+/** Map of employee id → full name across all statuses. */
+export function useEmployeeNameMap(): Map<string, string> {
+  const active = useEmployeesByStatus('Active');
+  const onNotice = useEmployeesByStatus('On-Notice');
+  const exited = useEmployeesByStatus('Exited');
+
+  const map = new Map<string, string>();
+  for (const pages of [active, onNotice, exited]) {
+    for (const p of pages) {
+      const data = p.data?.data ?? [];
+      for (const emp of data) {
+        if (emp.id && emp.name) map.set(emp.id, emp.name);
+      }
+    }
+  }
+  return map;
+}
+
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
 export function useEmployee(id: string) {

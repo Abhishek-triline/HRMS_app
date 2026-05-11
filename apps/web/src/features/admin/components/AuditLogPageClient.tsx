@@ -16,6 +16,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
+import { useEmployeeNameMap } from '@/lib/hooks/useEmployees';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import type { AuditLogEntry } from '@nexora/contracts/audit';
@@ -191,9 +192,15 @@ function humanizeTarget(entry: AuditLogEntry): string {
   return label;
 }
 
-function humanizeActor(entry: AuditLogEntry): { name: string; sub: string } {
+function humanizeActor(
+  entry: AuditLogEntry,
+  nameMap?: Map<string, string>,
+): { name: string; sub: string } {
   if (!entry.actorId) return { name: 'System', sub: 'automatic' };
-  // Try to pull a readable name out of the before/after blobs.
+  // 1. Prefer the resolved name from the directory lookup.
+  const fromMap = nameMap?.get(entry.actorId);
+  if (fromMap) return { name: fromMap, sub: entry.actorRole };
+  // 2. Try to pull a readable name out of the before/after blobs.
   const blob = (entry.after ?? entry.before) as Record<string, unknown> | null;
   const maybeName =
     blob && typeof blob === 'object'
@@ -278,7 +285,11 @@ function looksLikeId(v: unknown): v is string {
 }
 
 /** Format a value for the friendly view. */
-function formatValue(key: string, value: unknown): string {
+function formatValue(
+  key: string,
+  value: unknown,
+  nameMap?: Map<string, string>,
+): string {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   // ISO date/datetime
@@ -292,8 +303,12 @@ function formatValue(key: string, value: unknown): string {
       }
     } catch { /* fall through */ }
   }
-  // ULID — show truncated, full in tooltip via parent
-  if (looksLikeId(value)) return `${value.slice(0, 8)}…`;
+  // ULID — try to resolve to a human name from the directory lookup first.
+  if (looksLikeId(value)) {
+    const name = nameMap?.get(value);
+    if (name) return name;
+    return `${value.slice(0, 8)}…`;
+  }
   // Paise → rupees for any *_paise field
   if (key.endsWith('_paise') || key.endsWith('Paise')) {
     const n = typeof value === 'number' ? value : Number(value);
@@ -308,7 +323,11 @@ function formatValue(key: string, value: unknown): string {
 
 interface ChangeRow { key: string; label: string; before: string; after: string; changed: boolean }
 
-function summarizeDiff(before: unknown, after: unknown): ChangeRow[] {
+function summarizeDiff(
+  before: unknown,
+  after: unknown,
+  nameMap?: Map<string, string>,
+): ChangeRow[] {
   const b = (before ?? {}) as Record<string, unknown>;
   const a = (after ?? {}) as Record<string, unknown>;
   const keys = new Set<string>([...Object.keys(b), ...Object.keys(a)]);
@@ -318,8 +337,8 @@ function summarizeDiff(before: unknown, after: unknown): ChangeRow[] {
     const label = FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
     const beforeRaw = b[key];
     const afterRaw = a[key];
-    const beforeText = formatValue(key, beforeRaw);
-    const afterText = formatValue(key, afterRaw);
+    const beforeText = formatValue(key, beforeRaw, nameMap);
+    const afterText = formatValue(key, afterRaw, nameMap);
     const changed = JSON.stringify(beforeRaw ?? null) !== JSON.stringify(afterRaw ?? null);
     rows.push({ key, label, before: beforeText, after: afterText, changed });
   }
@@ -370,13 +389,19 @@ function JsonDiff({ before, after }: { before: unknown; after: unknown }) {
 
 // ── Audit row ────────────────────────────────────────────────────────────────
 
-function AuditRow({ entry }: { entry: AuditLogEntry }) {
+function AuditRow({
+  entry,
+  nameMap,
+}: {
+  entry: AuditLogEntry;
+  nameMap?: Map<string, string>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasTechnicalDetail =
     entry.before !== null || entry.after !== null || !!entry.targetId;
   const description = (entry as unknown as { description?: string }).description;
 
-  const actor = humanizeActor(entry);
+  const actor = humanizeActor(entry, nameMap);
   const phrase = humanizeAction(entry);
   const targetLabel = humanizeTarget(entry);
 
@@ -441,7 +466,7 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
       {expanded && hasTechnicalDetail && (
         <tr>
           <td colSpan={6} className="px-5 pb-4 pt-0 bg-offwhite/40">
-            <ChangeSummary entry={entry} />
+            <ChangeSummary entry={entry} nameMap={nameMap} />
           </td>
         </tr>
       )}
@@ -451,10 +476,16 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
 
 // ── Friendly change summary (replaces the raw JSON diff for non-tech admins) ──
 
-function ChangeSummary({ entry }: { entry: AuditLogEntry }) {
+function ChangeSummary({
+  entry,
+  nameMap,
+}: {
+  entry: AuditLogEntry;
+  nameMap?: Map<string, string>;
+}) {
   const [showRaw, setShowRaw] = useState(false);
   const hasDiff = entry.before !== null || entry.after !== null;
-  const rows = hasDiff ? summarizeDiff(entry.before, entry.after) : [];
+  const rows = hasDiff ? summarizeDiff(entry.before, entry.after, nameMap) : [];
   const changedRows = rows.filter((r) => r.changed);
   const unchangedRows = rows.filter((r) => !r.changed);
 
@@ -525,9 +556,18 @@ function ChangeSummary({ entry }: { entry: AuditLogEntry }) {
             <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">
               Acted by
             </div>
-            <code className="font-mono text-slate break-all text-[11px]">
-              {entry.actorId ?? 'system'}
-            </code>
+            {entry.actorId ? (
+              <>
+                <div className="text-charcoal font-medium text-xs">
+                  {nameMap?.get(entry.actorId) ?? entry.actorRole}
+                </div>
+                <code className="font-mono text-slate break-all text-[10px]">
+                  {entry.actorId}
+                </code>
+              </>
+            ) : (
+              <span className="text-slate text-xs">System (automatic)</span>
+            )}
           </div>
         </div>
         {hasDiff && (
@@ -628,6 +668,9 @@ export function AuditLogPageClient() {
   // Numbered pagination — 20 rows per page.
   const PAGE_SIZE = 20;
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Employee ID → name lookup (drives "Acted by", "Finalised by", etc. in details).
+  const employeeNameMap = useEmployeeNameMap();
 
   const {
     data,
@@ -982,7 +1025,7 @@ export function AuditLogPageClient() {
                 </tr>
               ) : (
                 pageEntries.map((entry) => (
-                  <AuditRow key={entry.id} entry={entry} />
+                  <AuditRow key={entry.id} entry={entry} nameMap={employeeNameMap} />
                 ))
               )}
             </tbody>
