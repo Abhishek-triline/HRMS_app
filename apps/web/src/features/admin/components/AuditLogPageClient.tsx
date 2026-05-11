@@ -61,10 +61,10 @@ function formatUTC(iso: string): string {
   }
 }
 
-// ── Module badge colours ─────────────────────────────────────────────────────
+// ── Module badge ─────────────────────────────────────────────────────────────
 
 function ModuleBadge({ module }: { module: string }) {
-  const label = module.charAt(0).toUpperCase() + module.slice(1);
+  const label = moduleLabel(module);
   return (
     <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">
       {label}
@@ -72,28 +72,142 @@ function ModuleBadge({ module }: { module: string }) {
   );
 }
 
+// ── Humanization layer ───────────────────────────────────────────────────────
+//
+// Translates audit fields into plain English so non-technical Admins can scan
+// the log. The original technical fields (action code, target ID, JSON diff)
+// remain available under "Show details" for forensic / engineering use.
+
+const ACTION_PHRASES: Record<string, string> = {
+  // Auth
+  'auth.login':                       'signed in',
+  'auth.logout':                      'signed out',
+  'auth.login.failed':                'failed sign-in attempt',
+  'auth.login.locked':                'account locked after too many failed attempts',
+  'auth.password.reset':              'reset their password',
+  'auth.password.first-login':        'completed first-time password setup',
+
+  // Employees
+  'employee.create':                  'created a new employee',
+  'employee.update':                  'updated an employee’s profile',
+  'employee.profile.self-update':     'updated their own profile',
+  'employee.salary.update':           'updated an employee’s salary',
+  'employee.status.changed':          'changed an employee’s status',
+  'employee.manager.reassigned':      'reassigned an employee’s reporting manager',
+  'employee.exit':                    'marked an employee as exited',
+
+  // Leave
+  'leave.create':                     'submitted a leave request',
+  'leave.approve':                    'approved a leave request',
+  'leave.reject':                     'rejected a leave request',
+  'leave.cancel':                     'cancelled a leave request',
+  'leave.escalated':                  'escalated a stale leave request to Admin',
+  'leave.carry-forward':              'rolled over leave balances for the new year',
+
+  // Attendance
+  'attendance.checkin':               'checked in',
+  'attendance.checkout':              'checked out',
+  'attendance.late-deduction':        'auto-deducted a leave day for late check-ins',
+  'attendance.midnight-generate':     'generated daily attendance rows',
+  'regularisation.create':            'requested an attendance regularisation',
+  'regularisation.approve':           'approved a regularisation request',
+  'regularisation.reject':            'rejected a regularisation request',
+
+  // Payroll
+  'payroll.run.create':               'initiated a payroll run',
+  'payroll.run.finalise':             'finalised a payroll run',
+  'payroll.run.reverse':              'reversed a finalised payroll run',
+  'payslip.tax.override':             'manually overrode tax on a payslip',
+  'config.tax.update':                'updated the tax reference rate',
+
+  // Performance
+  'performance.cycle.create':         'started a new performance cycle',
+  'performance.cycle.close':          'closed a performance cycle',
+  'performance.review.self-rating':   'submitted a self-rating',
+  'performance.review.manager-rating':'submitted a manager rating',
+  'performance.goal.create':          'added a performance goal',
+  'performance.goal.update':          'updated a performance goal',
+  'performance.deadline-nudge-7d':    'sent a 7-day deadline reminder',
+  'performance.deadline-nudge-1d':    'sent a 1-day deadline reminder',
+
+  // Notifications / system
+  'notifications.archive-90d':        'archived notifications older than 90 days',
+  'idempotency-key.cleanup':          'cleaned up expired idempotency keys',
+
+  // Configuration
+  'config.attendance.update':         'updated attendance settings',
+  'config.leave.update':              'updated leave settings',
+  'config.holidays.replace':          'updated the holiday calendar',
+};
+
+const TARGET_LABEL: Record<string, string> = {
+  Employee:           'employee',
+  LeaveRequest:       'leave request',
+  AttendanceRecord:   'attendance record',
+  Regularisation:     'regularisation request',
+  PayrollRun:         'payroll run',
+  Payslip:            'payslip',
+  PerformanceCycle:   'performance cycle',
+  PerformanceReview:  'performance review',
+  Goal:               'goal',
+  Configuration:      'configuration',
+  Holiday:            'holiday',
+  Notification:       'notification',
+};
+
+function moduleLabel(module: string): string {
+  switch (module.toLowerCase()) {
+    case 'auth':           return 'Sign-in';
+    case 'employees':      return 'People';
+    case 'leave':          return 'Leave';
+    case 'attendance':     return 'Attendance';
+    case 'regularisation': return 'Attendance';
+    case 'payroll':        return 'Payroll';
+    case 'performance':    return 'Reviews';
+    case 'notifications':  return 'Notifications';
+    case 'configuration':  return 'Settings';
+    case 'system':         return 'System';
+    default:               return module.charAt(0).toUpperCase() + module.slice(1);
+  }
+}
+
+/** Turn an action code into a plain-English sentence. Falls back to a sensible
+ *  default when the action isn't in the lookup. */
+function humanizeAction(entry: AuditLogEntry): string {
+  const phrase = ACTION_PHRASES[entry.action];
+  if (phrase) return phrase;
+  // Heuristic fallback: split "module.verb" into "verbed the module"
+  const parts = entry.action.split('.');
+  if (parts.length >= 2) {
+    const verb = parts[parts.length - 1]!.replace(/-/g, ' ');
+    return `${verb} on ${moduleLabel(entry.module).toLowerCase()}`;
+  }
+  return entry.action;
+}
+
+function humanizeTarget(entry: AuditLogEntry): string {
+  if (!entry.targetType) return '';
+  const label = TARGET_LABEL[entry.targetType] ?? entry.targetType.toLowerCase();
+  return label;
+}
+
+function humanizeActor(entry: AuditLogEntry): { name: string; sub: string } {
+  if (!entry.actorId) return { name: 'System', sub: 'automatic' };
+  // Try to pull a readable name out of the before/after blobs.
+  const blob = (entry.after ?? entry.before) as Record<string, unknown> | null;
+  const maybeName =
+    blob && typeof blob === 'object'
+      ? (blob['name'] as string | undefined) ??
+        (blob['employeeName'] as string | undefined) ??
+        (blob['actorName'] as string | undefined)
+      : undefined;
+  return {
+    name: maybeName ?? entry.actorRole,
+    sub: entry.actorRole,
+  };
+}
+
 // ── Action badge ─────────────────────────────────────────────────────────────
-
-function actionBadgeClass(action: string): string {
-  const a = action.toLowerCase();
-  if (/approved|created|finalised|regularisation approved/.test(a))
-    return 'bg-greenbg text-richgreen';
-  if (/rejected|reversed|finalise rejected/.test(a))
-    return 'bg-crimsonbg text-crimson';
-  if (/updated|escalated|late deduction|hierarchy change/.test(a))
-    return 'bg-umberbg text-umber';
-  if (/cycle closed|closed/.test(a))
-    return 'bg-lockedbg text-lockedfg';
-  return 'bg-softmint text-forest';
-}
-
-function ActionBadge({ action }: { action: string }) {
-  return (
-    <span className={`text-xs font-bold px-2 py-0.5 rounded ${actionBadgeClass(action)}`}>
-      {action}
-    </span>
-  );
-}
 
 // ── JSON diff display ────────────────────────────────────────────────────────
 
@@ -136,65 +250,99 @@ function JsonDiff({ before, after }: { before: unknown; after: unknown }) {
 
 function AuditRow({ entry }: { entry: AuditLogEntry }) {
   const [expanded, setExpanded] = useState(false);
-  const hasDiff = entry.before !== null || entry.after !== null;
-  // description field from the API payload (may not be in contract type)
+  const hasTechnicalDetail =
+    entry.before !== null || entry.after !== null || !!entry.targetId;
   const description = (entry as unknown as { description?: string }).description;
+
+  const actor = humanizeActor(entry);
+  const phrase = humanizeAction(entry);
+  const targetLabel = humanizeTarget(entry);
 
   return (
     <>
       <tr className="hover:bg-offwhite/60 transition-colors">
-        <td className="px-5 py-3 text-charcoal font-mono text-xs whitespace-nowrap">
-          <span title={formatUTC(entry.createdAt)}>
-            {formatIST(entry.createdAt)}
-          </span>
+        {/* When */}
+        <td className="px-5 py-3 text-slate text-xs whitespace-nowrap">
+          <span title={formatUTC(entry.createdAt)}>{formatIST(entry.createdAt)}</span>
         </td>
+
+        {/* User — friendly name, role on the line below; actor ID in tooltip */}
         <td className="px-4 py-3">
-          {entry.actorId ? (
-            <>
-              <span className="font-semibold text-charcoal">{entry.actorId}</span>
-              <span className="text-slate text-xs"> · {entry.actorRole}</span>
-            </>
-          ) : (
-            <>
-              <span className="text-slate font-semibold">System</span>
-              <span className="text-slate text-xs"> · automatic</span>
-            </>
-          )}
+          <div className="text-sm font-semibold text-charcoal">{actor.name}</div>
+          <div className="text-xs text-slate" title={entry.actorId ?? 'system'}>
+            {actor.sub}
+          </div>
         </td>
+
+        {/* Module */}
         <td className="px-4 py-3">
           <ModuleBadge module={entry.module} />
         </td>
-        <td className="px-4 py-3">
-          <ActionBadge action={entry.action} />
+
+        {/* Action — plain-English sentence (no badge) */}
+        <td className="px-4 py-3 text-sm text-charcoal capitalize-first">
+          {description ?? phrase}
         </td>
-        <td className="px-4 py-3 font-mono text-xs text-forest">
-          {entry.targetId ? (
-            <span>{entry.targetId}</span>
+
+        {/* Target — friendly type label + truncated ID for context */}
+        <td className="px-4 py-3 text-xs">
+          {entry.targetType ? (
+            <>
+              <div className="text-charcoal font-medium">{targetLabel}</div>
+              {entry.targetId && (
+                <div className="font-mono text-slate truncate max-w-[160px]" title={entry.targetId}>
+                  {entry.targetId.slice(0, 8)}…
+                </div>
+              )}
+            </>
           ) : (
             <span className="text-slate">—</span>
           )}
         </td>
-        <td className="px-4 py-3 text-slate text-xs">
-          {description ? (
-            <span>{description}</span>
-          ) : hasDiff ? (
+
+        {/* Details — Show / Hide toggle */}
+        <td className="px-4 py-3">
+          {hasTechnicalDetail ? (
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
               aria-expanded={expanded}
               className="text-xs font-semibold text-forest hover:text-emerald transition-colors underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded"
             >
-              {expanded ? 'Hide diff' : 'View diff'}
+              {expanded ? 'Hide details' : 'Show details'}
             </button>
           ) : (
-            <span>—</span>
+            <span className="text-xs text-slate">—</span>
           )}
         </td>
       </tr>
-      {expanded && hasDiff && !description && (
+      {expanded && hasTechnicalDetail && (
         <tr>
           <td colSpan={6} className="px-5 pb-4 pt-0 bg-offwhite/40">
-            <JsonDiff before={entry.before} after={entry.after} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-2 text-xs">
+              <div>
+                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Action code</div>
+                <code className="font-mono text-forest break-all">{entry.action}</code>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Target</div>
+                {entry.targetType ? (
+                  <code className="font-mono text-forest break-all">
+                    {entry.targetType}
+                    {entry.targetId ? ` · ${entry.targetId}` : ''}
+                  </code>
+                ) : (
+                  <span className="text-slate">—</span>
+                )}
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Actor ID</div>
+                <code className="font-mono text-slate break-all">{entry.actorId ?? 'system'}</code>
+              </div>
+            </div>
+            {(entry.before !== null || entry.after !== null) && (
+              <JsonDiff before={entry.before} after={entry.after} />
+            )}
           </td>
         </tr>
       )}
@@ -647,24 +795,23 @@ export function AuditLogPageClient() {
               )}
             </div>
           ) : (
-            pageEntries.map((entry) => (
-              <div key={entry.id} className="px-4 py-3 space-y-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-mono text-[11px] text-slate">{formatIST(entry.createdAt)}</span>
-                  <ModuleBadge module={entry.module} />
-                </div>
-                <div className="text-xs text-charcoal font-semibold">
-                  {entry.actorId ?? 'System'}{' '}
-                  <span className="font-normal text-slate">· {entry.actorRole}</span>
-                </div>
-                <ActionBadge action={entry.action} />
-                {entry.targetId && (
-                  <div className="text-[11px] font-mono text-forest">
-                    {entry.targetType ? `${entry.targetType} · ` : ''}{entry.targetId}
+            pageEntries.map((entry) => {
+              const actor = humanizeActor(entry);
+              const sentence = humanizeAction(entry);
+              return (
+                <div key={entry.id} className="px-4 py-3 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[11px] text-slate">{formatIST(entry.createdAt)}</span>
+                    <span className="text-[10px] uppercase tracking-wide text-slate">
+                      {moduleLabel(entry.module)}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))
+                  <div className="text-sm font-semibold text-charcoal">{actor.name}</div>
+                  <div className="text-sm text-charcoal capitalize-first">{sentence}</div>
+                  <div className="text-[11px] text-slate">{actor.sub}</div>
+                </div>
+              );
+            })
           )}
         </div>
 
