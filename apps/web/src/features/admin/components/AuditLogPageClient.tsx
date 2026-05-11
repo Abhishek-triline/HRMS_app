@@ -493,11 +493,24 @@ function ChangeSummary({
   const rows = hasDiff ? summarizeDiff(entry.before, entry.after, nameMap) : [];
   const changedRows = rows.filter((r) => r.changed);
   const unchangedRows = rows.filter((r) => !r.changed);
+  const phrase = humanizeAction(entry);
+  const actor = humanizeActor(entry, nameMap);
 
   return (
     <div className="mt-3 mb-2 space-y-4">
-      {/* What changed — readable rows */}
-      {hasDiff && (
+      {/* Always-visible summary sentence */}
+      <div className="bg-white border border-sage/30 rounded-lg px-4 py-3">
+        <p className="text-sm text-charcoal">
+          <span className="font-semibold">{actor.name}</span>{' '}
+          <span className="capitalize-first">{phrase}</span>
+          {humanizeTarget(entry) && (
+            <span className="text-slate"> · {humanizeTarget(entry)}</span>
+          )}
+        </p>
+      </div>
+
+      {/* What changed — readable rows (only when we have before/after data) */}
+      {hasDiff ? (
         <div>
           <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-2">
             {changedRows.length > 0 ? 'What changed' : 'Record details'}
@@ -529,6 +542,18 @@ function ChangeSummary({
               {unchangedRows.length} other field{unchangedRows.length === 1 ? '' : 's'} unchanged.
             </p>
           )}
+        </div>
+      ) : (
+        <div>
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-2">
+            What changed
+          </div>
+          <div className="bg-white border border-sage/30 rounded-lg px-4 py-3 text-xs text-slate">
+            This event records that an action occurred but doesn’t track field-level
+            changes (typical for sign-in, check-in, and read-only operations). See
+            <strong className="font-semibold text-charcoal"> Reference IDs &amp; raw data </strong>
+            below for the underlying event metadata.
+          </div>
         </div>
       )}
 
@@ -575,18 +600,24 @@ function ChangeSummary({
             )}
           </div>
         </div>
-        {hasDiff && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => setShowRaw((v) => !v)}
-              className="text-[11px] font-semibold text-forest hover:text-emerald transition-colors underline-offset-2 hover:underline"
-            >
-              {showRaw ? 'Hide raw JSON' : 'View raw JSON'}
-            </button>
-            {showRaw && <JsonDiff before={entry.before} after={entry.after} />}
-          </div>
-        )}
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowRaw((v) => !v)}
+            className="text-[11px] font-semibold text-forest hover:text-emerald transition-colors underline-offset-2 hover:underline"
+          >
+            {showRaw ? 'Hide raw event data' : 'View raw event data'}
+          </button>
+          {showRaw && (
+            hasDiff ? (
+              <JsonDiff before={entry.before} after={entry.after} />
+            ) : (
+              <pre className="mt-2 bg-offwhite border border-sage/20 rounded-lg px-3 py-2 text-[11px] text-charcoal overflow-x-auto whitespace-pre-wrap break-words max-h-60">
+                {JSON.stringify(entry, null, 2)}
+              </pre>
+            )
+          )}
+        </div>
       </details>
     </div>
   );
