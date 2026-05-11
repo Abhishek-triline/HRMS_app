@@ -98,7 +98,7 @@ export default function TaxConfigPanel() {
   const displayRate = (settings.referenceRate * 100).toFixed(2);
 
   return (
-    <div className="max-w-2xl">
+    <div>
       {/* v1 note */}
       <div className="bg-mint/20 border border-forest/20 rounded-xl px-5 py-4 mb-6 flex items-start gap-3">
         <svg className="w-5 h-5 text-forest shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
