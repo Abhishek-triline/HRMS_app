@@ -85,12 +85,13 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
   const dash = useEmployeeDashboard();
 
   const badge = currentMonthLabel() + ` · FY ${new Date().getFullYear()}-${(new Date().getFullYear() + 1).toString().slice(2)}`;
-  const subtitle = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const subtitle = (() => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    return `${get('weekday')} · ${get('day')} ${get('month')} ${get('year')}`;
+  })();
 
   const annualBalance = dash.annualBalance as LeaveBalance | null;
   const sickBalance = dash.sickBalance as LeaveBalance | null;

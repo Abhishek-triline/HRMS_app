@@ -106,12 +106,14 @@ export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboar
   const upcomingExits = (onNotice.data?.data ?? []).slice(0, 3);
 
   const badge = `${currentMonthLabel()} · ${currentFYLabel()}`;
-  const subtitle = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  // Match prototype: "Wednesday · 7 May 2026" — weekday + dot + day + month + year.
+  const subtitle = (() => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    return `${get('weekday')} · ${get('day')} ${get('month')} ${get('year')}`;
+  })();
 
   return (
     <div>

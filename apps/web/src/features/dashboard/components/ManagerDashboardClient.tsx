@@ -170,12 +170,14 @@ export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDash
 
   const dash = useManagerDashboard();
 
-  const subtitle = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }) + (dash.me?.department ? ` · ${dash.me.department} team` : '');
+  const subtitle = (() => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    const date = `${get('weekday')} · ${get('day')} ${get('month')} ${get('year')}`;
+    return dash.me?.department ? `${date} · ${dash.me.department} team` : date;
+  })();
 
   const badge = `Cycle 1 · FY ${new Date().getFullYear()}-${(new Date().getFullYear() + 1).toString().slice(2)}`;
 

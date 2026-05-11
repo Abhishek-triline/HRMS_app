@@ -98,12 +98,13 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
     firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
   const dash = usePayrollDashboard();
 
-  const subtitle = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }) + ' · processing period active';
+  const subtitle = (() => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    return `${get('weekday')} · ${get('day')} ${get('month')} ${get('year')} · processing period active`;
+  })();
 
   const now = new Date();
   const currentMonthLabel = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
