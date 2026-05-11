@@ -28,7 +28,10 @@ export function useAdminDashboard() {
   const today = todayISO();
   const { month, year } = currentMonthYear();
 
-  const employees = useEmployeesList({ status: 'Active', limit: 1 });
+  // limit=100 (API max) so .data.length reflects the real Active count for
+  // typical org sizes. v1.1: backend should return pagination.total to remove
+  // the cap entirely.
+  const employees = useEmployeesList({ status: 'Active', limit: 100 });
   const onLeaveToday = useLeaveList({ status: 'Approved', fromDate: today, toDate: today });
   const pendingLeave = useLeaveList({ status: 'Pending' });
   const payrollRuns = usePayrollRuns({ limit: 5 });
