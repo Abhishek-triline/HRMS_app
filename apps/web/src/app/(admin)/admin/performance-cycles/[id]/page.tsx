@@ -155,10 +155,8 @@ export default function CycleDetailPage() {
 
   if (isError || !data) {
     return (
-      <div className="p-6">
-        <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
-          Failed to load cycle. It may not exist or you may not have access.
-        </div>
+      <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
+        Failed to load cycle. It may not exist or you may not have access.
       </div>
     );
   }
@@ -168,7 +166,7 @@ export default function CycleDetailPage() {
   const pending = pendingCount(reviews);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate mb-5" aria-label="Breadcrumb">
         <Link href="/admin/performance-cycles" className="hover:text-forest transition-colors">
@@ -496,6 +494,6 @@ export default function CycleDetailPage() {
         onConfirm={handleClose}
         isSubmitting={isClosing}
       />
-    </div>
+    </>
   );
 }
