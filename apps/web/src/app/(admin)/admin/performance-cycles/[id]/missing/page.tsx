@@ -24,7 +24,7 @@ export default function MissingReviewsPage() {
   const cycle = cycleData?.cycle;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate mb-5" aria-label="Breadcrumb">
         <Link href="/admin/performance-cycles" className="hover:text-forest transition-colors">
@@ -93,6 +93,6 @@ export default function MissingReviewsPage() {
           />
         </>
       )}
-    </div>
+    </>
   );
 }
