@@ -63,7 +63,7 @@ export default function PayrollRunsPage() {
   const draftRun = runs.find((r) => r.status === 'Draft');
 
   return (
-    <div className="px-6 py-6">
+    <>
       {/* Page section header — matches prototype */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -265,6 +265,6 @@ export default function PayrollRunsPage() {
 
       {/* Footer disclaimer — matches prototype exactly */}
       <p className="text-xs text-slate mt-3">* Estimated amounts for Draft runs. Final figures available after finalisation.</p>
-    </div>
+    </>
   );
 }

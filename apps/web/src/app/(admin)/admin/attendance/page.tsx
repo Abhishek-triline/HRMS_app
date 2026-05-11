@@ -208,8 +208,7 @@ export default function AdminAttendancePage() {
   };
 
   return (
-    <div className="px-6 py-6">
-
+    <>
       {/* Day picker + filter row — matches prototype exactly */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5 flex flex-wrap items-center gap-3">
         <span className="text-sm font-semibold text-charcoal">Date:</span>
@@ -409,6 +408,6 @@ export default function AdminAttendancePage() {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }

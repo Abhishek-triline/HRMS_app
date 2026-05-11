@@ -308,7 +308,7 @@ export function AuditLogPageClient() {
   const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
 
   return (
-    <div className="p-8">
+    <>
       {/* Policy banner */}
       <div className="bg-forest/10 border border-forest/20 rounded-xl px-6 py-4 mb-6 flex gap-4">
         <svg className="w-5 h-5 text-forest shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -647,6 +647,6 @@ export function AuditLogPageClient() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
