@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import type { Role } from '@nexora/contracts/common';
 import { SignOutButton } from './SignOutButton';
@@ -45,6 +45,8 @@ interface SidebarProps {
 export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
   const livePath = usePathname();
   const currentPath = livePath ?? currentPathProp ?? '';
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams?.toString() ?? '';
   const entries = navByRole[role];
   const panelLabel = ROLE_PANEL_LABELS[role];
 
@@ -117,9 +119,24 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
               );
             }
 
-            const isActive =
-              currentPath === entry.href ||
-              (entry.href !== '/' && currentPath.startsWith(entry.href + '/'));
+            // Active match — pathname must match, AND when the nav entry's
+            // href carries a query string (e.g. /admin/attendance?scope=me) the
+            // current page's search params must match too. This disambiguates
+            // sibling links that share a pathname but differ by query, like
+            // Attendance (no scope) vs My Attendance (scope=me).
+            const [entryPath, entryQuery = ''] = entry.href.split('?');
+            const pathMatches =
+              currentPath === entryPath ||
+              (entryPath !== '/' && currentPath.startsWith(entryPath + '/'));
+            const isActive = entryQuery
+              ? pathMatches && currentSearch === entryQuery
+              : pathMatches && !navByRole[role].some(
+                  (e) =>
+                    e.type === 'link' &&
+                    e !== entry &&
+                    e.href.startsWith(entryPath + '?') &&
+                    currentSearch === e.href.split('?')[1],
+                );
 
             // Dynamic label for the check-in/out link.
             const liveLabel = entry.href.endsWith('/checkin')
