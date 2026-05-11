@@ -208,14 +208,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Stats strip */}
-          <div className="flex items-center gap-6 text-mint/70 text-xs">
-            <span>250+ Employees</span>
-            <span className="w-1 h-1 rounded-full bg-mint/40" />
-            <span>4 Roles</span>
-            <span className="w-1 h-1 rounded-full bg-mint/40" />
-            <span>100% Audit-ready</span>
-          </div>
         </div>
 
         {/* Right: floating glass sign-in card */}
