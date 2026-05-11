@@ -6,28 +6,76 @@
  * Visual reference: prototype/admin/leave-queue.html (card list, not table)
  *
  * Renders:
- *   - Coloured left-border severity stripe
+ *   - Coloured border-l-4 severity stripe (escalated = crimson, maternity/paternity = umber,
+ *     approved = richgreen, rejected = crimson, standard pending = sage/30 border all-round)
  *   - Avatar (initials circle)
- *   - Employee name + EMP code + leave type + date range + reason quote
- *   - Meta strip: submitted N days ago
+ *   - Employee name + EMP code + department + status badge
+ *   - Leave type + date range (bold dates)
+ *   - Reason quote (text-xs text-slate in quotes)
+ *   - Meta line (submitted N days ago · awaiting …)
  *   - Approve / Reject buttons (when showActions=true and status is actionable)
  *   - "View details" link
  */
 
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
-import { LeaveStatusBadge } from '@/components/leave/LeaveStatusBadge';
 import { LeaveApprovalActions } from '@/components/leave/LeaveApprovalActions';
 import { useLeave } from '@/lib/hooks/useLeave';
 import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 
-// ── Stripe colour derivation ──────────────────────────────────────────────────
+// ── Avatar background for different statuses ────────────────────────────────
 
-function stripeClass(req: LeaveRequestSummary): string {
-  if (req.status === 'Escalated') return 'bg-rose-500';
-  if (req.type === 'Maternity' || req.type === 'Paternity') return 'bg-amber-500';
-  if (req.status === 'Approved') return 'bg-mint';
-  return 'bg-stone-300';
+function avatarBg(req: LeaveRequestSummary): string {
+  if (req.status === 'Escalated') return 'bg-softmint';
+  if (req.status === 'Approved') return 'bg-greenbg';
+  if (req.status === 'Rejected') return 'bg-crimsonbg';
+  if (req.type === 'Maternity' || req.type === 'Paternity') return 'bg-mint';
+  return 'bg-mint';
+}
+
+function avatarText(req: LeaveRequestSummary): string {
+  if (req.status === 'Approved') return 'text-richgreen';
+  if (req.status === 'Rejected') return 'text-crimson';
+  return 'text-forest';
+}
+
+// ── Card border classes based on status ─────────────────────────────────────
+
+function cardBorderClass(req: LeaveRequestSummary): string {
+  if (req.status === 'Escalated') {
+    return 'border-l-4 border-crimson border-y border-r border-sage/30';
+  }
+  if (req.type === 'Maternity' || req.type === 'Paternity') {
+    return 'border-l-4 border-umber border-y border-r border-sage/30';
+  }
+  if (req.status === 'Approved') {
+    return 'border-l-4 border-richgreen border-y border-r border-sage/30';
+  }
+  if (req.status === 'Rejected') {
+    return 'border-l-4 border-crimson border-y border-r border-sage/30';
+  }
+  return 'border border-sage/30';
+}
+
+// ── Status badge ─────────────────────────────────────────────────────────────
+
+function StatusBadge({ req }: { req: LeaveRequestSummary }) {
+  if (req.status === 'Escalated') {
+    return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Escalated</span>;
+  }
+  if (req.type === 'Maternity') {
+    return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Maternity</span>;
+  }
+  if (req.type === 'Paternity') {
+    return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Paternity</span>;
+  }
+  if (req.status === 'Approved') {
+    return <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Approved</span>;
+  }
+  if (req.status === 'Rejected') {
+    return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Rejected</span>;
+  }
+  return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Pending</span>;
 }
 
 // ── Initials from employee name ───────────────────────────────────────────────
@@ -95,10 +143,12 @@ function CardActions({
   if (isLoading) return <Spinner size="sm" />;
   if (!request) return null;
   return (
-    <LeaveApprovalActions
-      request={request}
-      onDecision={onDecision}
-    />
+    <div className="flex gap-2">
+      <LeaveApprovalActions
+        request={request}
+        onDecision={onDecision}
+      />
+    </div>
   );
 }
 
@@ -127,72 +177,70 @@ export function LeaveQueueCard({
     (request.status === 'Pending' || request.status === 'Escalated');
 
   const avatarInitials = initials(request.employeeName);
-  const stripe = stripeClass(request);
+  const borderClass = cardBorderClass(request);
   const dateRange = formatDateRange(request.fromDate, request.toDate, request.days);
   const submittedAgo = daysAgo(request.createdAt);
 
   return (
     <article
-      className="relative rounded-xl border border-stone-200 bg-white p-4 pl-5 shadow-sm hover:shadow-md transition-shadow"
+      className={`bg-white rounded-xl shadow-sm px-5 py-4 ${borderClass}`}
       aria-label={`Leave request from ${request.employeeName}`}
     >
-      {/* Left severity stripe */}
-      <div
-        className={`absolute inset-y-0 left-0 w-1 rounded-l-xl ${stripe}`}
-        aria-hidden="true"
-      />
-
       <div className="flex items-start justify-between gap-4">
         {/* Left: avatar + content */}
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="flex items-start gap-3 flex-1">
           {/* Avatar */}
           <div
-            className="w-10 h-10 rounded-full bg-softmint flex items-center justify-center text-forest text-sm font-bold shrink-0"
+            className={`w-10 h-10 rounded-full ${avatarBg(request)} flex items-center justify-center ${avatarText(request)} text-sm font-bold shrink-0`}
             aria-hidden="true"
           >
             {avatarInitials}
           </div>
 
           {/* Middle column */}
-          <div className="flex-1 min-w-0">
-            {/* Name row */}
+          <div className="flex-1">
+            {/* Name + code + dept + badge */}
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-sm font-semibold text-charcoal">{request.employeeName}</span>
-              <span className="text-xs text-slate">{request.employeeCode}</span>
-              <LeaveStatusBadge status={request.status} />
-              {(request.type === 'Maternity' || request.type === 'Paternity') && (
-                <span className="text-xs bg-softmint text-forest font-bold px-1.5 py-0.5 rounded">
-                  Event-based
-                </span>
-              )}
+              <span className="text-xs text-slate">
+                {request.employeeCode}
+                {(request as unknown as { department?: string }).department
+                  ? ` · ${(request as unknown as { department: string }).department}`
+                  : ''}
+              </span>
+              <StatusBadge req={request} />
             </div>
 
             {/* Leave type + date range */}
-            <div className="text-sm text-slate mb-1.5">
-              <span className="text-charcoal font-medium">{request.type} Leave</span>
-              {' · '}
-              {dateRange}
+            <div className="text-sm text-slate mb-2">
+              {request.type} Leave ·{' '}
+              <strong className="text-charcoal">{dateRange}</strong>
             </div>
 
-            {/* Meta strip */}
-            <div className="text-xs text-slate">
+            {/* Reason quote */}
+            {(request as unknown as { reason?: string }).reason && (
+              <div className="text-xs text-slate">
+                &ldquo;{(request as unknown as { reason: string }).reason}&rdquo;
+              </div>
+            )}
+
+            {/* Meta */}
+            <div className="text-xs text-slate mt-2">
               Submitted {submittedAgo}
-              {request.routedTo && ` · awaiting ${request.routedTo}`}
-              {request.escalatedAt && (
-                <span className="text-rose-600 font-medium"> · Escalated</span>
-              )}
+              {request.routedTo && ` · Awaiting ${request.routedTo}`}
+              {request.escalatedAt && ' · Escalated'}
             </div>
           </div>
         </div>
 
         {/* Right column: actions + view link */}
-        <div className="flex flex-col items-end gap-2 shrink-0">
+        <div className="flex flex-col items-end gap-2">
           {isActionable && (
             <CardActions summary={request} onDecision={onDecision} />
           )}
           <Link
             href={`${detailHrefBase}/${request.id}`}
-            className="text-xs font-semibold text-forest hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded"
+            className="text-xs text-emerald font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded"
           >
             View details →
           </Link>
@@ -206,14 +254,13 @@ export function LeaveQueueCard({
 
 export function LeaveQueueCardSkeleton() {
   return (
-    <div className="relative rounded-xl border border-stone-200 bg-white p-4 pl-5 shadow-sm animate-pulse">
-      <div className="absolute inset-y-0 left-0 w-1 rounded-l-xl bg-stone-200" />
+    <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 animate-pulse">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-stone-200 shrink-0" />
+        <div className="w-10 h-10 rounded-full bg-sage/20 shrink-0" />
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-stone-200 rounded w-48" />
-          <div className="h-3 bg-stone-200 rounded w-64" />
-          <div className="h-3 bg-stone-200 rounded w-32" />
+          <div className="h-4 bg-sage/20 rounded w-48" />
+          <div className="h-3 bg-sage/20 rounded w-64" />
+          <div className="h-3 bg-sage/20 rounded w-32" />
         </div>
       </div>
     </div>

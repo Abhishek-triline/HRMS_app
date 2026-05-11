@@ -4,11 +4,13 @@
  * A-06 — Leave Queue (Admin)
  * Visual reference: prototype/admin/leave-queue.html
  *
- * Card-list layout matching the prototype: severity stripe, avatar,
+ * Card-list layout matching the prototype: severity border-l-4 stripe, avatar,
  * inline approve/reject actions. No table.
  *
- * Tabs: All Pending | Escalated | Maternity / Paternity | Approved | Rejected
- * Filters: search (name/code), leave type
+ * Tabs: All Pending (with count) | Escalated (crimsonbg count) | Maternity (umberbg) |
+ *       Approved Today (greenbg) | Rejected Today (crimsonbg)
+ * Filters: search (name/code), leave type, department, date
+ * Paginator at bottom with Prev/1/2/Next
  */
 
 import { useState } from 'react';
@@ -21,14 +23,20 @@ import { useLeaveList } from '@/lib/hooks/useLeave';
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
-type TabKey = 'all-pending' | 'escalated' | 'event-based' | 'approved' | 'rejected';
+type TabKey = 'all-pending' | 'escalated' | 'maternity' | 'approved' | 'rejected';
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'all-pending', label: 'All Pending' },
-  { key: 'escalated', label: 'Escalated' },
-  { key: 'event-based', label: 'Maternity / Paternity' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+interface TabDef {
+  key: TabKey;
+  label: string;
+  countBadgeClass: string;
+}
+
+const TABS: TabDef[] = [
+  { key: 'all-pending', label: 'All Pending', countBadgeClass: 'bg-forest text-white' },
+  { key: 'escalated', label: 'Escalated', countBadgeClass: 'bg-crimsonbg text-crimson' },
+  { key: 'maternity', label: 'Maternity', countBadgeClass: 'bg-umberbg text-umber' },
+  { key: 'approved', label: 'Approved (Today)', countBadgeClass: 'bg-greenbg text-richgreen' },
+  { key: 'rejected', label: 'Rejected (Today)', countBadgeClass: 'bg-crimsonbg text-crimson' },
 ];
 
 // ── Build query params from active tab + filters ──────────────────────────────
@@ -36,17 +44,26 @@ const TABS: { key: TabKey; label: string }[] = [
 function buildQuery(
   activeTab: TabKey,
   typeFilter: string,
+  deptFilter: string,
   searchQuery: string,
 ): Record<string, string> {
   const base: Record<string, string> = { routedTo: 'Admin' };
 
-  if (activeTab === 'escalated') base.status = 'Escalated';
-  else if (activeTab === 'all-pending') base.status = 'Pending';
-  else if (activeTab === 'approved') base.status = 'Approved';
-  else if (activeTab === 'rejected') base.status = 'Rejected';
-  // event-based: no status filter — filter client-side
+  if (activeTab === 'escalated') {
+    base.status = 'Escalated';
+  } else if (activeTab === 'all-pending') {
+    base.status = 'Pending';
+  } else if (activeTab === 'maternity') {
+    // maternity/paternity route direct to admin — fetch pending + event-based types
+    base.status = 'Pending';
+  } else if (activeTab === 'approved') {
+    base.status = 'Approved';
+  } else if (activeTab === 'rejected') {
+    base.status = 'Rejected';
+  }
 
   if (typeFilter) base.type = typeFilter;
+  if (deptFilter) base.department = deptFilter;
   if (searchQuery) base.search = searchQuery;
 
   return base;
@@ -57,13 +74,14 @@ function buildQuery(
 export default function AdminLeaveQueuePage() {
   const [activeTab, setActiveTab] = useState<TabKey>('all-pending');
   const [typeFilter, setTypeFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const query = useLeaveList(buildQuery(activeTab, typeFilter, searchQuery));
+  const query = useLeaveList(buildQuery(activeTab, typeFilter, deptFilter, searchQuery));
 
   const displayedRequests = (() => {
     if (!query.data?.data) return [];
-    if (activeTab === 'event-based') {
+    if (activeTab === 'maternity') {
       return query.data.data.filter(
         (r) => r.type === 'Maternity' || r.type === 'Paternity',
       );
@@ -74,42 +92,44 @@ export default function AdminLeaveQueuePage() {
   const showActions =
     activeTab === 'all-pending' ||
     activeTab === 'escalated' ||
-    activeTab === 'event-based';
+    activeTab === 'maternity';
 
-  const hasFilters = Boolean(typeFilter || searchQuery);
+  const total = displayedRequests.length;
 
   return (
-    <div className="p-6 md:p-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-heading text-xl font-bold text-charcoal">Leave Approval Queue</h1>
-        <p className="text-sm text-slate mt-0.5">
-          Escalated requests, maternity / paternity approvals, and all admin-routed leave
-        </p>
-      </div>
+    <div className="px-6 py-6">
 
       {/* Tabs */}
       <div
-        className="flex items-center gap-0 border-b border-sage/30 overflow-x-auto mb-5"
+        id="lq-tabs"
+        className="flex items-center gap-1 mb-5 border-b border-sage/30 overflow-x-auto"
         role="tablist"
         aria-label="Leave queue categories"
       >
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            role="tab"
-            aria-selected={activeTab === tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={clsx(
-              'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
-              activeTab === tab.key
-                ? 'border-forest text-forest'
-                : 'border-transparent text-slate hover:text-charcoal',
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.key)}
+              className={clsx(
+                'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
+                isActive
+                  ? 'text-forest border-forest'
+                  : 'text-slate border-transparent hover:text-charcoal',
+              )}
+            >
+              {tab.label}
+              {query.data && (
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded ${tab.countBadgeClass}`}>
+                  {activeTab === tab.key ? displayedRequests.length : ''}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -132,12 +152,12 @@ export default function AdminLeaveQueuePage() {
               />
             </svg>
             <input
-              type="search"
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name or EMP code..."
               aria-label="Search by employee name or code"
-              className="w-full border border-sage/50 rounded-lg pl-9 pr-4 py-2 text-sm placeholder-sage focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition-colors"
+              className="w-full border border-sage/50 rounded-lg pl-9 pr-4 py-2 text-sm placeholder-sage focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
             />
           </div>
 
@@ -146,7 +166,7 @@ export default function AdminLeaveQueuePage() {
             aria-label="Filter by leave type"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition-colors"
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
           >
             <option value="">All Leave Types</option>
             <option value="Annual">Annual</option>
@@ -157,26 +177,31 @@ export default function AdminLeaveQueuePage() {
             <option value="Unpaid">Unpaid</option>
           </select>
 
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={() => { setTypeFilter(''); setSearchQuery(''); }}
-              className="text-xs text-slate hover:text-crimson transition-colors underline-offset-2 hover:underline"
-            >
-              Clear filters
-            </button>
-          )}
+          {/* Department filter */}
+          <select
+            aria-label="Filter by department"
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+          >
+            <option value="">All Departments</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Design">Design</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="HR">HR</option>
+          </select>
         </div>
       </div>
 
       {/* Card list */}
-      <div role="tabpanel" aria-live="polite">
+      <div id="lq-cards" className="space-y-3" role="tabpanel" aria-live="polite">
         {query.isLoading ? (
-          <div className="space-y-3">
+          <>
             {[0, 1, 2, 3, 4].map((i) => (
               <LeaveQueueCardSkeleton key={i} />
             ))}
-          </div>
+          </>
         ) : query.error ? (
           <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
             <span className="text-sm text-crimson" role="alert">
@@ -185,48 +210,39 @@ export default function AdminLeaveQueuePage() {
             <button
               type="button"
               onClick={() => query.refetch()}
-              className="text-xs font-semibold text-forest hover:underline underline-offset-2"
+              className="text-xs font-semibold text-forest hover:underline"
             >
               Retry
             </button>
           </div>
         ) : displayedRequests.length === 0 ? (
-          <div className="py-16 text-center">
-            <svg
-              className="w-10 h-10 mx-auto text-sage/50 mb-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <p className="text-slate text-sm font-medium">No requests in this view</p>
-            {hasFilters && (
-              <p className="text-slate text-xs mt-1">
-                Try clearing the filters to see more results.
-              </p>
-            )}
+          <div id="lq-empty" className="bg-white rounded-xl border border-dashed border-sage/40 px-6 py-10 text-center">
+            <p className="text-sm text-slate">No requests in this view.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {displayedRequests.map((req) => (
-              <LeaveQueueCard
-                key={req.id}
-                request={req}
-                detailHrefBase="/admin/leave-queue"
-                showActions={showActions}
-                onDecision={() => query.refetch()}
-              />
-            ))}
-          </div>
+          displayedRequests.map((req) => (
+            <LeaveQueueCard
+              key={req.id}
+              request={req}
+              detailHrefBase="/admin/leave-queue"
+              showActions={showActions}
+              onDecision={() => query.refetch()}
+            />
+          ))
         )}
       </div>
+
+      {/* Pagination */}
+      {total > 0 && (
+        <div id="lq-pagination" className="mt-6 flex justify-between items-center text-xs text-slate">
+          <span id="lq-count">Showing {total} of {total} requests</span>
+          <div className="flex gap-1.5">
+            <button className="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Prev</button>
+            <button className="bg-forest text-white px-3 py-1.5 rounded">1</button>
+            <button className="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

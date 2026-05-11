@@ -26,14 +26,7 @@ function ConfigTabsFallback() {
 
 export default function ConfigurationPage() {
   return (
-    <div className="p-6 md:p-8">
-      <div className="mb-6">
-        <h1 className="font-heading text-xl font-bold text-charcoal">System Configuration</h1>
-        <p className="text-sm text-slate mt-1">
-          Admin-only settings that govern how the HRMS behaves across all modules.
-        </p>
-      </div>
-
+    <div className="px-6 py-6">
       <Suspense fallback={<ConfigTabsFallback />}>
         <ConfigTabs />
       </Suspense>

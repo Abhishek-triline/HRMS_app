@@ -63,30 +63,22 @@ export default function PayrollRunsPage() {
   const draftRun = runs.find((r) => r.status === 'Draft');
 
   return (
-    <div className="p-6">
-      {/* Page header */}
+    <div className="px-6 py-6">
+      {/* Page section header — matches prototype */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="font-heading text-xl font-bold text-charcoal">All Payroll Runs</h1>
+          <h2 className="font-heading text-xl font-bold text-charcoal">All Payroll Runs</h2>
           <p className="text-xs text-slate mt-0.5">Indian fiscal year — April to March</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/admin/reversal-history" className="text-xs text-emerald font-semibold hover:underline">
-            Reversal History →
-          </Link>
-          <Link href="/admin/tax-config" className="text-xs text-emerald font-semibold hover:underline">
-            Tax Settings
-          </Link>
-          <Link href="/admin/payroll-runs/new">
-            <Button variant="primary" size="sm" leadingIcon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            }>
-              Initiate Run
-            </Button>
-          </Link>
-        </div>
+        <Link href="/admin/payroll-runs/new">
+          <Button variant="primary" size="sm" leadingIcon={
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          }>
+            Initiate Run
+          </Button>
+        </Link>
       </div>
 
       {/* Stat tiles */}
@@ -132,7 +124,7 @@ export default function PayrollRunsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
           <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Reversals</p>
           <p className="font-heading text-2xl font-bold text-charcoal">{reversalCount}</p>
-          <p className="text-xs text-slate mt-1">All time</p>
+          <p className="text-xs text-slate mt-1">Last 12 months</p>
         </div>
       </div>
 
@@ -181,14 +173,14 @@ export default function PayrollRunsPage() {
               <table className="w-full text-sm" aria-label="Payroll run history">
                 <thead>
                   <tr className="bg-offwhite border-b border-sage/20">
-                    <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Period</th>
-                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Employees</th>
-                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Gross</th>
-                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">LOP</th>
-                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Tax</th>
-                    <th scope="col" className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Net</th>
-                    <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Status</th>
-                    <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-5 py-3 uppercase">Period</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Employees</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Gross</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">LOP</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Tax</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Net</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Status</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10">
@@ -200,41 +192,32 @@ export default function PayrollRunsPage() {
                     </tr>
                   ) : (
                     runs.map((run) => (
-                      <tr key={run.id} className="hover:bg-offwhite/60 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <span className="font-semibold text-charcoal">
-                            {MONTH_NAMES[run.month]} {run.year}
-                          </span>
-                          {run.code && (
-                            <p className="text-xs text-slate font-mono mt-0.5">{run.code}{run.reversalOfRunId ? ' · reversal' : ''}</p>
-                          )}
+                      <tr key={run.id} className="hover:bg-offwhite/50 transition-colors">
+                        <td className="px-5 py-3 font-semibold text-charcoal">
+                          {MONTH_NAMES[run.month]} {run.year}
                         </td>
-                        <td className="px-4 py-3.5 text-center text-slate">{run.employeeCount}</td>
-                        <td className="px-4 py-3.5 text-right text-charcoal">
+                        <td className="px-4 py-3 text-slate">{run.employeeCount}</td>
+                        <td className="px-4 py-3 text-slate">
                           <MoneyDisplay paise={run.totalGrossPaise} />
-                          {(run.status === 'Draft' || run.status === 'Review') && (
-                            <span className="text-slate text-[10px]">*</span>
-                          )}
+                          {(run.status === 'Draft' || run.status === 'Review') && '*'}
                         </td>
-                        <td className="px-4 py-3.5 text-right text-crimson font-semibold">
+                        <td className="px-4 py-3 text-crimson">
                           <MoneyDisplay paise={getLopPaise(run)} />
                         </td>
-                        <td className="px-4 py-3.5 text-right text-slate">
+                        <td className="px-4 py-3 text-slate">
                           <MoneyDisplay paise={getTaxPaise(run)} />
                         </td>
-                        <td className="px-4 py-3.5 text-right font-semibold text-charcoal">
+                        <td className="px-4 py-3 font-semibold text-charcoal">
                           <MoneyDisplay paise={run.totalNetPaise} />
-                          {(run.status === 'Draft' || run.status === 'Review') && (
-                            <span className="text-slate text-[10px]">*</span>
-                          )}
+                          {(run.status === 'Draft' || run.status === 'Review') && '*'}
                         </td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3">
                           <PayrollRunStatusBadge status={run.status} />
                         </td>
-                        <td className="px-4 py-3.5 text-center">
+                        <td className="px-4 py-3">
                           <Link
                             href={`/admin/payroll-runs/${run.id}`}
-                            className="text-forest text-xs font-semibold hover:underline"
+                            className="text-xs text-emerald font-semibold hover:underline"
                           >
                             {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
                           </Link>
@@ -280,10 +263,8 @@ export default function PayrollRunsPage() {
         )}
       </div>
 
-      {/* Footer disclaimer */}
-      <p className="text-xs text-slate mt-3 italic">
-        * Estimated amounts for Draft runs. Final figures available after finalisation.
-      </p>
+      {/* Footer disclaimer — matches prototype exactly */}
+      <p className="text-xs text-slate mt-3">* Estimated amounts for Draft runs. Final figures available after finalisation.</p>
     </div>
   );
 }

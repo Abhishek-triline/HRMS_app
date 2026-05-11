@@ -63,23 +63,15 @@ interface KpiTileProps {
   label: string;
   value: number | string;
   subtitle?: string;
-  icon: React.ReactNode;
   valueClass?: string;
 }
 
-function KpiTile({ label, value, subtitle, icon, valueClass = 'text-charcoal' }: KpiTileProps) {
+function KpiTile({ label, value, subtitle, valueClass = 'text-charcoal' }: KpiTileProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4">
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded-full bg-offwhite flex items-center justify-center flex-shrink-0">
-          {icon}
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">{label}</div>
-          <div className={`font-heading text-2xl font-bold ${valueClass}`}>{value}</div>
-          {subtitle && <p className="text-xs text-slate mt-1">{subtitle}</p>}
-        </div>
-      </div>
+      <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">{label}</div>
+      <div className={`font-heading text-2xl font-bold ${valueClass}`}>{value}</div>
+      {subtitle && <p className="text-xs text-slate mt-1">{subtitle}</p>}
     </div>
   );
 }
@@ -216,67 +208,41 @@ export default function AdminAttendancePage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="px-6 py-6">
 
-      {/* Day picker + filter row */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5 flex flex-wrap items-end gap-3">
-        <div>
-          <label htmlFor="admin-att-date" className="block text-xs font-semibold text-charcoal mb-1">Date</label>
-          <input
-            id="admin-att-date"
-            type="date"
-            value={selectedDate}
-            max={todayISO()}
-            onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
-          />
-        </div>
-        <div>
-          <label htmlFor="admin-att-dept" className="block text-xs font-semibold text-charcoal mb-1">Department</label>
-          <select
-            id="admin-att-dept"
-            value={deptFilter}
-            onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
-          >
-            {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="admin-att-status" className="block text-xs font-semibold text-charcoal mb-1">Status</label>
-          <select
-            id="admin-att-status"
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value as AttendanceStatus | ''); setPage(1); }}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
-          >
-            <option value="">All Status</option>
-            <option value="Present">Present</option>
-            <option value="Absent">Absent</option>
-            <option value="On-Leave">On Leave</option>
-            <option value="Weekly-Off">Weekly Off</option>
-          </select>
-        </div>
-        <div className="flex-1 min-w-48">
-          <label htmlFor="admin-att-search" className="block text-xs font-semibold text-charcoal mb-1">Search Employee</label>
-          <div className="relative">
-            <svg className="w-4 h-4 absolute left-3 top-2.5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input
-              id="admin-att-search"
-              type="search"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Name or EMP code…"
-              className="border border-sage/50 rounded-lg pl-9 pr-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
-            />
-          </div>
-        </div>
-        <div className="ml-auto">
-          <button className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite transition-colors">
-            Export CSV
-          </button>
+      {/* Day picker + filter row — matches prototype exactly */}
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5 flex flex-wrap items-center gap-3">
+        <span className="text-sm font-semibold text-charcoal">Date:</span>
+        <input
+          id="admin-att-date"
+          type="date"
+          value={selectedDate}
+          max={todayISO()}
+          onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
+          className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+        />
+        <select
+          id="admin-att-dept"
+          value={deptFilter}
+          onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
+          className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+        </select>
+        <select
+          id="admin-att-status"
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value as AttendanceStatus | ''); setPage(1); }}
+          className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="">All Status</option>
+          <option value="Present">Present</option>
+          <option value="Absent">Absent</option>
+          <option value="On-Leave">On Leave</option>
+          <option value="Weekly-Off">Weekly Off</option>
+        </select>
+        <div className="ml-auto flex gap-2">
+          <button className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite">Export CSV</button>
         </div>
       </div>
 
@@ -291,63 +257,37 @@ export default function AdminAttendancePage() {
         </p>
       </div>
 
-      {/* 5-tile KPI strip */}
+      {/* 5-tile KPI strip — matches prototype exactly (no icons) */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
         <KpiTile
           label="Present"
           value={kpiPresent}
           subtitle={`${presentPct}% of active`}
           valueClass="text-richgreen"
-          icon={
-            <svg className="w-5 h-5 text-richgreen" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-            </svg>
-          }
         />
         <KpiTile
           label="On Leave"
           value={kpiLeave}
           subtitle={totalActive > 0 ? `${Math.round((kpiLeave / totalActive) * 100)}%` : '—'}
           valueClass="text-umber"
-          icon={
-            <svg className="w-5 h-5 text-umber" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-          }
         />
         <KpiTile
           label="Absent"
           value={kpiAbsent}
           subtitle={totalActive > 0 ? `${Math.round((kpiAbsent / totalActive) * 100)}% · No check-in` : '—'}
           valueClass="text-crimson"
-          icon={
-            <svg className="w-5 h-5 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          }
         />
         <KpiTile
           label="Late"
           value={kpiLate}
           subtitle="After 10:30 AM"
           valueClass="text-crimson"
-          icon={
-            <svg className="w-5 h-5 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-          }
         />
         <KpiTile
           label="Yet to Check-in"
           value={kpiYetToCheckIn}
           subtitle="Active employees"
           valueClass="text-charcoal"
-          icon={
-            <svg className="w-5 h-5 text-slate" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            </svg>
-          }
         />
       </div>
 
@@ -401,19 +341,18 @@ export default function AdminAttendancePage() {
                 <thead>
                   <tr className="bg-offwhite border-b border-sage/20">
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-5 py-3 uppercase">Employee</th>
-                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">EMP Code</th>
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Department</th>
+                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Status</th>
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Check-In</th>
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Check-Out</th>
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Hours</th>
-                    <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Status</th>
                     <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3 uppercase">Late This Month</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10 text-sm">
                   {pageRows.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center text-sm text-slate py-10">
+                      <td colSpan={7} className="text-center text-sm text-slate py-10">
                         No records found for this date and filter.
                       </td>
                     </tr>
@@ -439,16 +378,20 @@ export default function AdminAttendancePage() {
                               </div>
                               <div>
                                 <div className="font-semibold text-charcoal">{r.employeeName ?? '—'}</div>
+                                <div className="text-xs text-slate">{r.employeeCode ?? '—'}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate">{r.employeeCode ?? '—'}</td>
-                          <td className="px-4 py-3 text-slate text-xs">—</td>
+                          <td className="px-4 py-3 text-slate">
+                            {(r as unknown as { department?: string }).department ?? '—'}
+                          </td>
+                          <td className="px-4 py-3"><StatusBadge status={r.status} late={r.late} /></td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkInTime)}</td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
-                          <td className="px-4 py-3 text-slate text-xs">{hours}</td>
-                          <td className="px-4 py-3"><StatusBadge status={r.status} late={r.late} /></td>
-                          <td className="px-4 py-3 text-slate text-xs">—</td>
+                          <td className="px-4 py-3 text-slate">{hours}</td>
+                          <td className="px-4 py-3 text-slate">
+                            {(r as unknown as { lateThisMonth?: number }).lateThisMonth ?? '—'}
+                          </td>
                         </tr>
                       );
                     })

@@ -137,6 +137,8 @@ function JsonDiff({ before, after }: { before: unknown; after: unknown }) {
 function AuditRow({ entry }: { entry: AuditLogEntry }) {
   const [expanded, setExpanded] = useState(false);
   const hasDiff = entry.before !== null || entry.after !== null;
+  // description field from the API payload (may not be in contract type)
+  const description = (entry as unknown as { description?: string }).description;
 
   return (
     <>
@@ -149,12 +151,12 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
         <td className="px-4 py-3">
           {entry.actorId ? (
             <>
-              <span className="font-semibold text-charcoal text-sm">{entry.actorId}</span>
+              <span className="font-semibold text-charcoal">{entry.actorId}</span>
               <span className="text-slate text-xs"> · {entry.actorRole}</span>
             </>
           ) : (
             <>
-              <span className="text-slate font-semibold text-sm">System</span>
+              <span className="text-slate font-semibold">System</span>
               <span className="text-slate text-xs"> · automatic</span>
             </>
           )}
@@ -167,13 +169,15 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
         </td>
         <td className="px-4 py-3 font-mono text-xs text-forest">
           {entry.targetId ? (
-            <span>{entry.targetType ? `${entry.targetType} · ` : ''}{entry.targetId}</span>
+            <span>{entry.targetId}</span>
           ) : (
             <span className="text-slate">—</span>
           )}
         </td>
-        <td className="px-4 py-3">
-          {hasDiff ? (
+        <td className="px-4 py-3 text-slate text-xs">
+          {description ? (
+            <span>{description}</span>
+          ) : hasDiff ? (
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
@@ -183,11 +187,11 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
               {expanded ? 'Hide diff' : 'View diff'}
             </button>
           ) : (
-            <span className="text-slate text-xs">—</span>
+            <span>—</span>
           )}
         </td>
       </tr>
-      {expanded && hasDiff && (
+      {expanded && hasDiff && !description && (
         <tr>
           <td colSpan={6} className="px-5 pb-4 pt-0 bg-offwhite/40">
             <JsonDiff before={entry.before} after={entry.after} />
@@ -304,7 +308,7 @@ export function AuditLogPageClient() {
   const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-8">
       {/* Policy banner */}
       <div className="bg-forest/10 border border-forest/20 rounded-xl px-6 py-4 mb-6 flex gap-4">
         <svg className="w-5 h-5 text-forest shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -319,6 +323,43 @@ export function AuditLogPageClient() {
             module: user / hierarchy changes, leave decisions, attendance corrections, payroll runs and reversals, and
             review-cycle actions.
           </p>
+        </div>
+      </div>
+
+      {/* Stat tiles — matches prototype */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Today</div>
+          <div className="font-heading text-2xl font-bold text-charcoal">
+            {isLoading ? '—' : (data?.pages[0] as { todayCount?: number } | undefined)?.todayCount ?? '—'}
+          </div>
+          <p className="text-[11px] text-slate mt-0.5">events recorded</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Last 7 days</div>
+          <div className="font-heading text-2xl font-bold text-charcoal">
+            {isLoading ? '—' : (data?.pages[0] as { weekCount?: number } | undefined)?.weekCount ?? allEntries.length}
+          </div>
+          <p className="text-[11px] text-slate mt-0.5">across all modules</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Distinct users</div>
+          <div className="font-heading text-2xl font-bold text-charcoal">
+            {isLoading ? '—' : new Set(allEntries.map((e) => e.actorId).filter(Boolean)).size || '—'}
+          </div>
+          <p className="text-[11px] text-slate mt-0.5">last 7 days</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Destructive actions</div>
+          <div className="font-heading text-2xl font-bold text-crimson">
+            {isLoading ? '—' : allEntries.filter((e) => /reversed|closed/i.test(e.action)).length || '—'}
+          </div>
+          <p className="text-[11px] text-slate mt-0.5">reversals + cycle closures</p>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-4">
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-1.5">Retention</div>
+          <div className="font-heading text-base font-bold text-charcoal mt-1">Permanent</div>
+          <p className="text-[11px] text-slate mt-0.5">never deleted</p>
         </div>
       </div>
 
@@ -372,21 +413,30 @@ export function AuditLogPageClient() {
             <label htmlFor="audit-action" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
               Action
             </label>
-            <input
+            <select
               id="audit-action"
-              type="text"
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              placeholder="e.g. Approved"
               aria-label="Filter by action"
-              className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition w-36"
-            />
+              className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-forest"
+            >
+              <option value="">All actions</option>
+              <option value="Created">Created</option>
+              <option value="Updated">Updated</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Finalised">Finalised</option>
+              <option value="Reversed">Reversed</option>
+              <option value="Closed">Closed</option>
+              <option value="Status change">Status change</option>
+            </select>
           </div>
 
-          {/* Role */}
+          {/* User */}
           <div>
             <label htmlFor="audit-role" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
-              Role
+              User
             </label>
             <select
               id="audit-role"
@@ -395,7 +445,7 @@ export function AuditLogPageClient() {
               aria-label="Filter by actor role"
               className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-forest"
             >
-              <option value="">All roles</option>
+              <option value="">All users</option>
               {ROLES.slice(1).map((r) => (
                 <option key={r} value={r}>
                   {r}
@@ -468,21 +518,20 @@ export function AuditLogPageClient() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
-        <div className="px-5 py-3 border-b border-sage/20 flex items-center justify-between flex-wrap gap-2">
+        <div className="px-5 py-3 border-b border-sage/20 flex items-center justify-between">
           <div className="text-sm">
             {isLoading ? (
               <span className="text-slate text-sm">Loading…</span>
             ) : (
               <>
-                <span className="font-semibold text-charcoal">{totalLoaded}</span>
-                <span className="text-slate"> entries loaded</span>
-                {hasNextPage && <span className="text-slate"> · more available</span>}
+                <span className="font-semibold text-charcoal">Showing {totalLoaded}</span>
+                <span className="text-slate"> entries{hasNextPage ? ' · more available' : ''}</span>
               </>
             )}
           </div>
           <span className="text-[11px] text-slate flex items-center gap-1.5" aria-live="polite" aria-atomic>
             <span className="w-1.5 h-1.5 bg-richgreen rounded-full" aria-hidden="true" />
-            Append-only · system generated
+            Live · refreshes every 60s
           </span>
         </div>
 
@@ -491,12 +540,12 @@ export function AuditLogPageClient() {
           <table className="w-full text-sm" aria-label="Audit log entries">
             <thead>
               <tr className="bg-offwhite border-b border-sage/30">
-                <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">When (IST)</th>
+                <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">When</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">User</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Module</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Action</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Target</th>
-                <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Diff</th>
+                <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sage/20">

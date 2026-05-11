@@ -214,29 +214,25 @@ export default function PerformanceCyclesPage() {
   const pastCycles = cycles.filter((c) => c.status === 'Closed');
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="px-6 py-6">
+      {/* Page section header — matches prototype */}
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-charcoal">Performance Cycles</h1>
-          <p className="text-sm text-slate mt-0.5">Half-yearly review cycles · April–September &amp; October–March</p>
+          <h2 className="font-heading text-xl font-bold text-charcoal">Review Cycles</h2>
+          <p className="text-xs text-slate mt-0.5">Two cycles per year · created and closed by Admin</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="#" className="text-xs text-emerald font-semibold hover:underline">Rating Report →</Link>
-          <Link href="#" className="text-xs text-emerald font-semibold hover:underline">Missing Reviews</Link>
-          <Link href="/admin/performance-cycles/new">
-            <Button
-              variant="primary"
-              leadingIcon={
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              }
-            >
-              Create Cycle
-            </Button>
-          </Link>
-        </div>
+        <Link href="/admin/performance-cycles/new">
+          <Button
+            variant="primary"
+            leadingIcon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            }
+          >
+            Create Cycle
+          </Button>
+        </Link>
       </div>
 
       {isLoading && (
@@ -271,7 +267,6 @@ export default function PerformanceCyclesPage() {
           {/* Past Cycles table */}
           {pastCycles.length > 0 && (
             <>
-              <h2 className="font-heading text-lg font-semibold text-charcoal mb-3">Past Cycles</h2>
               <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
                 <div className="px-5 py-4 border-b border-sage/20 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-charcoal">Past Cycles</h3>
