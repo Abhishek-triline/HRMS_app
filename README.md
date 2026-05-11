@@ -131,4 +131,5 @@ The web app reads `NEXT_PUBLIC_API_BASE_URL` from `apps/api/.env` (shared across
 
 ## License
 
-Proprietary — © Nexora Technologies Pvt. Ltd. All rights reserved.
+Released under the [MIT License](LICENSE).
+
