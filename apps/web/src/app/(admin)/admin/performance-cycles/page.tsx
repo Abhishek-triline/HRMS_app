@@ -214,7 +214,7 @@ export default function PerformanceCyclesPage() {
   const pastCycles = cycles.filter((c) => c.status === 'Closed');
 
   return (
-    <div className="px-6 py-6">
+    <>
       {/* Page section header — matches prototype */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -297,7 +297,7 @@ export default function PerformanceCyclesPage() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }
 

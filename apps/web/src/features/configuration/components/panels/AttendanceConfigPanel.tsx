@@ -1,21 +1,15 @@
 'use client';
 
 /**
- * AttendanceConfigPanel — 6-card prototype layout (prototype/admin/config.html
- * lines 29-177). Each card is an independent form section with its own
- * Reset + Save Changes footer.
+ * AttendanceConfigPanel — attendance-only cards. Per owner request, leave-
+ * related cards (Escalation, Event-Based Leaves) live exclusively in the
+ * Leave Config tab.
  *
  * Cards (in order):
  *   1. Daily Attendance Generation (info, no inputs)
  *   2. Standard Daily Working Hours
  *   3. Late Check-in Threshold
- *   4. Working Week & Holiday Calendar (weeklyOffDays + holidays inline)
- *   5. Leave Approval Escalation
- *   6. Event-Based Leaves (Maternity + Paternity)
- *
- * Card 4 wires weeklyOffDays to AttendanceConfig (Phase 7) and the
- * inline holidays list to useHolidays / useReplaceHolidays.
- * Cards 5 & 6 write to LeaveConfig.
+ *   4. Working Week & Holiday Calendar
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -573,102 +567,6 @@ export default function AttendanceConfigPanel() {
         </div>
       </div>
 
-      {/* ── Card 5: Leave Approval Escalation ───────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Leave Approval Escalation
-        </h3>
-        <p className="text-xs text-slate mb-5">
-          If a Manager doesn&apos;t act on a leave request within this period, it auto-escalates
-          to Admin
-        </p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div>
-            <label htmlFor="att-escalation" className="block text-xs font-semibold text-charcoal mb-1.5">
-              Escalation Period (working days)
-            </label>
-            <input
-              id="att-escalation"
-              type="number"
-              min={1}
-              max={14}
-              value={escalationDraft}
-              onChange={(e) => setEscalationDraft(e.target.value)}
-              className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-            />
-            <p className="text-xs text-slate mt-1.5">Default 5 working days</p>
-          </div>
-          <div className="bg-crimsonbg/40 border border-crimson/30 rounded-lg px-4 py-3">
-            <div className="text-xs font-semibold text-crimson mb-1">No Auto-Approval</div>
-            <p className="text-xs text-charcoal">
-              Escalated leaves stay <strong>pending</strong> in the Admin queue. The system never
-              auto-approves leave requests.
-            </p>
-          </div>
-        </div>
-        <CardFooter
-          onSave={handleSaveEscalation}
-          saving={leaveMutation.isPending}
-          dirty={escalationDirty}
-        />
-      </div>
-
-      {/* ── Card 6: Event-Based Leaves ──────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Event-Based Leaves
-        </h3>
-        <p className="text-xs text-slate mb-5">
-          Maternity and paternity are event-based (one allocation per event; no balance tracked).
-          Both are <strong>Admin-approved</strong>.
-        </p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div>
-            <label htmlFor="att-maternity" className="block text-xs font-semibold text-charcoal mb-1.5">
-              Maternity Leave Maximum
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                id="att-maternity"
-                type="number"
-                min={1}
-                max={52}
-                value={maternityWeeksDraft}
-                onChange={(e) => setMaternityWeeksDraft(e.target.value)}
-                className="w-32 border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-              />
-              <span className="text-sm text-slate">weeks per event</span>
-            </div>
-            <p className="text-xs text-slate mt-1.5">Default 26 weeks · Approved by Admin</p>
-          </div>
-          <div>
-            <label htmlFor="att-paternity" className="block text-xs font-semibold text-charcoal mb-1.5">
-              Paternity Leave Maximum
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                id="att-paternity"
-                type="number"
-                min={1}
-                max={60}
-                value={paternityDaysDraft}
-                onChange={(e) => setPaternityDaysDraft(e.target.value)}
-                className="w-32 border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-              />
-              <span className="text-sm text-slate">working days per event</span>
-            </div>
-            <p className="text-xs text-slate mt-1.5">
-              Default 10 working days · single block · must be claimed within 6 months of birth ·
-              Approved by Admin
-            </p>
-          </div>
-        </div>
-        <CardFooter
-          onSave={handleSaveEventBased}
-          saving={leaveMutation.isPending}
-          dirty={eventDirty}
-        />
-      </div>
     </div>
   );
 }
