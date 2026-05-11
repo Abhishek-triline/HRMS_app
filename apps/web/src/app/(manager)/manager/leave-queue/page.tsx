@@ -46,7 +46,7 @@ export default function ManagerLeaveQueuePage() {
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       {/* Header */}
       <div className="mb-6">
         <h1 className="font-heading text-xl font-bold text-charcoal">Leave Approval Queue</h1>
@@ -191,6 +191,6 @@ export default function ManagerLeaveQueuePage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

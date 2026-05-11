@@ -42,7 +42,7 @@ export default function NewPerformanceCyclePage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate mb-5" aria-label="Breadcrumb">
         <Link href="/admin/performance-cycles" className="hover:text-forest transition-colors">
@@ -66,6 +66,6 @@ export default function NewPerformanceCyclePage() {
         isSubmitting={isPending}
         currentUserId={auth?.data?.user?.id}
       />
-    </div>
+    </>
   );
 }

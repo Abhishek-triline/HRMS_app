@@ -55,7 +55,7 @@ export default function POPayrollRunsPage() {
   const draftRun = runs.find((r) => r.status === 'Draft');
 
   return (
-    <div className="p-6">
+    <>
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-heading text-xl font-bold text-charcoal">Payroll Runs</h1>
@@ -237,6 +237,6 @@ export default function POPayrollRunsPage() {
       <p className="text-xs text-slate mt-3 italic">
         * Estimated amounts for Draft runs. Final figures available after finalisation.
       </p>
-    </div>
+    </>
   );
 }

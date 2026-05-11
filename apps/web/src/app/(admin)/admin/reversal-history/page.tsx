@@ -17,7 +17,7 @@ export default function ReversalHistoryPage() {
   const items = data?.data ?? [];
 
   return (
-    <div className="p-6">
+    <>
       {/* Page header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -46,6 +46,6 @@ export default function ReversalHistoryPage() {
           <ReversalHistoryTable items={items} isLoading={isLoading} />
         </div>
       )}
-    </div>
+    </>
   );
 }

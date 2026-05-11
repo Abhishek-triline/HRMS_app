@@ -31,7 +31,7 @@ export default function AdminPayslipDetailPage() {
 
   if (isError || !payslip) {
     return (
-      <div className="p-6 text-center text-crimson text-sm">
+      <div className="text-center text-crimson text-sm">
         Failed to load payslip.{' '}
         <Link href="/admin/payroll-runs" className="underline text-forest">
           Back to Payroll Runs
@@ -41,7 +41,7 @@ export default function AdminPayslipDetailPage() {
   }
 
   return (
-    <div className="p-6">
+    <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate mb-4 print:hidden">
         <Link href="/admin/payroll-runs" className="hover:text-forest transition-colors">Payroll</Link>
@@ -62,6 +62,6 @@ export default function AdminPayslipDetailPage() {
         backHref={`/admin/payroll-runs/${payslip.runId}`}
         backLabel={payslip.runCode}
       />
-    </div>
+    </>
   );
 }

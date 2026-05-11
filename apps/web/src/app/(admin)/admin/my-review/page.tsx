@@ -28,7 +28,7 @@ export default function AdminMyReviewPage() {
   const reviews = data?.data ?? [];
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <>
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-bold text-charcoal">My Review</h1>
         <p className="text-sm text-slate mt-1">Your performance reviews across all cycles.</p>
@@ -106,6 +106,6 @@ export default function AdminMyReviewPage() {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

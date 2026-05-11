@@ -115,7 +115,7 @@ export default function MyLeavePage() {
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -261,6 +261,6 @@ export default function MyLeavePage() {
           onClose={() => setCancelTarget(null)}
         />
       )}
-    </div>
+    </>
   );
 }

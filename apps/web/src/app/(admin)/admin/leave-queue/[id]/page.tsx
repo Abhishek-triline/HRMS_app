@@ -69,7 +69,7 @@ export default function AdminLeaveDetailPage() {
   const isPending = request.status === 'Pending' || request.status === 'Escalated';
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl">
+    <>
       {/* Breadcrumb */}
       <div className="mb-6">
         <h1 className="font-heading text-xl font-semibold text-charcoal">Leave Request</h1>
@@ -175,6 +175,6 @@ export default function AdminLeaveDetailPage() {
           />
         </div>
       )}
-    </div>
+    </>
   );
 }

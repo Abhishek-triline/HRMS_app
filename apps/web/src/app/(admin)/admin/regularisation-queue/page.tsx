@@ -116,7 +116,7 @@ export default function AdminRegularisationQueuePage() {
   };
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="space-y-5">
 
       {/* umberbg warning banner — BL-029 */}
       <div className="flex items-start gap-3 bg-umberbg border border-umber/25 rounded-xl px-5 py-4" role="note">

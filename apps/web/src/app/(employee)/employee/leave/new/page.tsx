@@ -24,7 +24,7 @@ export default function ApplyLeavePage() {
   const isLoading = meLoading || typesQuery.isLoading;
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       {/* Breadcrumb */}
       <div className="mb-6">
         <h1 className="font-heading text-xl font-semibold text-charcoal">Apply for Leave</h1>
@@ -58,6 +58,6 @@ export default function ApplyLeavePage() {
           successPath="/employee/leave"
         />
       )}
-    </div>
+    </>
   );
 }

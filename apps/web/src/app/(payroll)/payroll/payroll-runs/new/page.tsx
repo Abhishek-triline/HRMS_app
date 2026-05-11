@@ -102,7 +102,7 @@ export default function PONewPayrollRunPage() {
   }
 
   return (
-    <div className="p-6">
+    <>
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-2 text-xs text-slate mb-4">
           <Link href="/payroll/payroll-runs" className="hover:text-forest transition-colors">Payroll Runs</Link>
@@ -252,6 +252,6 @@ export default function PONewPayrollRunPage() {
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 }

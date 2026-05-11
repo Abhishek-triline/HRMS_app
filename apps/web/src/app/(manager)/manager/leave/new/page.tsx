@@ -17,7 +17,7 @@ export default function ManagerApplyLeavePage() {
   }
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       <div className="mb-6">
         <h1 className="font-heading text-xl font-semibold text-charcoal">Apply for Leave</h1>
         <div className="text-xs text-slate flex items-center gap-1 mt-0.5">
@@ -34,6 +34,6 @@ export default function ManagerApplyLeavePage() {
         backPath="/manager/leave"
         successPath="/manager/leave"
       />
-    </div>
+    </>
   );
 }

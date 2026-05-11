@@ -55,7 +55,7 @@ export default function PayrollRunDetailPage() {
 
   if (isError || !data) {
     return (
-      <div className="p-6 text-center text-crimson text-sm">
+      <div className="text-center text-crimson text-sm">
         Failed to load payroll run. <Link href="/admin/payroll-runs" className="underline text-forest">Go back</Link>
       </div>
     );
@@ -75,7 +75,7 @@ export default function PayrollRunDetailPage() {
   ).length;
 
   return (
-    <div className="p-6">
+    <>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate mb-4">
         <Link href="/admin/payroll-runs" className="hover:text-forest transition-colors">Payroll Runs</Link>
@@ -228,6 +228,6 @@ export default function PayrollRunDetailPage() {
           setReverseOpen(false);
         }}
       />
-    </div>
+    </>
   );
 }

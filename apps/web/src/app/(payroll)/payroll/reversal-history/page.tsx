@@ -16,7 +16,7 @@ export default function POReversalHistoryPage() {
   const items = data?.data ?? [];
 
   return (
-    <div className="p-6">
+    <>
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-heading text-xl font-bold text-charcoal">Reversal History</h1>
@@ -39,6 +39,6 @@ export default function POReversalHistoryPage() {
           <ReversalHistoryTable items={items} isLoading={isLoading} readOnly />
         </div>
       )}
-    </div>
+    </>
   );
 }

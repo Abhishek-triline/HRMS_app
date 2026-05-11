@@ -29,7 +29,7 @@ export default function EmployeePayslipDetailPage() {
 
   if (isError || !payslip) {
     return (
-      <div className="p-6 text-center text-crimson text-sm">
+      <div className="text-center text-crimson text-sm">
         Failed to load payslip.{' '}
         <Link href="/employee/payslips" className="underline text-forest">Back to My Payslips</Link>
       </div>
@@ -37,7 +37,7 @@ export default function EmployeePayslipDetailPage() {
   }
 
   return (
-    <div className="p-6">
+    <>
       <div className="flex items-center gap-2 text-xs text-slate mb-4 print:hidden">
         <Link href="/employee/payslips" className="hover:text-forest transition-colors">My Payslips</Link>
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -46,6 +46,6 @@ export default function EmployeePayslipDetailPage() {
         <span className="text-charcoal font-medium">{payslip.code}</span>
       </div>
       <PayslipViewer payslip={payslip} backHref="/employee/payslips" backLabel="My Payslips" />
-    </div>
+    </>
   );
 }

@@ -19,7 +19,7 @@ export default function ManagerPerformanceCyclesPage() {
   const activeCycle = cycles.find((c) => c.status !== 'Closed');
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <>
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-bold text-charcoal">Performance Cycles</h1>
         <p className="text-sm text-slate mt-0.5">Your team&apos;s review cycles</p>
@@ -118,6 +118,6 @@ export default function ManagerPerformanceCyclesPage() {
           No performance cycles found.
         </div>
       )}
-    </div>
+    </>
   );
 }

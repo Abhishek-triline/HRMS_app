@@ -240,7 +240,7 @@ export default function LeaveDetailPage() {
   const showBalanceCard = request.status !== 'Rejected' && request.status !== 'Cancelled';
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl">
+    <>
       {/* Breadcrumb */}
       <div className="mb-6">
         <div className="text-xs text-slate flex items-center gap-1">
@@ -544,6 +544,6 @@ export default function LeaveDetailPage() {
           isLoading={cancelMutation.isPending}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -226,7 +226,7 @@ export default function AdminLeaveBalancesPage() {
   const employees = employeesQuery.data?.data ?? [];
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -323,6 +323,6 @@ export default function AdminLeaveBalancesPage() {
           Search for an employee above to view and adjust their leave balances.
         </div>
       )}
-    </div>
+    </>
   );
 }

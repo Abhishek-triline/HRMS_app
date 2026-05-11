@@ -209,7 +209,7 @@ export default function EmployeePayslipsPage() {
   }
 
   return (
-    <div className="p-6">
+    <>
       <div className="mb-5">
         <h1 className="font-heading text-xl font-bold text-charcoal">My Payslips</h1>
         <p className="text-xs text-slate mt-0.5">Your monthly payslip history</p>
@@ -244,6 +244,6 @@ export default function EmployeePayslipsPage() {
           <FinalisedInfoCard />
         </>
       )}
-    </div>
+    </>
   );
 }

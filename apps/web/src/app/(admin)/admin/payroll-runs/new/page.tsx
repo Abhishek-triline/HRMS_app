@@ -134,7 +134,7 @@ export default function NewPayrollRunPage() {
   }
 
   return (
-    <div className="p-6">
+    <>
       <div className="max-w-3xl mx-auto">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-slate mb-4">
@@ -383,6 +383,6 @@ export default function NewPayrollRunPage() {
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 }
