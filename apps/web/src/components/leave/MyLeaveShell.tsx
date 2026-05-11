@@ -129,7 +129,7 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   const fySubtitle = `${fiscalYearLabel} — as of ${asOfLabel}`;
 
   return (
-    <div className="p-6 md:p-8">
+    <>
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -267,6 +267,6 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
           onClose={() => setCancelTarget(null)}
         />
       )}
-    </div>
+    </>
   );
 }
