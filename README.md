@@ -102,7 +102,7 @@ Backend highlights:
 - `SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS` — required when `MAIL_TRANSPORT=smtp`
 - `TZ=Asia/Kolkata`, `LOCALE=en-IN` — single-tenant Indian timezone + locale
 
-The web app reads `NEXT_PUBLIC_API_BASE_URL` from `apps/api/.env` (shared across the monorepo) — defaults to `http://localhost:4000/api/v1`.
+The web app reads `NEXT_PUBLIC_API_BASE_URL` from `apps/web/.env.local` — set it to the **bare API host** (`http://localhost:4000`). The `/api/v1` prefix is already baked into every path in `apps/web/src/lib/api/*.ts`, so adding it to the env var will produce a doubled-prefix 404 on every request.
 
 ---
 
