@@ -33,7 +33,7 @@ export default function ManagerPerformanceQueuePage() {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <>
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-bold text-charcoal">Performance Queue</h1>
         <p className="text-sm text-slate mt-0.5">
@@ -159,6 +159,6 @@ export default function ManagerPerformanceQueuePage() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

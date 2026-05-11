@@ -79,10 +79,8 @@ export default function EmployeeSelfRatingPage() {
 
   if (isError || !data) {
     return (
-      <div className="p-6">
-        <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
-          Review not found or you do not have access.
-        </div>
+      <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
+        Review not found or you do not have access.
       </div>
     );
   }
@@ -95,7 +93,7 @@ export default function EmployeeSelfRatingPage() {
   const canProposeGoal = inSelfReviewWindow && !selfReviewDeadlinePassed && !review.isMidCycleJoiner && !review.lockedAt;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-5">
+    <div className="space-y-5">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate" aria-label="Breadcrumb">
         <Link href="/employee/performance" className="hover:text-forest transition-colors">

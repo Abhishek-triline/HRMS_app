@@ -94,10 +94,8 @@ export default function ManagerReviewDetailPage() {
 
   if (isError || !data) {
     return (
-      <div className="p-6">
-        <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
-          Review not found or you do not have permission to view it.
-        </div>
+      <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 text-sm text-crimson">
+        Review not found or you do not have permission to view it.
       </div>
     );
   }
@@ -107,7 +105,7 @@ export default function ManagerReviewDetailPage() {
   const isCycleOpen = review.cycleStatus === 'Open' || review.cycleStatus === 'Self-Review';
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-5">
+    <div className="space-y-5">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate" aria-label="Breadcrumb">
         <Link href="/manager/performance" className="hover:text-forest transition-colors">
