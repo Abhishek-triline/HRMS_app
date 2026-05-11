@@ -17,13 +17,6 @@ interface RoleLayoutProps {
   hasUnread?: boolean;
 }
 
-/** Get initials from a full name */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return (parts[0]?.[0] ?? '').toUpperCase();
-  return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
-}
-
 /** Derive the notifications page path from the user's role. */
 function notificationsPath(role: Role): string {
   switch (role) {
@@ -47,7 +40,6 @@ export function RoleLayout({
   pageTitle,
 }: RoleLayoutProps) {
   const role = user.role as Role;
-  const initials = getInitials(user.name);
   const notifHref = notificationsPath(role);
 
   return (
@@ -65,9 +57,6 @@ export function RoleLayout({
         <Sidebar
           role={role}
           currentPath={currentPath}
-          initials={initials}
-          name={user.name}
-          email={user.email}
         />
       </div>
 
@@ -80,9 +69,6 @@ export function RoleLayout({
             <MobileDrawerWrapper
               role={role}
               currentPath={currentPath}
-              initials={initials}
-              name={user.name}
-              email={user.email}
             />
           }
         >

@@ -159,9 +159,14 @@ function InlineApproveReject({ req }: { req: LeaveReq }) {
   );
 }
 
-export function ManagerDashboardClient() {
+interface ManagerDashboardClientProps {
+  firstName?: string;
+}
+
+export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDashboardClientProps = {}) {
   const me = useMe();
-  const firstName = me.data?.data?.user?.name?.split(' ')[0] ?? 'Manager';
+  const firstName =
+    firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
 
   const dash = useManagerDashboard();
 

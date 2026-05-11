@@ -88,9 +88,14 @@ function timeAgo(iso?: string | null): string {
   return `${days}d ago`;
 }
 
-export function PayrollDashboardClient() {
+interface PayrollDashboardClientProps {
+  firstName?: string;
+}
+
+export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDashboardClientProps = {}) {
   const me = useMe();
-  const firstName = me.data?.data?.user?.name?.split(' ')[0] ?? 'Officer';
+  const firstName =
+    firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
   const dash = usePayrollDashboard();
 
   const subtitle = new Date().toLocaleDateString('en-IN', {

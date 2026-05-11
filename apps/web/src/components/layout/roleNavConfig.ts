@@ -47,6 +47,10 @@ const ICONS = {
     'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
   myAttendance:
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+  checkin:
+    'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  auditLog:
+    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
 } as const;
 
 // ── Nav entry types ───────────────────────────────────────────────────────────
@@ -74,58 +78,68 @@ export type NavEntry = NavLink | NavSubhead | NavDivider;
 // ── Role nav configs ──────────────────────────────────────────────────────────
 
 const adminNav: NavEntry[] = [
-  { type: 'link', label: 'Dashboard',     href: '/admin/dashboard',         iconPath: ICONS.dashboard },
+  { type: 'link', label: 'Dashboard',     href: '/admin/dashboard',          iconPath: ICONS.dashboard },
   { type: 'link', label: 'Employees',     href: '/admin/employees',          iconPath: ICONS.employees },
   { type: 'link', label: 'Leave',         href: '/admin/leave-queue',        iconPath: ICONS.leave },
   { type: 'link', label: 'Attendance',    href: '/admin/attendance',         iconPath: ICONS.attendance },
   { type: 'link', label: 'Payroll',       href: '/admin/payroll-runs',       iconPath: ICONS.payroll },
   { type: 'link', label: 'Performance',   href: '/admin/performance-cycles', iconPath: ICONS.performance },
+  { type: 'link', label: 'Audit Log',     href: '/admin/audit-log',          iconPath: ICONS.auditLog },
   { type: 'link', label: 'Configuration', href: '/admin/configuration',      iconPath: ICONS.configuration },
+  { type: 'subhead', label: 'My Records' },
+  { type: 'link', label: 'My Leave',       href: '/admin/leave',                   iconPath: ICONS.leave },
+  { type: 'link', label: 'My Attendance',  href: '/admin/attendance?scope=me',     iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'Check In / Out', href: '/admin/checkin',                 iconPath: ICONS.checkin },
+  { type: 'link', label: 'My Payslips',    href: '/admin/payslips',                iconPath: ICONS.payslips },
+  { type: 'link', label: 'My Review',      href: '/admin/my-review',               iconPath: ICONS.review },
   { type: 'divider' },
-  { type: 'link', label: 'Profile',   href: '/admin/profile',            iconPath: ICONS.profile },
-  { type: 'link', label: 'Sign Out',  href: '/api/auth/signout',         iconPath: ICONS.signOut, danger: true },
+  { type: 'link', label: 'My Profile', href: '/admin/profile',       iconPath: ICONS.profile },
+  { type: 'link', label: 'Sign Out',   href: '/api/auth/signout',    iconPath: ICONS.signOut, danger: true },
 ];
 
 const managerNav: NavEntry[] = [
-  { type: 'link', label: 'Dashboard',            href: '/manager/dashboard',             iconPath: ICONS.dashboard },
-  { type: 'link', label: 'My Team',              href: '/manager/team',                  iconPath: ICONS.myTeam },
-  { type: 'link', label: 'Leave Queue',          href: '/manager/leave-queue',           iconPath: ICONS.leaveQueue },
-  { type: 'link', label: 'Regularisation Queue', href: '/manager/regularisation-queue',  iconPath: ICONS.regularisation },
-  { type: 'link', label: 'Performance',          href: '/manager/performance',           iconPath: ICONS.performance },
+  { type: 'link', label: 'Dashboard',            href: '/manager/dashboard',            iconPath: ICONS.dashboard },
+  { type: 'link', label: 'My Team',              href: '/manager/team',                 iconPath: ICONS.myTeam },
+  { type: 'link', label: 'Leave Queue',          href: '/manager/leave-queue',          iconPath: ICONS.leaveQueue },
+  { type: 'link', label: 'Regularisation Queue', href: '/manager/regularisation-queue', iconPath: ICONS.regularisation },
+  { type: 'link', label: 'Performance',          href: '/manager/performance',          iconPath: ICONS.performance },
   { type: 'subhead', label: 'My Records' },
-  { type: 'link', label: 'My Leave',      href: '/manager/leave',       iconPath: ICONS.leave },
-  { type: 'link', label: 'My Attendance', href: '/manager/attendance',  iconPath: ICONS.myAttendance },
-  { type: 'link', label: 'My Reviews',    href: '/manager/my-review',   iconPath: ICONS.review },
-  { type: 'link', label: 'My Payslips',   href: '/manager/payslips',    iconPath: ICONS.payslips },
+  { type: 'link', label: 'My Leave',       href: '/manager/leave',      iconPath: ICONS.leave },
+  { type: 'link', label: 'My Attendance',  href: '/manager/attendance', iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'Check In / Out', href: '/manager/checkin',    iconPath: ICONS.checkin },
+  { type: 'link', label: 'My Reviews',     href: '/manager/my-review',  iconPath: ICONS.review },
+  { type: 'link', label: 'My Payslips',    href: '/manager/payslips',   iconPath: ICONS.payslips },
   { type: 'divider' },
-  { type: 'link', label: 'Profile',  href: '/manager/profile',      iconPath: ICONS.profile },
-  { type: 'link', label: 'Sign Out', href: '/api/auth/signout',      iconPath: ICONS.signOut, danger: true },
+  { type: 'link', label: 'My Profile', href: '/manager/profile',   iconPath: ICONS.profile },
+  { type: 'link', label: 'Sign Out',   href: '/api/auth/signout',  iconPath: ICONS.signOut, danger: true },
 ];
 
 const employeeNav: NavEntry[] = [
-  { type: 'link', label: 'Dashboard',    href: '/employee/dashboard',   iconPath: ICONS.dashboard },
-  { type: 'link', label: 'My Leave',     href: '/employee/leave',       iconPath: ICONS.leave },
-  { type: 'link', label: 'My Attendance',href: '/employee/attendance',  iconPath: ICONS.myAttendance },
-  { type: 'link', label: 'My Payslips',  href: '/employee/payslips',    iconPath: ICONS.payslips },
-  { type: 'link', label: 'My Reviews',   href: '/employee/performance', iconPath: ICONS.review },
+  { type: 'link', label: 'Dashboard',     href: '/employee/dashboard',  iconPath: ICONS.dashboard },
+  { type: 'link', label: 'My Leave',      href: '/employee/leave',      iconPath: ICONS.leave },
+  { type: 'link', label: 'My Attendance', href: '/employee/attendance', iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'Check In / Out',href: '/employee/checkin',    iconPath: ICONS.checkin },
+  { type: 'link', label: 'My Payslips',   href: '/employee/payslips',   iconPath: ICONS.payslips },
+  { type: 'link', label: 'My Reviews',    href: '/employee/performance',iconPath: ICONS.review },
   { type: 'divider' },
-  { type: 'link', label: 'Profile',  href: '/employee/profile',     iconPath: ICONS.profile },
-  { type: 'link', label: 'Sign Out', href: '/api/auth/signout',     iconPath: ICONS.signOut, danger: true },
+  { type: 'link', label: 'My Profile', href: '/employee/profile',  iconPath: ICONS.profile },
+  { type: 'link', label: 'Sign Out',   href: '/api/auth/signout',  iconPath: ICONS.signOut, danger: true },
 ];
 
 const payrollNav: NavEntry[] = [
-  { type: 'link', label: 'Dashboard',       href: '/payroll/dashboard',       iconPath: ICONS.dashboard },
-  { type: 'link', label: 'Payroll Runs',    href: '/payroll/payroll-runs',    iconPath: ICONS.payroll },
-  { type: 'link', label: 'Reports',         href: '/payroll/reports',         iconPath: ICONS.reports },
-  { type: 'link', label: 'Reversal History',href: '/payroll/reversal-history',iconPath: ICONS.reversal },
+  { type: 'link', label: 'Dashboard',        href: '/payroll/dashboard',        iconPath: ICONS.dashboard },
+  { type: 'link', label: 'Payroll Runs',     href: '/payroll/payroll-runs',     iconPath: ICONS.payroll },
+  { type: 'link', label: 'Reports',          href: '/payroll/reports',          iconPath: ICONS.reports },
+  { type: 'link', label: 'Reversal History', href: '/payroll/reversal-history', iconPath: ICONS.reversal },
   { type: 'subhead', label: 'My Records' },
-  { type: 'link', label: 'My Leave',      href: '/payroll/leave',      iconPath: ICONS.leave },
-  { type: 'link', label: 'My Attendance', href: '/payroll/attendance', iconPath: ICONS.myAttendance },
-  { type: 'link', label: 'My Payslips',   href: '/payroll/payslips',   iconPath: ICONS.payslips },
-  { type: 'link', label: 'My Reviews',    href: '/payroll/my-review',  iconPath: ICONS.review },
+  { type: 'link', label: 'My Leave',       href: '/payroll/leave',      iconPath: ICONS.leave },
+  { type: 'link', label: 'My Attendance',  href: '/payroll/attendance', iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'Check In / Out', href: '/payroll/checkin',    iconPath: ICONS.checkin },
+  { type: 'link', label: 'My Payslips',    href: '/payroll/payslips',   iconPath: ICONS.payslips },
+  { type: 'link', label: 'My Reviews',     href: '/payroll/my-review',  iconPath: ICONS.review },
   { type: 'divider' },
-  { type: 'link', label: 'Profile',  href: '/payroll/profile',    iconPath: ICONS.profile },
-  { type: 'link', label: 'Sign Out', href: '/api/auth/signout',   iconPath: ICONS.signOut, danger: true },
+  { type: 'link', label: 'My Profile', href: '/payroll/profile',   iconPath: ICONS.profile },
+  { type: 'link', label: 'Sign Out',   href: '/api/auth/signout',  iconPath: ICONS.signOut, danger: true },
 ];
 
 export const navByRole: Record<Role, NavEntry[]> = {

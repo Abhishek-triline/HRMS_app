@@ -4,12 +4,21 @@ import type { Role } from '@nexora/contracts/common';
 import { SignOutButton } from './SignOutButton';
 import { navByRole } from './roleNavConfig';
 
+// ── Role panel subtitle labels ────────────────────────────────────────────────
+
+const ROLE_PANEL_LABELS: Record<Role, string> = {
+  Admin:          'Admin Panel',
+  Manager:        'Manager Panel',
+  Employee:       'Employee Panel',
+  PayrollOfficer: 'Payroll Panel',
+};
+
 // ── Icon helper (inline SVG, no external deps) ────────────────────────────────
 
 function Icon({ path, className }: { path: string; className?: string }) {
   return (
     <svg
-      className={clsx('w-5 h-5 flex-shrink-0', className)}
+      className={clsx('w-4 h-4 flex-shrink-0', className)}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
@@ -26,18 +35,15 @@ function Icon({ path, className }: { path: string; className?: string }) {
 interface SidebarProps {
   role: Role;
   currentPath: string;
-  /** User initials for the bottom user card */
-  initials: string;
-  name: string;
-  email: string;
 }
 
-export function Sidebar({ role, currentPath, initials, name, email }: SidebarProps) {
+export function Sidebar({ role, currentPath }: SidebarProps) {
   const entries = navByRole[role];
+  const panelLabel = ROLE_PANEL_LABELS[role];
 
   return (
     <aside className="nx-sidebar w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">
-      {/* Brand — "Nexora HRMS" wordmark, no role subtitle */}
+      {/* Brand — "Nexora HRMS" wordmark + role panel subtitle */}
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
         <div className="w-8 h-8 bg-mint rounded-lg flex items-center justify-center flex-shrink-0">
           <svg
@@ -55,7 +61,12 @@ export function Sidebar({ role, currentPath, initials, name, email }: SidebarPro
             />
           </svg>
         </div>
-        <span className="font-heading text-base font-bold">Nexora HRMS</span>
+        <div className="flex flex-col min-w-0 leading-tight">
+          <span className="font-heading text-base font-bold">Nexora HRMS</span>
+          <span className="text-mint/60 text-[10px] uppercase tracking-[0.15em] font-semibold mt-0.5">
+            {panelLabel}
+          </span>
+        </div>
       </div>
 
       {/* Nav — flat list per role, with optional subhead + divider entries */}
@@ -104,7 +115,7 @@ export function Sidebar({ role, currentPath, initials, name, email }: SidebarPro
                   className={clsx(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
                     isActive
-                      ? 'bg-emerald/20 border-l-2 border-mint text-white font-medium'
+                      ? 'bg-emerald/20 text-white border-l-2 border-mint font-medium'
                       : 'text-white/70 hover:text-white hover:bg-emerald/10',
                   )}
                   aria-current={isActive ? 'page' : undefined}
@@ -117,22 +128,6 @@ export function Sidebar({ role, currentPath, initials, name, email }: SidebarPro
           })}
         </ul>
       </nav>
-
-      {/* Bottom user card */}
-      <div className="px-4 py-4 border-t border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-full bg-mint flex items-center justify-center text-forest text-xs font-bold flex-shrink-0"
-            aria-hidden="true"
-          >
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-white truncate">{name}</div>
-            <div className="text-xs text-white/50 truncate">{email}</div>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

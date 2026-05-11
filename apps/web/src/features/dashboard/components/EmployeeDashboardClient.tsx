@@ -73,9 +73,14 @@ function currentMonthLabel() {
   return new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 }
 
-export function EmployeeDashboardClient() {
+interface EmployeeDashboardClientProps {
+  firstName?: string;
+}
+
+export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDashboardClientProps = {}) {
   const me = useMe();
-  const firstName = me.data?.data?.user?.name?.split(' ')[0] ?? 'there';
+  const firstName =
+    firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
 
   const dash = useEmployeeDashboard();
 

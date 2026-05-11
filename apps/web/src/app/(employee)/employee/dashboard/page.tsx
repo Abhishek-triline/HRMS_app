@@ -1,10 +1,20 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+import { getMe } from '@/lib/api/auth';
 import { EmployeeDashboardClient } from '@/features/dashboard/components/EmployeeDashboardClient';
 
 export const metadata: Metadata = {
   title: 'Dashboard — Nexora HRMS',
 };
 
-export default function EmployeeDashboardPage() {
-  return <EmployeeDashboardClient />;
+export default async function EmployeeDashboardPage() {
+  let firstName: string | undefined;
+  try {
+    const cookieHeader = headers().get('cookie') ?? undefined;
+    const me = await getMe(cookieHeader);
+    firstName = me.data.user.name?.split(' ')[0];
+  } catch {
+    /* fall back to client-side useMe() */
+  }
+  return <EmployeeDashboardClient firstName={firstName} />;
 }

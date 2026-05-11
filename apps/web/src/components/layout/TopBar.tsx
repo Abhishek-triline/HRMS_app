@@ -4,7 +4,7 @@
  * TopBar — dashboard header (client component).
  *
  * Left:  page title (h1) + Intl-formatted date subtitle below it.
- * Right: NotificationBell + avatar block (name + role pill).
+ * Right: NotificationBell + avatar block (name + role pill, clickable link to profile).
  *
  * Role pill display map:
  *   Admin          → "Admin"
@@ -14,6 +14,7 @@
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
 import type { AuthUser } from '@nexora/contracts/auth';
 import type { Role } from '@nexora/contracts/common';
 import { NotificationBell } from './NotificationBell';
@@ -25,6 +26,15 @@ const ROLE_LABELS: Record<Role, string> = {
   Manager:        'Manager',
   Employee:       'Employee',
   PayrollOfficer: 'Payroll Officer',
+};
+
+// ── Profile href per role ─────────────────────────────────────────────────────
+
+const PROFILE_HREFS: Record<Role, string> = {
+  Admin:          '/admin/profile',
+  Manager:        '/manager/profile',
+  Employee:       '/employee/profile',
+  PayrollOfficer: '/payroll/profile',
 };
 
 // ── Date formatter ────────────────────────────────────────────────────────────
@@ -63,6 +73,7 @@ interface TopBarProps {
 export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBarProps) {
   const initials = getInitials(user.name);
   const roleLabel = ROLE_LABELS[user.role as Role] ?? user.role;
+  const profileHref = PROFILE_HREFS[user.role as Role] ?? '/profile';
 
   // Compute the date string client-side to avoid SSR/CSR hydration mismatch.
   // useState initialiser runs only on the client after hydration.
@@ -91,8 +102,12 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
         {/* Live notification bell */}
         <NotificationBell href={notificationsHref} />
 
-        {/* Avatar + name + role pill */}
-        <div className="flex items-center gap-2">
+        {/* Avatar + name + role pill — links to the user's own profile */}
+        <Link
+          href={profileHref}
+          title="View your profile"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <div
             className="w-8 h-8 rounded-full bg-forest flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
             aria-hidden="true"
@@ -107,7 +122,7 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
               </span>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

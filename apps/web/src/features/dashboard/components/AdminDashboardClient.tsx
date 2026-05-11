@@ -80,9 +80,14 @@ function payslipStatusPill(status?: string) {
   );
 }
 
-export function AdminDashboardClient() {
+interface AdminDashboardClientProps {
+  firstName?: string;
+}
+
+export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboardClientProps = {}) {
   const me = useMe();
-  const firstName = me.data?.data?.user?.name?.split(' ')[0] ?? 'Admin';
+  const firstName =
+    firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
 
   const dashboard = useAdminDashboard();
   const openCycles = useCycles({ status: 'Open' } as Record<string, unknown>);
