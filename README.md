@@ -44,8 +44,9 @@ HRMS_app/
 # 1. Install deps (workspace-wide)
 pnpm install
 
-# 2. Configure environment
-cp apps/api/.env.example apps/api/.env
+# 2. Configure environment — two files, one per app
+cp .env.example apps/api/.env                    # backend secrets (DB, SESSION_SECRET, SMTP)
+echo 'NEXT_PUBLIC_API_BASE_URL="http://localhost:4000/api/v1"' > apps/web/.env.local
 # Edit apps/api/.env — fill DATABASE_URL, SESSION_SECRET, SMTP_* if needed
 
 # 3. Run database migrations + seed
@@ -58,7 +59,7 @@ pnpm dev
 
 - API serves on **http://localhost:4000** (`/api/v1`)
 - Web serves on **http://localhost:3000**
-- Default admin (from seed): `admin@triline.in` / `admin@123`
+- Default admin (from seed): `admin@triline.co.in` / `admin@123`
 
 ---
 
@@ -88,7 +89,12 @@ pnpm --filter @nexora/api test         # API tests only
 
 ## Environment
 
-The API reads from `apps/api/.env` (gitignored). The template is at `apps/api/.env.example` — copy it and fill the blanks. Highlights:
+Two env files, one per app — both gitignored. The single source-of-truth template is `/.env.example` at the repo root.
+
+- `apps/api/.env` — backend secrets, read by Express via `dotenv` at startup.
+- `apps/web/.env.local` — Next.js convention; only `NEXT_PUBLIC_*` vars belong here.
+
+Backend highlights:
 
 - `DATABASE_URL` — MySQL connection string
 - `SESSION_SECRET` — ≥ 32 chars; generate with `openssl rand -hex 32`
