@@ -76,17 +76,34 @@ export default function AdminLeaveQueuePage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   const query = useLeaveList(buildQuery(activeTab, typeFilter, deptFilter, searchQuery));
 
+  // Per-tab counts — small parallel queries so all 5 badges show real numbers.
+  const allPendingCount = useLeaveList({ routedTo: 'Admin', status: 'Pending', limit: 1});
+  const escalatedCount = useLeaveList({ routedTo: 'Admin', status: 'Escalated', limit: 1});
+  const todayApprovedCount = useLeaveList({ routedTo: 'Admin', status: 'Approved', limit: 1});
+  const todayRejectedCount = useLeaveList({ routedTo: 'Admin', status: 'Rejected', limit: 1});
+
+  const tabCounts: Record<TabKey, number | null> = {
+    'all-pending': allPendingCount.data?.data?.length ?? null,
+    'escalated':   escalatedCount.data?.data?.length ?? null,
+    'maternity':   (allPendingCount.data?.data ?? []).filter((r) => r.type === 'Maternity' || r.type === 'Paternity').length,
+    'approved':    todayApprovedCount.data?.data?.length ?? null,
+    'rejected':    todayRejectedCount.data?.data?.length ?? null,
+  };
+
   const displayedRequests = (() => {
     if (!query.data?.data) return [];
+    let list = query.data.data;
     if (activeTab === 'maternity') {
-      return query.data.data.filter(
-        (r) => r.type === 'Maternity' || r.type === 'Paternity',
-      );
+      list = list.filter((r) => r.type === 'Maternity' || r.type === 'Paternity');
     }
-    return query.data.data;
+    if (dateFilter) {
+      list = list.filter((r) => r.fromDate <= dateFilter && r.toDate >= dateFilter);
+    }
+    return list;
   })();
 
   const showActions =
@@ -97,8 +114,7 @@ export default function AdminLeaveQueuePage() {
   const total = displayedRequests.length;
 
   return (
-    <div className="px-6 py-6">
-
+    <>
       {/* Tabs */}
       <div
         id="lq-tabs"
@@ -108,6 +124,7 @@ export default function AdminLeaveQueuePage() {
       >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
+          const count = tabCounts[tab.key];
           return (
             <button
               key={tab.key}
@@ -122,9 +139,9 @@ export default function AdminLeaveQueuePage() {
               )}
             >
               {tab.label}
-              {query.data && (
+              {count !== null && (
                 <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded ${tab.countBadgeClass}`}>
-                  {activeTab === tab.key ? displayedRequests.length : ''}
+                  {count}
                 </span>
               )}
             </button>
@@ -191,6 +208,15 @@ export default function AdminLeaveQueuePage() {
             <option value="Operations">Operations</option>
             <option value="HR">HR</option>
           </select>
+
+          {/* Date filter — match prototype */}
+          <input
+            type="date"
+            aria-label="Filter by date (request covers this date)"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+          />
         </div>
       </div>
 
@@ -243,6 +269,6 @@ export default function AdminLeaveQueuePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

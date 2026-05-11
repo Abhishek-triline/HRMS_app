@@ -114,6 +114,36 @@ function formatDateRange(from: string, to: string, days: number): string {
   }
 }
 
+// ── Context-aware meta line (mirrors prototype copy per card type) ─────────────
+
+function renderMetaLine(req: LeaveRequestSummary, submittedAgo: string): string {
+  // Maternity → routes direct to Admin
+  if (req.type === 'Maternity' && req.status !== 'Approved' && req.status !== 'Rejected') {
+    return 'Maternity routes directly to Admin (manager bypass)';
+  }
+  if (req.type === 'Paternity' && req.status !== 'Approved' && req.status !== 'Rejected') {
+    return 'Within 6 months of birth window · Routes to Admin (event-based)';
+  }
+  // Escalated — show manager + how long it sat
+  if (req.status === 'Escalated') {
+    const mgr = req.approverName ?? 'Manager';
+    return `Submitted ${submittedAgo} · ${mgr} did not act in time`;
+  }
+  // Approved / Rejected — show decider + decision time
+  if (req.status === 'Approved' || req.status === 'Rejected') {
+    const decider = (req as unknown as { decidedBy?: string }).decidedBy;
+    const decidedAt = (req as unknown as { decidedAt?: string }).decidedAt;
+    const when = decidedAt
+      ? new Date(decidedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+      : '';
+    const verb = req.status === 'Approved' ? 'Approved by' : 'Rejected by';
+    return decider ? `${verb} ${decider}${when ? ` · ${when}` : ''}` : verb.replace(' by', '');
+  }
+  // Default pending
+  const mgr = req.approverName ?? req.routedTo;
+  return `Awaiting ${mgr ?? 'approval'} · Submitted ${submittedAgo}`;
+}
+
 // ── Relative time since submission ────────────────────────────────────────────
 
 function daysAgo(isoCreatedAt: string): string {
@@ -224,11 +254,9 @@ export function LeaveQueueCard({
               </div>
             )}
 
-            {/* Meta */}
+            {/* Meta — context-specific per status/type, matches prototype copy */}
             <div className="text-xs text-slate mt-2">
-              Submitted {submittedAgo}
-              {request.routedTo && ` · Awaiting ${request.routedTo}`}
-              {request.escalatedAt && ' · Escalated'}
+              {renderMetaLine(request, submittedAgo)}
             </div>
           </div>
         </div>
