@@ -478,17 +478,23 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 <p className="text-mint/70 text-xs">Updates as you fill the form</p>
               </div>
               <div className="px-5 py-5">
-                {/* Avatar */}
+                {/* Avatar — neutral placeholder per prototype */}
                 <div className="flex flex-col items-center mb-5">
-                  <div className="w-16 h-16 rounded-full bg-forest flex items-center justify-center text-white font-heading text-xl font-bold mb-2">
-                    {watchedName ? getInitials(watchedName) : (
-                      <svg className="w-7 h-7 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    )}
+                  <div className="w-16 h-16 rounded-full bg-sage/20 flex items-center justify-center mb-2">
+                    <svg className="w-7 h-7 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
-                  <div className="text-sm font-semibold text-charcoal">{watchedName || <span className="text-sage">Full Name</span>}</div>
-                  <div className="text-xs text-slate mt-0.5">{watchedDesignation || <span className="text-sage/70">Designation</span>}</div>
+                  {watchedName ? (
+                    <div className="text-sm font-semibold text-charcoal">{watchedName}</div>
+                  ) : (
+                    <div className="text-sm font-semibold text-sage">Full Name</div>
+                  )}
+                  {watchedDesignation ? (
+                    <div className="text-xs text-slate mt-0.5">{watchedDesignation}</div>
+                  ) : (
+                    <div className="text-xs text-sage/70 mt-0.5">Designation</div>
+                  )}
                 </div>
 
                 {/* EMP Code */}
@@ -499,40 +505,20 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 </div>
 
                 <div className="space-y-2.5">
-                  {watchedPhone && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate">Phone</span>
-                      <span className="text-xs font-medium text-charcoal">{watchedPhone}</span>
-                    </div>
-                  )}
-                  {watchedDob && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate">DoB</span>
-                      <span className="text-xs font-medium text-charcoal">{watchedDob}</span>
-                    </div>
-                  )}
-                  {watchedGender && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate">Gender</span>
-                      <span className="text-xs font-medium text-charcoal">
-                        {watchedGender === 'PreferNotToSay' ? 'Prefer not to say' : watchedGender}
-                      </span>
-                    </div>
-                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Department</span>
                     <span className="text-xs font-medium text-charcoal">{watchedDept || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate">Type</span>
+                    <span className="text-xs text-slate">Employment Type</span>
                     <span className="text-xs font-medium text-charcoal">{watchedEmpType || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate">DoJ</span>
+                    <span className="text-xs text-slate">Date of Joining</span>
                     <span className="text-xs font-medium text-charcoal">{watchedJoinDate || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate">Manager</span>
+                    <span className="text-xs text-slate">Reporting Manager</span>
                     <span className="text-xs font-medium text-charcoal">{previewManagerName || '—'}</span>
                   </div>
                   <div className="border-t border-sage/20 pt-2 flex justify-between items-center">
@@ -554,14 +540,14 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 <div>
                   <p className="text-xs font-semibold text-forest mb-1">Invite Email</p>
                   <p className="text-xs text-slate leading-relaxed">
-                    After creation, an invite with login credentials will be sent to the employee&apos;s email. They&apos;ll be required to change the password on first login (BL-001).
+                    After creation, an invite with login credentials and a first-login link will be sent to the employee&apos;s work email automatically.
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="text-xs text-slate px-1">
-              Fields marked <span className="text-crimson font-bold">*</span> are required.
+              Fields marked <span className="text-crimson font-bold">*</span> are required to create the employee record.
             </div>
           </div>
         </div>
