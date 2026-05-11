@@ -413,14 +413,6 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
   const standardDailyHours = data?.standardDailyHours ?? 8;
   const lateMonthCount = data?.lateMonthCount ?? 0;
 
-  if (isTodayLoading) {
-    return (
-      <div className="relative rounded-2xl overflow-hidden mb-5 bg-forest/80 min-h-[280px] flex items-center justify-center">
-        <Spinner size="lg" aria-label="Loading attendance status…" />
-      </div>
-    );
-  }
-
   if (isError) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
     return (
@@ -440,7 +432,19 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
 
       {/* Glass panel foreground */}
       <div className="relative px-8 py-12 flex justify-center">
-        {panelState === 'Ready' && (
+        {isTodayLoading && (
+          <div className="nx-panel bg-white/95 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl shadow-forest/30 px-10 py-8 w-full max-w-md text-center">
+            <div className="inline-flex items-center gap-2 bg-mint/40 border border-forest/30 rounded-full px-3 py-1 mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-forest animate-pulse" aria-hidden="true" />
+              <span className="text-[11px] font-bold text-forest uppercase tracking-widest">Loading</span>
+            </div>
+            <div className="h-12 w-48 mx-auto bg-sage/20 rounded animate-pulse" />
+            <div className="h-3 w-40 mx-auto mt-3 bg-sage/15 rounded animate-pulse" />
+            <div className="h-3 w-56 mx-auto mt-5 bg-sage/10 rounded animate-pulse" />
+            <div className="h-11 w-40 mx-auto mt-7 bg-forest/15 rounded animate-pulse" />
+          </div>
+        )}
+        {!isTodayLoading && panelState === 'Ready' && (
           <ReadyPanel
             now={now}
             lateThreshold={lateThreshold}
@@ -450,7 +454,7 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
             isLoading={checkInMutation.isPending}
           />
         )}
-        {panelState === 'Working' && (
+        {!isTodayLoading && panelState === 'Working' && (
           <WorkingPanel
             now={now}
             checkInIso={record?.checkInTime ?? new Date().toISOString()}
@@ -459,7 +463,7 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
             isLoading={checkOutMutation.isPending}
           />
         )}
-        {panelState === 'Confirm' && (
+        {!isTodayLoading && panelState === 'Confirm' && (
           <ConfirmPanel
             checkInIso={record?.checkInTime ?? ''}
             checkOutIso={record?.checkOutTime ?? ''}
