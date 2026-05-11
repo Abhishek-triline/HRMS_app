@@ -132,6 +132,16 @@ export const CheckOutResponseSchema = z.object({
 });
 export type CheckOutResponse = z.infer<typeof CheckOutResponseSchema>;
 
+// ── POST /attendance/check-out/undo ────────────────────────────────────────
+
+/**
+ * Undo a check-out. Payload is byte-identical to CheckInResponse so the
+ * frontend can reuse the same deserialisation path. Only allowed within
+ * 5 minutes of the check-out; after that, a regularisation is required.
+ */
+export const UndoCheckOutResponseSchema = CheckInResponseSchema;
+export type UndoCheckOutResponse = CheckInResponse;
+
 // ── GET /attendance/me, /attendance/team, /attendance ───────────────────────
 
 export const AttendanceListQuerySchema = PaginationQuerySchema.extend({

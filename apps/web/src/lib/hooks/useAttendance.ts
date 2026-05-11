@@ -10,7 +10,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { checkIn, checkOut, getTodayAttendance, listAttendance } from '@/lib/api/attendance';
+import { checkIn, checkOut, undoCheckOut, getTodayAttendance, listAttendance } from '@/lib/api/attendance';
 import { qk } from '@/lib/api/query-keys';
 import { showToast } from '@/components/ui/Toast';
 import type { AttendanceListQuery } from '@nexora/contracts/attendance';
@@ -88,6 +88,31 @@ export function useCheckOut() {
     },
     onError: () => {
       showToast({ type: 'error', title: 'Check-out failed', message: 'Please try again.' });
+    },
+  });
+}
+
+// ── Undo check-out ────────────────────────────────────────────────────────────
+
+export function useUndoCheckOut() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => undoCheckOut(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.attendance.all() });
+      queryClient.invalidateQueries({ queryKey: qk.attendance.today() });
+      showToast({
+        type: 'success',
+        title: 'Back to working',
+        message: 'Your check-out has been undone.',
+      });
+    },
+    onError: (err: unknown) => {
+      const apiErr = err as { error?: { message?: string } };
+      const message =
+        apiErr?.error?.message ?? 'Could not undo check-out. Please try again.';
+      showToast({ type: 'error', title: 'Undo failed', message });
     },
   });
 }

@@ -44,6 +44,10 @@ export const ErrorCode = {
 
   // Hierarchy
   CIRCULAR_REPORTING: 'CIRCULAR_REPORTING',
+
+  // Attendance undo (check-out reversal)
+  UNDO_WINDOW_EXPIRED: 'UNDO_WINDOW_EXPIRED',
+  UNDO_OUTSIDE_DAY: 'UNDO_OUTSIDE_DAY',
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

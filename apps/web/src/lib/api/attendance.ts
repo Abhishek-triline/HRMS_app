@@ -10,6 +10,7 @@ import { apiClient } from './client';
 import type {
   CheckInResponse,
   CheckOutResponse,
+  UndoCheckOutResponse,
   TodayAttendanceResponse,
   AttendanceListQuery,
   AttendanceListResponse,
@@ -43,6 +44,12 @@ export async function checkIn(): Promise<CheckInResponse['data']> {
 /** POST /api/v1/attendance/check-out */
 export async function checkOut(): Promise<CheckOutResponse['data']> {
   const res = await apiClient.post<CheckOutResponse>(`${ATT_BASE}/check-out`, {});
+  return res.data;
+}
+
+/** POST /api/v1/attendance/check-out/undo — only valid within 5 min of check-out */
+export async function undoCheckOut(): Promise<UndoCheckOutResponse['data']> {
+  const res = await apiClient.post<UndoCheckOutResponse>(`${ATT_BASE}/check-out/undo`, {});
   return res.data;
 }
 

@@ -17,7 +17,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { useTodayAttendance, useCheckIn, useCheckOut } from '@/lib/hooks/useAttendance';
+import { useTodayAttendance, useCheckIn, useCheckOut, useUndoCheckOut } from '@/lib/hooks/useAttendance';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -375,7 +375,7 @@ function ConfirmPanel({ checkInIso, checkOutIso, hoursWorkedMinutes, onUndo, isL
         disabled={isLoading}
         className="text-xs text-emerald font-semibold hover:underline mt-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded disabled:opacity-50"
       >
-        {isLoading ? 'Checking in…' : 'Undo (still working) →'}
+        {isLoading ? 'Undoing…' : 'Undo (still working) →'}
       </button>
     </div>
   );
@@ -393,6 +393,7 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
   const { data, isLoading: isTodayLoading, isError, error } = useTodayAttendance();
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
+  const undoCheckOutMutation = useUndoCheckOut();
 
   const handleCheckIn = useCallback(() => {
     checkInMutation.mutate();
@@ -402,10 +403,9 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
     checkOutMutation.mutate();
   }, [checkOutMutation]);
 
-  // For "Undo" — re-check-in (calling checkIn again is idempotent on same-day)
   const handleUndo = useCallback(() => {
-    checkInMutation.mutate();
-  }, [checkInMutation]);
+    undoCheckOutMutation.mutate();
+  }, [undoCheckOutMutation]);
 
   const panelState = data?.panelState ?? 'Ready';
   const record = data?.record ?? null;
@@ -469,7 +469,7 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
             checkOutIso={record?.checkOutTime ?? ''}
             hoursWorkedMinutes={record?.hoursWorkedMinutes ?? null}
             onUndo={handleUndo}
-            isLoading={checkInMutation.isPending}
+            isLoading={undoCheckOutMutation.isPending}
           />
         )}
       </div>
