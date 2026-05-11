@@ -4,151 +4,197 @@
  * A-02 — Employee Directory (Admin).
  * Visual reference: prototype/admin/employees.html
  *
- * Features:
- * - Search (name / email / EMP code)
- * - Filter: status, role, employment type, department (select with seeded options)
- * - "Filters" toggle button (mobile collapsible)
- * - Count line "Showing 1–N of T" above Load-more
- * - Org-wide status sub-counters (Active / On Notice / Exited) via parallel queries
- * - "Create Employee" CTA in top-right
+ * Pixel-faithful reproduction of the prototype. Key implementation notes:
+ *
+ * PAGINATION SHAPE
+ *   The EmployeeListResponse contract carries only `nextCursor` (cursor-based).
+ *   There is no `total` field. To drive a numbered paginator we maintain a client-side
+ *   cursor map: cursorMap[page] = cursor. We use limit=20 per page.
+ *   The total shown in the header / paginator footer is computed as:
+ *     knownTotal = (currentPage - 1) * PAGE_SIZE + currentPageData.length
+ *     isApproximate = nextCursor !== null  (there are more pages)
+ *   Status sub-counts use three parallel queries (status=Active/On-Notice/Exited, limit=1)
+ *   and read nextCursor: if not null, show "1+"; if null, data.length is the true count.
+ *   Contract gap flagged: backend should return `pagination.total` in EmployeeListResponse.
+ *
+ * FILTER "FILTERS" BUTTON
+ *   Always visible in the filter card (prototype line 151), not mobile-only.
+ *   Clicking it resets all filters (matches prototype's wired filter behaviour).
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useEmployeesList } from '@/lib/hooks/useEmployees';
-import { EmployeeTable } from '@/components/employees/EmployeeTable';
+import { EmployeeDirectoryTable } from '@/features/employees/components/EmployeeDirectoryTable';
 import { Button } from '@/components/ui/Button';
 import type { EmployeeStatus, Role, EmploymentType } from '@nexora/contracts/common';
+
+// ── constants ─────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 20;
+const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
+
+// ── types ─────────────────────────────────────────────────────────────────────
 
 type FilterStatus = EmployeeStatus | '';
 type FilterRole = Role | '';
 type FilterEmpType = EmploymentType | '';
 
-const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
+/** Maps page number (1-based) → cursor string (or undefined for page 1). */
+type CursorMap = Record<number, string | undefined>;
+
+// ── page ──────────────────────────────────────────────────────────────────────
 
 export default function EmployeesPage() {
+  // ── filter state ────────────────────────────────────────────────────────────
   const [searchRaw, setSearchRaw] = useState('');
+  const [search, setSearch] = useState('');
   const [status, setStatus] = useState<FilterStatus>('');
   const [role, setRole] = useState<FilterRole>('');
   const [empType, setEmpType] = useState<FilterEmpType>('');
   const [department, setDepartment] = useState('');
-  const [showFilters, setShowFilters] = useState(true);
 
-  const [search, setSearch] = useState('');
-  const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  // ── pagination state ─────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  // cursorMap[page] = cursor needed to fetch that page
+  const [cursorMap, setCursorMap] = useState<CursorMap>({ 1: undefined });
 
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── search debounce ──────────────────────────────────────────────────────────
   function handleSearchChange(value: string) {
     setSearchRaw(value);
-    if (searchTimer) clearTimeout(searchTimer);
-    setSearchTimer(
-      setTimeout(() => {
-        setSearch(value);
-      }, 300),
-    );
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setSearch(value);
+      // Reset to page 1 on search change
+      setCurrentPage(1);
+      setCursorMap({ 1: undefined });
+    }, 300);
   }
 
-  const query = {
-    q: search || undefined,
-    status: (status || undefined) as EmployeeStatus | undefined,
-    role: (role || undefined) as Role | undefined,
-    employmentType: (empType || undefined) as EmploymentType | undefined,
-    department: department || undefined,
-    limit: 20,
-  };
-
-  const { data, isLoading, isError, refetch } = useEmployeesList(query);
-  const employees = data?.data ?? [];
-
-  // Org-wide status counts — parallel small queries (limit=1 to read total if API supports it,
-  // otherwise we fall back to counting the current page slice).
-  // The EmployeeListResponse does NOT currently carry `total` — contract only has `nextCursor`.
-  // So we run three parallel minimal queries filtered by status and use the length when no
-  // nextCursor is present (i.e. all loaded). When nextCursor is present the count is "N+".
-  const activeQuery = useEmployeesList({ status: 'Active', limit: 1 });
-  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 1 });
-  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 1 });
-
-  // Since the API uses cursor pagination without a total field, we resolve the
-  // sub-counts from the filtered queries. We request limit=1 and check nextCursor:
-  // if nextCursor is null, the count == data.length (0 or 1). We only use this
-  // for the sub-count badges, so a small discrepancy is acceptable.
-  // A better approach is for the backend to return `total` — flagged as contract gap.
-  const activeCount = activeQuery.data
-    ? activeQuery.data.data.length + (activeQuery.data.nextCursor ? '+' : '')
-    : '—';
-  const onNoticeCount = onNoticeQuery.data
-    ? onNoticeQuery.data.data.length + (onNoticeQuery.data.nextCursor ? '+' : '')
-    : '—';
-  const exitedCount = exitedQuery.data
-    ? exitedQuery.data.data.length + (exitedQuery.data.nextCursor ? '+' : '')
-    : '—';
-
-  // Total shown in the headline
-  const totalDisplay = !isLoading
-    ? `${employees.length}${data?.nextCursor ? '+' : ''} Employees`
-    : 'Employee Directory';
-
-  function resetFilters() {
+  // ── reset filters ────────────────────────────────────────────────────────────
+  const resetFilters = useCallback(() => {
     setSearchRaw('');
     setSearch('');
     setStatus('');
     setRole('');
     setEmpType('');
     setDepartment('');
+    setCurrentPage(1);
+    setCursorMap({ 1: undefined });
+  }, []);
+
+  // ── filter change handlers (reset page) ──────────────────────────────────────
+  function handleStatusChange(v: string) {
+    setStatus(v as FilterStatus);
+    setCurrentPage(1);
+    setCursorMap({ 1: undefined });
+  }
+  function handleRoleChange(v: string) {
+    setRole(v as FilterRole);
+    setCurrentPage(1);
+    setCursorMap({ 1: undefined });
+  }
+  function handleEmpTypeChange(v: string) {
+    setEmpType(v as FilterEmpType);
+    setCurrentPage(1);
+    setCursorMap({ 1: undefined });
+  }
+  function handleDepartmentChange(v: string) {
+    setDepartment(v);
+    setCurrentPage(1);
+    setCursorMap({ 1: undefined });
+  }
+
+  // ── main query ───────────────────────────────────────────────────────────────
+  const mainQuery = useEmployeesList({
+    q: search || undefined,
+    status: (status || undefined) as EmployeeStatus | undefined,
+    role: (role || undefined) as Role | undefined,
+    employmentType: (empType || undefined) as EmploymentType | undefined,
+    department: department || undefined,
+    limit: PAGE_SIZE,
+    cursor: cursorMap[currentPage],
+  });
+
+  const employees = mainQuery.data?.data ?? [];
+  const nextCursor = mainQuery.data?.nextCursor ?? null;
+
+  // Cache the cursor for the next page whenever we receive one
+  if (nextCursor && !cursorMap[currentPage + 1]) {
+    setCursorMap((prev) => ({ ...prev, [currentPage + 1]: nextCursor }));
+  }
+
+  // ── total computation ────────────────────────────────────────────────────────
+  // Since the API has no total field, we compute a lower bound:
+  //   known total = pages fully traversed + current page count
+  // isApproximate = true when nextCursor is present (there are more pages)
+  const knownTotal = (currentPage - 1) * PAGE_SIZE + employees.length;
+  const isApproximate = nextCursor !== null;
+  const totalPages = isApproximate
+    ? currentPage + 1 // always show at least one more page to navigate to
+    : currentPage;
+
+  // ── org-wide status sub-counts (parallel, limit=1) ───────────────────────────
+  // We read nextCursor from these: if nextCursor!=null the count is >1 (show "N+"),
+  // otherwise it equals data.length.
+  const activeQuery = useEmployeesList({ status: 'Active', limit: 1 });
+  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 1 });
+  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 1 });
+
+  function subCount(
+    q: typeof activeQuery,
+  ): string {
+    if (!q.data) return '—';
+    if (q.data.nextCursor) return `${q.data.data.length}+`;
+    return String(q.data.data.length);
+  }
+
+  const activeCount = subCount(activeQuery);
+  const onNoticeCount = subCount(onNoticeQuery);
+  const exitedCount = subCount(exitedQuery);
+
+  // ── headline total ───────────────────────────────────────────────────────────
+  const headlineTotal = mainQuery.isLoading
+    ? null
+    : `${knownTotal}${isApproximate ? '+' : ''}`;
+
+  // ── page navigation ──────────────────────────────────────────────────────────
+  function handlePageChange(page: number) {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
   }
 
   const hasActiveFilters = !!(searchRaw || status || role || empType || department);
 
   return (
     <div>
-      {/* Header row */}
+      {/* ── Header row ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="font-heading text-xl font-bold text-charcoal">
-            {totalDisplay}
+            {headlineTotal !== null ? `${headlineTotal} Employees` : 'Employee Directory'}
           </h2>
-          {!isLoading && (
+          {!mainQuery.isLoading && (
             <p className="text-xs text-slate mt-0.5">
               Active: {activeCount} &middot; On Notice: {onNoticeCount} &middot; Exited: {exitedCount}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Filters toggle (visible on mobile, hidden on desktop since filters are always shown) */}
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className="md:hidden flex items-center gap-1.5 border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate hover:bg-offwhite transition-colors"
-            aria-expanded={showFilters}
-            aria-controls="filter-row"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-            </svg>
-            Filters
-          </button>
-
-          <Link href="/admin/employees/new">
-            <Button
-              variant="primary"
-              size="md"
-              leadingIcon={
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              }
-            >
-              Add Employee
-            </Button>
-          </Link>
-        </div>
+        <Link
+          href="/admin/employees/new"
+          className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg font-body text-sm font-semibold transition-colors flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Employee
+        </Link>
       </div>
 
-      {/* Filters */}
-      <div
-        id="filter-row"
-        className={`bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5 ${showFilters ? 'block' : 'hidden md:block'}`}
-      >
+      {/* ── Filter card ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4 mb-5">
         <div className="flex flex-wrap gap-3 items-center">
           {/* Search */}
           <div className="flex-1 min-w-48 relative">
@@ -167,10 +213,10 @@ export default function EmployeesPage() {
               />
             </svg>
             <input
-              type="search"
+              type="text"
               value={searchRaw}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search by name, email, EMP code…"
+              placeholder="Search by name, email, EMP code..."
               aria-label="Search employees"
               className="w-full border border-sage/50 rounded-lg pl-9 pr-4 py-2 text-sm text-charcoal placeholder-sage focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
             />
@@ -179,7 +225,7 @@ export default function EmployeesPage() {
           {/* Status */}
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as FilterStatus)}
+            onChange={(e) => handleStatusChange(e.target.value)}
             aria-label="Filter by status"
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
@@ -188,13 +234,12 @@ export default function EmployeesPage() {
             <option value="On-Notice">On Notice</option>
             <option value="Exited">Exited</option>
             <option value="On-Leave">On Leave</option>
-            <option value="Inactive">Inactive</option>
           </select>
 
           {/* Role */}
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as FilterRole)}
+            onChange={(e) => handleRoleChange(e.target.value)}
             aria-label="Filter by role"
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
@@ -208,7 +253,7 @@ export default function EmployeesPage() {
           {/* Employment Type */}
           <select
             value={empType}
-            onChange={(e) => setEmpType(e.target.value as FilterEmpType)}
+            onChange={(e) => handleEmpTypeChange(e.target.value)}
             aria-label="Filter by employment type"
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
@@ -219,74 +264,72 @@ export default function EmployeesPage() {
             <option value="Probation">Probation</option>
           </select>
 
-          {/* Department — select with seeded options */}
+          {/* Department */}
           <select
             value={department}
-            onChange={(e) => setDepartment(e.target.value)}
+            onChange={(e) => handleDepartmentChange(e.target.value)}
             aria-label="Filter by department"
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
             <option value="">All Departments</option>
             {DEPARTMENTS.map((d) => (
-              <option key={d} value={d}>{d}</option>
+              <option key={d} value={d}>
+                {d}
+              </option>
             ))}
           </select>
 
-          {/* Reset */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate hover:bg-offwhite transition-colors flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear
-            </button>
-          )}
+          {/* Filters / Reset button — always visible (matches prototype) */}
+          <button
+            type="button"
+            onClick={resetFilters}
+            aria-label={hasActiveFilters ? 'Clear filters' : 'Filters'}
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate hover:bg-offwhite transition-colors flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+            Filters
+          </button>
         </div>
       </div>
 
-      {/* Error state */}
-      {isError && (
-        <div className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 mb-5 flex items-center justify-between">
-          <p className="text-sm text-crimson">Failed to load employees.</p>
-          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+      {/* ── Error state ─────────────────────────────────────────────────────── */}
+      {mainQuery.isError && (
+        <div
+          role="alert"
+          className="bg-crimsonbg border border-crimson/30 rounded-xl px-5 py-4 mb-5 flex items-center justify-between"
+        >
+          <p className="text-sm text-crimson">Failed to load employees. Please try again.</p>
+          <Button variant="secondary" size="sm" onClick={() => mainQuery.refetch()}>
             Retry
           </Button>
         </div>
       )}
 
-      {/* Count line */}
-      {!isLoading && employees.length > 0 && (
-        <div className="mb-3 text-xs text-slate">
-          Showing 1–{employees.length}{data?.nextCursor ? '+' : ''} of{' '}
-          {data?.nextCursor ? `${employees.length}+ employees` : `${employees.length} employee${employees.length !== 1 ? 's' : ''}`}
-        </div>
-      )}
-
-      {/* Table */}
-      <EmployeeTable
+      {/* ── Table + Paginator ────────────────────────────────────────────────── */}
+      <EmployeeDirectoryTable
         employees={employees}
-        isLoading={isLoading}
+        isLoading={mainQuery.isLoading}
         detailBase="/admin/employees"
-        showViewButton
         emptyMessage={
           hasActiveFilters
             ? 'No employees match your filters.'
             : 'No employees found. Add your first employee to get started.'
         }
+        paginator={{
+          currentPage,
+          pageSize: PAGE_SIZE,
+          total: knownTotal,
+          isApproximate,
+          onPageChange: handlePageChange,
+        }}
       />
-
-      {/* Load more (cursor pagination) */}
-      {data?.nextCursor && (
-        <div className="mt-4 flex justify-center">
-          <Button variant="secondary" size="md">
-            Load more employees
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
