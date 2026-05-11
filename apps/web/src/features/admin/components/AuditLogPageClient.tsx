@@ -207,7 +207,129 @@ function humanizeActor(entry: AuditLogEntry): { name: string; sub: string } {
   };
 }
 
-// ── Action badge ─────────────────────────────────────────────────────────────
+// ── Human-readable change summary ────────────────────────────────────────────
+
+/** Field label map — converts technical field names to readable English. */
+const FIELD_LABELS: Record<string, string> = {
+  status:             'Status',
+  reason:             'Reason',
+  finalisedAt:        'Finalised at',
+  finalisedBy:        'Finalised by',
+  approvedAt:         'Approved at',
+  approvedBy:         'Approved by',
+  rejectedAt:         'Rejected at',
+  rejectedBy:         'Rejected by',
+  decidedAt:          'Decision time',
+  decidedBy:          'Decided by',
+  decisionNote:       'Decision note',
+  escalatedAt:        'Escalated at',
+  cancelledAt:        'Cancelled at',
+  cancelledBy:        'Cancelled by',
+  reversedAt:         'Reversed at',
+  reversedBy:         'Reversed by',
+  reversalReason:     'Reversal reason',
+  reportingManagerId: 'Reporting manager',
+  managerId:          'Manager',
+  employeeId:         'Employee',
+  name:               'Name',
+  email:              'Email',
+  phone:              'Phone',
+  department:         'Department',
+  designation:        'Designation',
+  role:               'Role',
+  employmentType:     'Employment type',
+  joinDate:           'Join date',
+  exitDate:           'Exit date',
+  fromDate:           'From',
+  toDate:             'To',
+  type:               'Type',
+  days:               'Days',
+  basic_paise:        'Basic salary',
+  allowances_paise:   'Allowances',
+  hra_paise:          'HRA',
+  transport_paise:    'Transport',
+  other_paise:        'Other allowances',
+  totalGrossPaise:    'Gross total',
+  totalNetPaise:      'Net total',
+  totalLopPaise:      'LOP total',
+  totalTaxPaise:      'Tax total',
+  workingDays:        'Working days',
+  lopDays:            'LOP days',
+  taxRate:            'Tax rate',
+  taxPaise:           'Tax amount',
+  selfRating:         'Self rating',
+  managerRating:      'Manager rating',
+  finalRating:        'Final rating',
+  selfSubmittedAt:    'Self-rating submitted',
+  managerSubmittedAt: 'Manager rating submitted',
+  selfReviewDeadline: 'Self-review deadline',
+  managerReviewDeadline: 'Manager-review deadline',
+};
+
+/** Fields that are internal-only and should be hidden from the friendly view. */
+const HIDDEN_FIELDS = new Set([
+  'id', 'version', 'createdAt', 'updatedAt',
+  'cycleId', 'reviewId', 'leaveRequestId', 'employeeCode',
+]);
+
+/** Detect if a value looks like a ULID/CUID (long alphanumeric ID). */
+function looksLikeId(v: unknown): v is string {
+  return typeof v === 'string' && /^c[a-z0-9]{24,}$/i.test(v);
+}
+
+/** Format a value for the friendly view. */
+function formatValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  // ISO date/datetime
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value)) {
+    try {
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) {
+        return value.includes('T')
+          ? IST_FORMATTER.format(d) + ' IST'
+          : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    } catch { /* fall through */ }
+  }
+  // ULID — show truncated, full in tooltip via parent
+  if (looksLikeId(value)) return `${value.slice(0, 8)}…`;
+  // Paise → rupees for any *_paise field
+  if (key.endsWith('_paise') || key.endsWith('Paise')) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (Number.isFinite(n)) {
+      return '₹' + new Intl.NumberFormat('en-IN').format(Math.round(n / 100));
+    }
+  }
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value);
+}
+
+interface ChangeRow { key: string; label: string; before: string; after: string; changed: boolean }
+
+function summarizeDiff(before: unknown, after: unknown): ChangeRow[] {
+  const b = (before ?? {}) as Record<string, unknown>;
+  const a = (after ?? {}) as Record<string, unknown>;
+  const keys = new Set<string>([...Object.keys(b), ...Object.keys(a)]);
+  const rows: ChangeRow[] = [];
+  for (const key of keys) {
+    if (HIDDEN_FIELDS.has(key)) continue;
+    const label = FIELD_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+    const beforeRaw = b[key];
+    const afterRaw = a[key];
+    const beforeText = formatValue(key, beforeRaw);
+    const afterText = formatValue(key, afterRaw);
+    const changed = JSON.stringify(beforeRaw ?? null) !== JSON.stringify(afterRaw ?? null);
+    rows.push({ key, label, before: beforeText, after: afterText, changed });
+  }
+  // Sort: changed first, then alphabetical by label.
+  rows.sort((x, y) => {
+    if (x.changed !== y.changed) return x.changed ? -1 : 1;
+    return x.label.localeCompare(y.label);
+  });
+  return rows;
+}
 
 // ── JSON diff display ────────────────────────────────────────────────────────
 
@@ -319,34 +441,109 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
       {expanded && hasTechnicalDetail && (
         <tr>
           <td colSpan={6} className="px-5 pb-4 pt-0 bg-offwhite/40">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 mb-2 text-xs">
-              <div>
-                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Action code</div>
-                <code className="font-mono text-forest break-all">{entry.action}</code>
-              </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Target</div>
-                {entry.targetType ? (
-                  <code className="font-mono text-forest break-all">
-                    {entry.targetType}
-                    {entry.targetId ? ` · ${entry.targetId}` : ''}
-                  </code>
-                ) : (
-                  <span className="text-slate">—</span>
-                )}
-              </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">Actor ID</div>
-                <code className="font-mono text-slate break-all">{entry.actorId ?? 'system'}</code>
-              </div>
-            </div>
-            {(entry.before !== null || entry.after !== null) && (
-              <JsonDiff before={entry.before} after={entry.after} />
-            )}
+            <ChangeSummary entry={entry} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+// ── Friendly change summary (replaces the raw JSON diff for non-tech admins) ──
+
+function ChangeSummary({ entry }: { entry: AuditLogEntry }) {
+  const [showRaw, setShowRaw] = useState(false);
+  const hasDiff = entry.before !== null || entry.after !== null;
+  const rows = hasDiff ? summarizeDiff(entry.before, entry.after) : [];
+  const changedRows = rows.filter((r) => r.changed);
+  const unchangedRows = rows.filter((r) => !r.changed);
+
+  return (
+    <div className="mt-3 mb-2 space-y-4">
+      {/* What changed — readable rows */}
+      {hasDiff && (
+        <div>
+          <div className="text-[11px] font-semibold text-slate uppercase tracking-wide mb-2">
+            {changedRows.length > 0 ? 'What changed' : 'Record details'}
+          </div>
+          <div className="bg-white border border-sage/30 rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <tbody className="divide-y divide-sage/15">
+                {(changedRows.length > 0 ? changedRows : unchangedRows).map((r) => (
+                  <tr key={r.key} className={r.changed ? 'bg-greenbg/20' : ''}>
+                    <td className="px-3 py-2 text-slate font-medium w-40">{r.label}</td>
+                    {r.changed ? (
+                      <>
+                        <td className="px-3 py-2 text-crimson line-through">{r.before}</td>
+                        <td className="px-3 py-2 text-slate" aria-hidden="true">→</td>
+                        <td className="px-3 py-2 text-richgreen font-medium">{r.after}</td>
+                      </>
+                    ) : (
+                      <td className="px-3 py-2 text-charcoal" colSpan={3}>
+                        {r.after}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {changedRows.length > 0 && unchangedRows.length > 0 && (
+            <p className="text-[11px] text-slate mt-1.5">
+              {unchangedRows.length} other field{unchangedRows.length === 1 ? '' : 's'} unchanged.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Reference IDs — collapsed footer */}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-[11px] font-semibold text-slate uppercase tracking-wide hover:text-charcoal transition-colors select-none">
+          Reference IDs &amp; raw data
+        </summary>
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">
+              Event type
+            </div>
+            <code className="font-mono text-forest break-all text-[11px]">{entry.action}</code>
+          </div>
+          <div>
+            <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">
+              Affected record
+            </div>
+            {entry.targetType ? (
+              <code className="font-mono text-forest break-all text-[11px]">
+                {entry.targetType}
+                {entry.targetId ? ` · ${entry.targetId}` : ''}
+              </code>
+            ) : (
+              <span className="text-slate">—</span>
+            )}
+          </div>
+          <div>
+            <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">
+              Acted by
+            </div>
+            <code className="font-mono text-slate break-all text-[11px]">
+              {entry.actorId ?? 'system'}
+            </code>
+          </div>
+        </div>
+        {hasDiff && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setShowRaw((v) => !v)}
+              className="text-[11px] font-semibold text-forest hover:text-emerald transition-colors underline-offset-2 hover:underline"
+            >
+              {showRaw ? 'Hide raw JSON' : 'View raw JSON'}
+            </button>
+            {showRaw && <JsonDiff before={entry.before} after={entry.after} />}
+          </div>
+        )}
+      </details>
+    </div>
   );
 }
 
