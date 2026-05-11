@@ -31,7 +31,8 @@ import type { EmployeeStatus, Role, EmploymentType } from '@nexora/contracts/com
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 20;
+// 100 is the API's max limit — fits typical org sizes on one page.
+const PAGE_SIZE = 100;
 const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
 
 // ── types ─────────────────────────────────────────────────────────────────────
