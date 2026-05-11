@@ -392,9 +392,11 @@ function JsonDiff({ before, after }: { before: unknown; after: unknown }) {
 function AuditRow({
   entry,
   nameMap,
+  serial,
 }: {
   entry: AuditLogEntry;
   nameMap?: Map<string, string>;
+  serial: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasTechnicalDetail =
@@ -408,6 +410,9 @@ function AuditRow({
   return (
     <>
       <tr className="hover:bg-offwhite/60 transition-colors">
+        {/* # — serial number scoped to the current page (1..PAGE_SIZE) */}
+        <td className="px-4 py-3 text-slate text-xs font-mono">{serial}</td>
+
         {/* When */}
         <td className="px-5 py-3 text-slate text-xs whitespace-nowrap">
           <span title={formatUTC(entry.createdAt)}>{formatIST(entry.createdAt)}</span>
@@ -465,7 +470,7 @@ function AuditRow({
       </tr>
       {expanded && hasTechnicalDetail && (
         <tr>
-          <td colSpan={6} className="px-5 pb-4 pt-0 bg-offwhite/40">
+          <td colSpan={7} className="px-5 pb-4 pt-0 bg-offwhite/40">
             <ChangeSummary entry={entry} nameMap={nameMap} />
           </td>
         </tr>
@@ -592,7 +597,7 @@ function ChangeSummary({
 function SkeletonRow() {
   return (
     <tr className="animate-pulse">
-      {[120, 160, 80, 100, 120, 60].map((w, i) => (
+      {[32, 120, 160, 80, 100, 120, 60].map((w, i) => (
         <td key={i} className="px-4 py-4">
           <div className={`h-3 bg-sage/20 rounded`} style={{ width: w }} />
         </td>
@@ -611,8 +616,9 @@ function csvSanitize(value: string): string {
 }
 
 function exportToCsv(entries: AuditLogEntry[]) {
-  const headers = ['Timestamp (IST)', 'Actor ID', 'Actor Role', 'Module', 'Action', 'Target Type', 'Target ID'];
-  const rows = entries.map((e) => [
+  const headers = ['#', 'Timestamp (IST)', 'Actor ID', 'Actor Role', 'Module', 'Action', 'Target Type', 'Target ID'];
+  const rows = entries.map((e, i) => [
+    i + 1,
     formatIST(e.createdAt),
     e.actorId ?? 'system',
     e.actorRole,
@@ -985,6 +991,7 @@ export function AuditLogPageClient() {
           <table className="w-full text-sm" aria-label="Audit log entries">
             <thead>
               <tr className="bg-offwhite border-b border-sage/30">
+                <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider w-12">#</th>
                 <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wider">When</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">User</th>
                 <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wider">Module</th>
@@ -1004,7 +1011,7 @@ export function AuditLogPageClient() {
                 Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
               ) : isError ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={7} className="text-center py-12">
                     <p className="text-sm text-crimson mb-3">Failed to load audit log.</p>
                     <Button variant="secondary" size="sm" onClick={() => refetch()}>
                       Retry
@@ -1013,7 +1020,7 @@ export function AuditLogPageClient() {
                 </tr>
               ) : allEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-14">
+                  <td colSpan={7} className="text-center py-14">
                     <svg className="w-10 h-10 text-sage/50 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
@@ -1024,8 +1031,13 @@ export function AuditLogPageClient() {
                   </td>
                 </tr>
               ) : (
-                pageEntries.map((entry) => (
-                  <AuditRow key={entry.id} entry={entry} nameMap={employeeNameMap} />
+                pageEntries.map((entry, i) => (
+                  <AuditRow
+                    key={entry.id}
+                    entry={entry}
+                    nameMap={employeeNameMap}
+                    serial={(currentPage - 1) * PAGE_SIZE + i + 1}
+                  />
                 ))
               )}
             </tbody>
