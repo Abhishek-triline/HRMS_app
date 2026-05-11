@@ -15,11 +15,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { AuthUser } from '@nexora/contracts/auth';
 import type { Role } from '@nexora/contracts/common';
 import { NotificationBell } from './NotificationBell';
-import { resolvePageMeta } from './pageMeta';
+import { PAGE_META, resolvePageMeta } from './pageMeta';
 
 // ── Profile href per role ─────────────────────────────────────────────────────
 
@@ -75,9 +75,14 @@ export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBar
   const [dateString] = useState(() => formatDate(new Date()));
 
   // Resolve title + subtitle for this route. Falls back to `children` for the
-  // title and no subtitle if the pathname isn't registered in pageMeta.
+  // title and no subtitle if the pathname isn't registered in pageMeta. When a
+  // query string is present, prefer a `pathname?query` key (e.g. the sibling
+  // /admin/attendance?scope=me → "My Attendance") before the bare pathname.
   const pathname = usePathname() ?? '';
-  const meta = resolvePageMeta(pathname);
+  const searchParams = useSearchParams();
+  const search = searchParams?.toString() ?? '';
+  const meta =
+    (search && PAGE_META[`${pathname}?${search}`]) || resolvePageMeta(pathname);
   const title = meta?.title ?? children;
   const subtitle = meta?.subtitle?.replace('{date}', dateString) ?? null;
 
