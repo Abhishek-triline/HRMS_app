@@ -58,7 +58,7 @@ type SelfEditValues = z.infer<typeof SelfEditSchema>;
 const GENDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'Male', label: 'Male' },
   { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Other' },
+  { value: 'Other', label: 'Non-binary' },
   { value: 'PreferNotToSay', label: 'Prefer not to say' },
 ];
 
@@ -224,21 +224,18 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             />
             <FieldError id="self-dob-error" message={errors.dateOfBirth?.message} />
           </div>
-          <div className="md:col-span-2">
-            <Label>Gender</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+          <div>
+            <Label htmlFor="self-gender">Gender</Label>
+            <select
+              id="self-gender"
+              {...register('gender')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select gender</option>
               {GENDER_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    value={opt.value}
-                    {...register('gender')}
-                    className="accent-forest"
-                  />
-                  <span className="text-sm text-charcoal">{opt.label}</span>
-                </label>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
-            </div>
+            </select>
             <FieldError id="self-gender-error" message={errors.gender?.message} />
           </div>
         </div>

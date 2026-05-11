@@ -42,11 +42,11 @@ const EditFormSchema = UpdateEmployeeRequestSchema;
 type CreateFormValues = z.infer<typeof CreateFormSchema>;
 type EditFormValues = z.infer<typeof EditFormSchema>;
 
-// Gender options for the radio group
+// Gender options for the select (matches prototype label set; 'Other' → "Non-binary")
 const GENDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'Male', label: 'Male' },
   { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Other' },
+  { value: 'Other', label: 'Non-binary' },
   { value: 'PreferNotToSay', label: 'Prefer not to say' },
 ];
 
@@ -300,22 +300,19 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   />
                   <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
                 </div>
-                {/* Gender — radio group */}
+                {/* Gender — select (matches prototype) */}
                 <div>
-                  <Label>Gender</Label>
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                  <Label htmlFor="gender">Gender</Label>
+                  <select
+                    id="gender"
+                    {...register('gender')}
+                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                  >
+                    <option value="">Select gender</option>
                     {GENDER_OPTIONS.map((opt) => (
-                      <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          value={opt.value}
-                          {...register('gender')}
-                          className="accent-forest"
-                        />
-                        <span className="text-sm text-charcoal">{opt.label}</span>
-                      </label>
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                  </div>
+                  </select>
                   <FieldError id="gender-error" message={errors.gender?.message} />
                 </div>
               </div>
@@ -620,20 +617,17 @@ export function EmployeeForm(props: EmployeeFormProps) {
           </div>
           {/* Gender */}
           <div className="col-span-2">
-            <Label>Gender</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+            <Label htmlFor="edit-gender">Gender</Label>
+            <select
+              id="edit-gender"
+              {...editRegister('gender')}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value="">Select gender</option>
               {GENDER_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    value={opt.value}
-                    {...editRegister('gender')}
-                    className="accent-forest"
-                  />
-                  <span className="text-sm text-charcoal">{opt.label}</span>
-                </label>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
-            </div>
+            </select>
             <FieldError id="edit-gender-error" message={editErrors.gender?.message} />
           </div>
           <div>
