@@ -336,13 +336,30 @@ export type ReversalHistoryResponse = z.infer<typeof ReversalHistoryResponseSche
 // ── Tax settings (A-17) ─────────────────────────────────────────────────────
 
 /**
- * v1 — single configurable reference rate. Configurable Indian slab engine
- * is deferred to v2.
+ * Gross-taxable-income basis options — the definition used to compute the
+ * reference figure on each payslip. Stored as Configuration key
+ * `TAX_GROSS_TAXABLE_BASIS`.
+ *
+ * v1: stored + displayed but the payroll engine still uses `gross × rate`
+ * unconditionally. The branch will be wired in v2 once the slab engine lands.
+ */
+export const GrossTaxableBasisSchema = z.enum([
+  'GrossMinusStandardDeduction',
+  'GrossFull',
+  'BasicOnly',
+]);
+export type GrossTaxableBasis = z.infer<typeof GrossTaxableBasisSchema>;
+
+/**
+ * v1 — single configurable reference rate plus a (display-only) basis hint.
+ * Configurable Indian slab engine is deferred to v2.
  */
 export const TaxSettingsSchema = z.object({
   /** Decimal — e.g. 0.095 for 9.5 percent. The reference figure on every
       payslip is computed as `gross × referenceRate`. */
   referenceRate: z.number().min(0).max(1),
+  /** Definition used to compute the reference figure. v1: display-only. */
+  grossTaxableBasis: GrossTaxableBasisSchema,
   updatedBy: z.string().nullable(),
   updatedAt: ISODateSchema.nullable(),
 });
@@ -353,9 +370,18 @@ export const TaxSettingsResponseSchema = z.object({
 });
 export type TaxSettingsResponse = z.infer<typeof TaxSettingsResponseSchema>;
 
-export const UpdateTaxSettingsRequestSchema = z.object({
-  referenceRate: z.number().min(0).max(1),
-});
+/**
+ * PUT/PATCH body — both fields optional so the rate and basis can be saved
+ * independently. At least one field is required.
+ */
+export const UpdateTaxSettingsRequestSchema = z
+  .object({
+    referenceRate: z.number().min(0).max(1).optional(),
+    grossTaxableBasis: GrossTaxableBasisSchema.optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, {
+    message: 'At least one field must be provided',
+  });
 export type UpdateTaxSettingsRequest = z.infer<typeof UpdateTaxSettingsRequestSchema>;
 
 export const UpdateTaxSettingsResponseSchema = TaxSettingsResponseSchema;
