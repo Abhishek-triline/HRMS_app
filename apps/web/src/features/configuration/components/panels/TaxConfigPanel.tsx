@@ -1,48 +1,74 @@
 'use client';
 
 /**
- * TaxConfigPanel — umber banner + 2 cards matching prototype lines 281–336.
- *
- * Layout:
- *   1. v1 banner   (umber callout — informational)
- *   2. Standard Reference Formula card (mono formula + 2-col inputs + footer)
- *   3. v2 Indian Tax Slab Engine card  (softmint callout — roadmap info)
- *
- * Data wiring:
- *   - referenceRate  → useTaxSettings / useUpdateTaxSettings  (PUT /config/tax)
- *   - grossTaxableBasis select → NOT in backend contract (v1); rendered as a
- *     static display-only select showing prototype options. Flagged in report.
+ * TaxConfigPanel — inline version of /admin/tax-config.
+ * Renders the tax settings without page-level chrome.
+ * Used inside ConfigTabs.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTaxSettings, useUpdateTaxSettings } from '@/lib/hooks/useTaxConfig';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
+
+function RateInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative w-48">
+      <input
+        type="number"
+        min={0}
+        max={100}
+        step={0.1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-sage/60 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 pr-8"
+        aria-label="Reference tax rate in percent"
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate text-sm select-none" aria-hidden="true">%</span>
+    </div>
+  );
+}
 
 export default function TaxConfigPanel() {
   const { data: settings, isLoading, isError } = useTaxSettings();
   const mutation = useUpdateTaxSettings();
 
-  // referenceRate stored as decimal (0–1); displayed as percent
-  const [ratePercent, setRatePercent] = useState<string>('9.5');
+  const [editing, setEditing] = useState(false);
+  const [ratePercent, setRatePercent] = useState('');
+  const [validationError, setValidationError] = useState('');
 
-  useEffect(() => {
+  function startEdit() {
     if (settings) {
-      setRatePercent((settings.referenceRate * 100).toFixed(1));
+      setRatePercent(String(+(settings.referenceRate * 100).toFixed(4)));
     }
-  }, [settings]);
+    setEditing(true);
+    setValidationError('');
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setValidationError('');
+  }
 
   async function handleSave() {
     const pct = parseFloat(ratePercent);
-    if (isNaN(pct) || pct < 0 || pct > 40) {
-      showToast({ type: 'error', title: 'Invalid rate', message: 'Enter a rate between 0 and 40%.' });
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      setValidationError('Enter a valid rate between 0 and 100%.');
       return;
     }
     const decimal = parseFloat((pct / 100).toFixed(6));
     try {
       await mutation.mutateAsync({ referenceRate: decimal });
-      showToast({ type: 'success', title: 'Tax rate updated', message: `New rate: ${pct.toFixed(1)}%` });
+      showToast({ type: 'success', title: 'Tax rate updated', message: `New rate: ${pct.toFixed(2)}%` });
+      setEditing(false);
     } catch (err) {
       showToast({
         type: 'error',
@@ -52,169 +78,112 @@ export default function TaxConfigPanel() {
     }
   }
 
-  function handleReset() {
-    if (settings) {
-      setRatePercent((settings.referenceRate * 100).toFixed(1));
-    } else {
-      setRatePercent('9.5');
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
-        <Spinner size="lg" aria-label="Loading tax settings" />
+        <Spinner />
+        <span className="ml-2 text-sm text-slate">Loading tax settings…</span>
       </div>
     );
   }
 
   if (isError || !settings) {
     return (
-      <div
-        className="bg-crimsonbg border border-crimson/20 rounded-xl px-5 py-4 text-sm text-crimson"
-        role="alert"
-      >
+      <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-5 py-4 text-sm text-crimson" role="alert">
         Failed to load tax settings. Please refresh.
       </div>
     );
   }
 
-  return (
-    <div className="space-y-5">
+  const displayRate = (settings.referenceRate * 100).toFixed(2);
 
-      {/* ── 1. v1 mode banner ── */}
-      <div className="bg-umberbg/40 border border-umber/40 rounded-xl px-5 py-4 flex items-start gap-3">
-        <svg
-          className="w-5 h-5 text-umber shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
+  return (
+    <div className="max-w-2xl">
+      {/* v1 note */}
+      <div className="bg-mint/20 border border-forest/20 rounded-xl px-5 py-4 mb-6 flex items-start gap-3">
+        <svg className="w-5 h-5 text-forest shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div>
-          <p className="text-sm text-charcoal font-semibold mb-0.5">v1 uses manual tax entry</p>
-          <p className="text-sm text-slate">
-            A configurable Indian income tax slab engine is{' '}
-            <strong>not part of v1</strong> — it is on the v2 roadmap. For now, the{' '}
-            <strong>PayrollOfficer enters tax manually on each payslip</strong> during the run
-            review. The system shows a reference figure derived from a standard formula but the
-            value is editable per payslip.
+          <p className="text-sm font-semibold text-forest">Version 1 — Manual Reference Rate Only</p>
+          <p className="text-xs text-forest/80 mt-1">
+            The system computes a reference tax per payslip as: <strong>Gross × Reference Rate</strong>.
+            The Payroll Officer reviews and may override the final tax per payslip before finalisation.
+            The Indian income-tax slab engine (with deductions, HRA exemptions, etc.) is planned for v2.
           </p>
         </div>
       </div>
 
-      {/* ── 2. Standard Reference Formula card ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          Standard Reference Formula
-        </h3>
-        <p className="text-xs text-slate mb-5">
-          Used to suggest a tax figure when generating each payslip · PayrollOfficer can override
-          per row
-        </p>
-
-        {/* Monospace formula display */}
-        <div className="bg-offwhite rounded-lg p-5 mb-5 font-mono text-sm text-charcoal">
-          reference_tax = gross_taxable_income &times;{' '}
-          <span className="text-forest font-semibold">flat_reference_rate</span>
+      {/* Current rate card */}
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-slate uppercase tracking-wide mb-2">Current Reference Rate</p>
+            <p className="font-heading text-4xl font-bold text-charcoal">{displayRate}%</p>
+            <p className="text-xs text-slate mt-2">
+              Every payslip reference figure = Gross × {displayRate}%
+            </p>
+            {settings.updatedBy && (
+              <p className="text-xs text-slate mt-1.5">
+                Last updated by <span className="font-semibold text-charcoal">{settings.updatedBy}</span>
+                {settings.updatedAt && (
+                  <span> · {new Date(settings.updatedAt).toLocaleDateString('en-IN')}</span>
+                )}
+              </p>
+            )}
+          </div>
+          {!editing && (
+            <Button variant="secondary" onClick={startEdit}>
+              Edit Rate
+            </Button>
+          )}
         </div>
 
-        {/* 2-col inputs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Flat Reference Rate */}
-          <div>
-            <label
-              htmlFor="tax-ref-rate"
-              className="block text-xs font-semibold text-charcoal mb-1.5"
-            >
-              Flat Reference Rate
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                id="tax-ref-rate"
-                type="number"
-                value={ratePercent}
-                step={0.1}
-                min={0}
-                max={40}
-                onChange={(e) => setRatePercent(e.target.value)}
-                className="w-32 border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-                aria-describedby="tax-rate-hint"
-              />
-              <span className="text-sm text-slate">%</span>
+        {editing && (
+          <div className="mt-6 pt-5 border-t border-sage/20">
+            <p className="text-sm font-semibold text-charcoal mb-3">New Reference Rate</p>
+            <div className="flex items-start gap-3">
+              <div>
+                <RateInput value={ratePercent} onChange={setRatePercent} />
+                {validationError && (
+                  <p className="text-xs text-crimson mt-1.5">{validationError}</p>
+                )}
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                loading={mutation.isPending}
+                disabled={mutation.isPending}
+              >
+                Save
+              </Button>
+              <Button variant="secondary" onClick={cancelEdit} disabled={mutation.isPending}>
+                Cancel
+              </Button>
             </div>
-            <p id="tax-rate-hint" className="text-xs text-slate mt-1.5">
-              Currently {ratePercent}% · used as a guide only
+            <p className="text-xs text-slate mt-2">
+              Rate applies to all future payslip reference calculations. Existing finalised payslips are unaffected (BL-031).
             </p>
           </div>
-
-          {/* Gross Taxable Income basis — display-only; not in v1 contract */}
-          <div>
-            <label
-              htmlFor="tax-basis"
-              className="block text-xs font-semibold text-charcoal mb-1.5"
-            >
-              Gross Taxable Income basis
-            </label>
-            <select
-              id="tax-basis"
-              defaultValue="Gross Pay (Basic + Allowances) − Standard Deduction"
-              className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
-              aria-describedby="tax-basis-hint"
-            >
-              <option>Gross Pay (Basic + Allowances) − Standard Deduction</option>
-              <option>Gross Pay (full)</option>
-              <option>Basic Only</option>
-            </select>
-            <p id="tax-basis-hint" className="text-xs text-slate mt-1.5">
-              Definition used to compute the reference figure
-            </p>
-          </div>
-        </div>
-
-        {/* Per-card footer */}
-        <div className="mt-5 pt-4 border-t border-sage/20 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="border border-sage/50 px-4 py-2 rounded-lg text-sm font-semibold text-slate hover:bg-offwhite"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={mutation.isPending}
-            className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {mutation.isPending ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* ── 3. v2 — Indian Tax Slab Engine (roadmap, informational) ── */}
+      {/* Example preview */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-        <h3 className="font-heading text-base font-semibold text-charcoal mb-1">
-          v2 — Indian Tax Slab Engine
-        </h3>
-        <p className="text-xs text-slate mb-4">
-          Planned for the next release. The engine will replace manual entry with bracket-based
-          computation under the New Regime, with annual slab updates configurable by Admin.
-        </p>
-        <div className="bg-softmint border border-mint rounded-lg px-4 py-3 text-xs text-forest">
-          <strong>Out of scope for v1:</strong> bracketed slab editor, regime selection, surcharge,
-          cess, 80C/80D investments, Form 16 auto-generation. These remain manual in v1 and ship
-          in v2.
+        <h3 className="font-heading text-sm font-semibold text-charcoal mb-3">Example Calculation</h3>
+        <div className="space-y-2 text-sm">
+          {[
+            { label: 'Gross Salary (example)', value: '₹1,00,000' },
+            { label: `Tax Reference (× ${displayRate}%)`, value: `₹${(100000 * settings.referenceRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}` },
+            { label: 'PO may adjust to', value: 'any value ≥ ₹0' },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between py-2 border-b border-sage/10 last:border-0">
+              <span className="text-slate">{label}</span>
+              <span className="font-semibold text-charcoal">{value}</span>
+            </div>
+          ))}
         </div>
       </div>
-
     </div>
   );
 }
