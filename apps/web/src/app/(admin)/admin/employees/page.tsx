@@ -24,7 +24,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useEmployeesList } from '@/lib/hooks/useEmployees';
+import { useEmployeesCount, useEmployeesList } from '@/lib/hooks/useEmployees';
 import { EmployeeDirectoryTable } from '@/features/employees/components/EmployeeDirectoryTable';
 import { Button } from '@/components/ui/Button';
 import type { EmployeeStatus, Role, EmploymentType } from '@nexora/contracts/common';
@@ -126,39 +126,38 @@ export default function EmployeesPage() {
     setCursorMap((prev) => ({ ...prev, [currentPage + 1]: nextCursor }));
   }
 
-  // ── org-wide status sub-counts ────────────────────────────────────────────────
-  // Fetch each status bucket with limit=100 (API max) so .data.length reflects
-  // the actual count for typical org sizes. These also drive the true total
-  // used by the paginator below.
-  const activeQuery = useEmployeesList({ status: 'Active', limit: 100 });
-  const onNoticeQuery = useEmployeesList({ status: 'On-Notice', limit: 100 });
-  const exitedQuery = useEmployeesList({ status: 'Exited', limit: 100 });
+  // ── org-wide status sub-counts (exact via cursor walk) ───────────────────────
+  // useEmployeesCount walks all cursor pages so the count is exact regardless
+  // of org size (up to 1,000 per bucket). v1.1: backend pagination.total would
+  // replace this with a single fetch.
+  const activeCountQuery = useEmployeesCount({ status: 'Active' });
+  const onNoticeCountQuery = useEmployeesCount({ status: 'On-Notice' });
+  const exitedCountQuery = useEmployeesCount({ status: 'Exited' });
 
-  function subCount(q: typeof activeQuery): string {
-    if (!q.data) return '—';
-    return String(q.data.data.length);
+  function subCount(q: { count: number | null }): string {
+    if (q.count === null) return '—';
+    return String(q.count);
   }
 
-  const activeCount = subCount(activeQuery);
-  const onNoticeCount = subCount(onNoticeQuery);
-  const exitedCount = subCount(exitedQuery);
+  const activeCount = subCount(activeCountQuery);
+  const onNoticeCount = subCount(onNoticeCountQuery);
+  const exitedCount = subCount(exitedCountQuery);
 
   // ── headline + true total ────────────────────────────────────────────────────
-  // Sum of the three status buckets gives the true org-wide count (since every
-  // employee has exactly one status). When a status filter is active the true
-  // total is just that bucket's count.
   const allLoaded =
-    !!activeQuery.data && !!onNoticeQuery.data && !!exitedQuery.data;
+    activeCountQuery.count !== null &&
+    onNoticeCountQuery.count !== null &&
+    exitedCountQuery.count !== null;
   const orgTotal = allLoaded
-    ? activeQuery.data.data.length +
-      onNoticeQuery.data.data.length +
-      exitedQuery.data.data.length
+    ? activeCountQuery.count! +
+      onNoticeCountQuery.count! +
+      exitedCountQuery.count!
     : null;
 
   const bucketCountForStatus = (s: string): number | null => {
-    if (s === 'Active') return activeQuery.data?.data.length ?? null;
-    if (s === 'On-Notice') return onNoticeQuery.data?.data.length ?? null;
-    if (s === 'Exited') return exitedQuery.data?.data.length ?? null;
+    if (s === 'Active') return activeCountQuery.count;
+    if (s === 'On-Notice') return onNoticeCountQuery.count;
+    if (s === 'Exited') return exitedCountQuery.count;
     return null;
   };
 

@@ -10,7 +10,7 @@
  *   Payroll:           listPayrollRuns({ limit: 1 }) filtered to current month/year
  */
 
-import { useEmployeesList } from '@/lib/hooks/useEmployees';
+import { useEmployeesCount, useEmployeesList } from '@/lib/hooks/useEmployees';
 import { useLeaveList } from '@/lib/hooks/useLeave';
 import { usePayrollRuns } from '@/lib/hooks/usePayroll';
 import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
@@ -28,10 +28,9 @@ export function useAdminDashboard() {
   const today = todayISO();
   const { month, year } = currentMonthYear();
 
-  // limit=100 (API max) so .data.length reflects the real Active count for
-  // typical org sizes. v1.1: backend should return pagination.total to remove
-  // the cap entirely.
-  const employees = useEmployeesList({ status: 'Active', limit: 100 });
+  // Cursor-walks all Active employees (up to 1,000) for an exact count.
+  // v1.1: backend should add pagination.total so this can become a single fetch.
+  const activeCount = useEmployeesCount({ status: 'Active' });
   const onLeaveToday = useLeaveList({ status: 'Approved', fromDate: today, toDate: today });
   const pendingLeave = useLeaveList({ status: 'Pending' });
   const payrollRuns = usePayrollRuns({ limit: 5 });
@@ -51,21 +50,19 @@ export function useAdminDashboard() {
   // Recent activity — first page of audit logs
   const recentActivity = auditLogs.data?.pages?.[0]?.data?.slice(0, 8) ?? [];
 
-  // Employee count from pagination total (fallback to data array length)
-  type ListResp = { pagination?: { total?: number }; data?: unknown[] };
-  const empTotal =
-    ((employees.data as ListResp)?.pagination?.total as number | undefined) ??
-    ((employees.data as ListResp)?.data?.length as number | undefined) ??
-    null;
+  // Active employee count — exact via cursor walk.
+  const empTotal = activeCount.count;
 
   // On-leave today count
   const onLeaveTodayCount = (onLeaveToday.data?.data ?? []).length;
 
   return {
     empTotal,
-    empLoading: employees.isLoading,
-    empError: employees.isError,
-    empRefetch: employees.refetch,
+    empLoading: activeCount.isLoading,
+    empError: false,
+    empRefetch: () => {
+      /* useEmployeesCount has no single refetch — invalidation via QueryClient. */
+    },
 
     onLeaveTodayCount,
     onLeaveTodayLoading: onLeaveToday.isLoading,

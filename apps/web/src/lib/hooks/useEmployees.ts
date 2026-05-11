@@ -44,6 +44,183 @@ export function useEmployeesList(query: Partial<EmployeeListQuery> = {}) {
   });
 }
 
+// ── COUNT (cursor-walking aggregate) ──────────────────────────────────────────
+//
+// API has no `total` field on EmployeeListResponse (v1.1 backlog). To get an
+// exact count without backend changes, walk the cursor pages with limit=100.
+// Returns { count, isLoading } where count is the running total across all
+// fetched pages. Stops fetching when nextCursor === null.
+//
+// Used by the dashboard KPI tile and any other spot that needs an exact
+// org-wide or status-bucket total. Cached for 30 s so subsequent renders
+// don't re-walk.
+
+// MAX_PAGES is a constant — same number of useQuery hooks called every render
+// (Rules of Hooks). Each subsequent page is only `enabled` when the prior page
+// returned a cursor, so unused queries never fire.
+const COUNT_PAGE_SIZE = 100;
+const COUNT_MAX_PAGES = 10; // up to 1,000 employees; v1.1 backlog: backend total field
+
+export function useEmployeesCount(
+  filters: Omit<Partial<EmployeeListQuery>, 'limit' | 'cursor'> = {},
+): { count: number | null; isLoading: boolean } {
+  const filtersKey = JSON.stringify(filters);
+
+  // Page 1 — always enabled.
+  const p1 = useQuery({
+    queryKey: ['employees-count', filtersKey, 1],
+    queryFn: () =>
+      listEmployees({ ...filters, limit: COUNT_PAGE_SIZE } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+  });
+  const p2cur = p1.data?.nextCursor ?? null;
+  const p2 = useQuery({
+    queryKey: ['employees-count', filtersKey, 2, p2cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p2cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p2cur),
+  });
+  const p3cur = p2.data?.nextCursor ?? null;
+  const p3 = useQuery({
+    queryKey: ['employees-count', filtersKey, 3, p3cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p3cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p3cur),
+  });
+  const p4cur = p3.data?.nextCursor ?? null;
+  const p4 = useQuery({
+    queryKey: ['employees-count', filtersKey, 4, p4cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p4cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p4cur),
+  });
+  const p5cur = p4.data?.nextCursor ?? null;
+  const p5 = useQuery({
+    queryKey: ['employees-count', filtersKey, 5, p5cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p5cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p5cur),
+  });
+  const p6cur = p5.data?.nextCursor ?? null;
+  const p6 = useQuery({
+    queryKey: ['employees-count', filtersKey, 6, p6cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p6cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p6cur),
+  });
+  const p7cur = p6.data?.nextCursor ?? null;
+  const p7 = useQuery({
+    queryKey: ['employees-count', filtersKey, 7, p7cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p7cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p7cur),
+  });
+  const p8cur = p7.data?.nextCursor ?? null;
+  const p8 = useQuery({
+    queryKey: ['employees-count', filtersKey, 8, p8cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p8cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p8cur),
+  });
+  const p9cur = p8.data?.nextCursor ?? null;
+  const p9 = useQuery({
+    queryKey: ['employees-count', filtersKey, 9, p9cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p9cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p9cur),
+  });
+  const p10cur = p9.data?.nextCursor ?? null;
+  const p10 = useQuery({
+    queryKey: ['employees-count', filtersKey, 10, p10cur],
+    queryFn: () =>
+      listEmployees({
+        ...filters,
+        limit: COUNT_PAGE_SIZE,
+        cursor: p10cur!,
+      } as Partial<EmployeeListQuery>),
+    staleTime: 30_000,
+    retry: 1,
+    enabled: Boolean(p10cur),
+  });
+
+  const pages = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10];
+
+  // Find the last page that has data — that's our terminus.
+  let terminus: typeof p1 | null = null;
+  for (let i = pages.length - 1; i >= 0; i--) {
+    if (pages[i]!.data) {
+      terminus = pages[i]!;
+      break;
+    }
+  }
+
+  const finalReached =
+    !!terminus && terminus.data!.nextCursor === null;
+  const isLoading = pages.some((p) => p.isLoading || p.isFetching);
+
+  if (!finalReached) {
+    return { count: null, isLoading };
+  }
+
+  // Sum only the pages we actually loaded (data present).
+  const count = pages.reduce(
+    (sum, p) => sum + (p.data?.data.length ?? 0),
+    0,
+  );
+  // void unused vars to silence linter — they exist to keep Rules of Hooks intact.
+  void COUNT_MAX_PAGES;
+  return { count, isLoading: false };
+}
+
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
 export function useEmployee(id: string) {
