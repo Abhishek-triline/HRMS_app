@@ -12,11 +12,16 @@
  *      check-out | hours | status | late this month
  *   5. Search + filter row above table
  *   6. Numbered paginator with "Showing X of Y"
+ *
+ * When ?scope=me is present, renders the personal attendance view instead
+ * (prototype/admin/my-attendance.html — A-10).
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { MyAttendanceView } from '@/features/attendance/components/MyAttendanceView';
 import type { AttendanceStatus } from '@nexora/contracts/attendance';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -136,9 +141,32 @@ function Paginator({ page, totalPages, totalItems, showing, onChange }: Paginato
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
+// ── Scope-router ───────────────────────────────────────────────────────────────
+
+/**
+ * Inner component that reads search params and branches between the org-wide
+ * view and the personal "My Attendance" view (?scope=me).
+ * Wrapped in Suspense by the default export so Next.js App Router is satisfied.
+ */
+function AdminAttendanceRouter() {
+  const searchParams = useSearchParams();
+  if (searchParams.get('scope') === 'me') {
+    return <MyAttendanceView />;
+  }
+  return <OrgAttendancePage />;
+}
 
 export default function AdminAttendancePage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-16"><Spinner size="lg" aria-label="Loading attendance…" /></div>}>
+      <AdminAttendanceRouter />
+    </Suspense>
+  );
+}
+
+// ── Org-wide Page ──────────────────────────────────────────────────────────────
+
+function OrgAttendancePage() {
   const today = new Date();
 
   // Date picker: default to today, query month data then filter client-side

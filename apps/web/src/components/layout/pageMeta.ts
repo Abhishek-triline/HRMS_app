@@ -26,6 +26,7 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/admin/leave':                     { title: 'My Leave',                         subtitle: 'No reporting manager · routes to Admin queue' },
   '/admin/leave/new':                 { title: 'Apply for Leave' },
   '/admin/attendance':                { title: 'Attendance Overview',              subtitle: 'Org-wide attendance · {date}' },
+  '/admin/attendance?scope=me':       { title: 'My Attendance' },
   '/admin/regularisation':            { title: 'Regularisation Request' },
   '/admin/regularisation-queue':      { title: 'Regularisation Approval Queue' },
   '/admin/checkin':                   { title: 'Check In / Out' },
