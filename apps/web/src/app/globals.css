@@ -150,7 +150,7 @@ aside > * {
 /* Base — falls back when no data-tod is set (matches prototype theme.js) */
 [data-nx-hero] {
   color: white;
-  min-height: 120px;
+  min-height: 200px;
   background: linear-gradient(180deg, #3F8AA8 0%, #4A9C88 35%, #2D7A5F 70%, #1C3D2E 100%);
 }
 
