@@ -1,162 +1,213 @@
 'use client';
 
 /**
- * LeaveQuotasPanel — inline version of /admin/leave-config.
- * Renders the leave quota matrix and carry-forward caps without page-level chrome.
- * Used inside ConfigTabs.
+ * LeaveQuotasPanel — combined leave-quotas + carry-forward + per-event matrix.
+ *
+ * Layout:
+ *   1. Header stat strip — Accrual types · Event-based · Sick reset · Unpaid uncapped
+ *   2. Single unified matrix:
+ *        Leave Type · Permanent · Contract · Intern · Probation · Carry-fwd cap · Max/event · Action
+ *      Each row supports a single Edit toggle that opens all 6 numeric fields at once.
+ *      Event-based rows render with a soft umber tint; Unpaid renders "∞".
+ *   3. Annual reset rules card — colour-coded chips per type.
  */
 
 import { useState } from 'react';
+import { clsx } from 'clsx';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
-import { useLeaveConfig, useUpdateLeaveType, useUpdateLeaveQuota } from '@/lib/hooks/useLeave';
+import {
+  useLeaveConfig,
+  useUpdateLeaveType,
+  useUpdateLeaveQuota,
+} from '@/lib/hooks/useLeave';
 import { useToast } from '@/lib/hooks/useToast';
-import type { LeaveTypeCatalogItem, LeaveType } from '@nexora/contracts/leave';
+import type {
+  LeaveTypeCatalogItem,
+  LeaveType,
+} from '@nexora/contracts/leave';
 
 const EMPLOYMENT_TYPES = ['Permanent', 'Contract', 'Intern', 'Probation'] as const;
-type ET = typeof EMPLOYMENT_TYPES[number];
+type ET = (typeof EMPLOYMENT_TYPES)[number];
 
-// ── Quota cell (inline edit) ──────────────────────────────────────────────────
+// ── Visual taxonomy per leave type ───────────────────────────────────────────
 
-function QuotaCell({
-  type,
-  empType,
-  currentValue,
-}: {
-  type: LeaveType;
-  empType: ET;
-  currentValue: number | null;
-}) {
-  const toast = useToast();
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState<string>(currentValue !== null ? String(currentValue) : '');
-  const updateQuota = useUpdateLeaveQuota(type);
+type TypeKind = 'accrual' | 'event' | 'sick' | 'unpaid';
 
-  async function handleSave() {
-    const parsed = parseInt(value, 10);
-    if (isNaN(parsed) || parsed < 0) {
-      toast.error('Invalid value', 'Enter a non-negative integer.');
-      return;
-    }
-    try {
-      await updateQuota.mutateAsync({ employmentType: empType, daysPerYear: parsed });
-      toast.success('Quota updated', `${type} leave quota for ${empType} set to ${parsed} days.`);
-      setEditing(false);
-    } catch (err) {
-      toast.error('Update failed', err instanceof Error ? err.message : 'Please try again.');
-    }
-  }
-
-  if (currentValue === null) {
-    return <span className="text-slate text-xs">—</span>;
-  }
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1 justify-center">
-        <input
-          type="number"
-          min={0}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          aria-label={`${type} quota for ${empType}`}
-          className="w-14 border border-forest rounded px-1.5 py-0.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-forest/40"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') setEditing(false);
-          }}
-          autoFocus
-        />
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={updateQuota.isPending}
-          aria-label="Save"
-          className="text-richgreen hover:text-forest min-w-[44px] min-h-[44px] flex items-center justify-center"
-        >
-          {updateQuota.isPending ? <Spinner size="sm" /> : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setEditing(false)}
-          aria-label="Cancel"
-          className="text-slate hover:text-crimson min-w-[44px] min-h-[44px] flex items-center justify-center"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => setEditing(true)}
-      className="font-semibold text-charcoal hover:text-forest hover:underline transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-      aria-label={`Edit ${type} quota for ${empType} (currently ${currentValue})`}
-    >
-      {currentValue}
-    </button>
-  );
+function kindOf(item: LeaveTypeCatalogItem): TypeKind {
+  if (item.type === 'Unpaid') return 'unpaid';
+  if (item.type === 'Sick') return 'sick';
+  if (item.isEventBased) return 'event';
+  return 'accrual';
 }
 
-// ── Type config row ───────────────────────────────────────────────────────────
+const TYPE_DOT: Record<LeaveType, string> = {
+  Annual:    'bg-forest',
+  Sick:      'bg-crimson',
+  Casual:    'bg-emerald',
+  Maternity: 'bg-umber',
+  Paternity: 'bg-umber',
+  Unpaid:    'bg-slate',
+};
 
-function TypeConfigRow({ item }: { item: LeaveTypeCatalogItem }) {
+const KIND_TAG: Record<TypeKind, { label: string; bg: string; text: string }> = {
+  accrual: { label: 'Accrual',     bg: 'bg-greenbg',   text: 'text-richgreen' },
+  event:   { label: 'Event-based', bg: 'bg-umberbg',   text: 'text-umber' },
+  sick:    { label: 'Sick · Reset', bg: 'bg-crimsonbg', text: 'text-crimson' },
+  unpaid:  { label: 'Uncapped',    bg: 'bg-sage/30',   text: 'text-slate' },
+};
+
+// ── Row component ────────────────────────────────────────────────────────────
+
+function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
-  const [cfCap, setCfCap] = useState<string>(
-    item.carryForwardCap !== null ? String(item.carryForwardCap) : '',
-  );
-  const [maxEvent, setMaxEvent] = useState<string>(
-    item.maxDaysPerEvent !== null ? String(item.maxDaysPerEvent) : '',
-  );
-  const updateType = useUpdateLeaveType(item.type);
+  const [draft, setDraft] = useState<Record<string, string>>({});
 
-  async function handleSave() {
-    const body: { carryForwardCap?: number | null; maxDaysPerEvent?: number | null } = {};
-    if (cfCap !== '') {
-      const v = parseInt(cfCap, 10);
-      if (isNaN(v) || v < 0) { toast.error('Invalid cap', 'Enter a non-negative integer.'); return; }
-      body.carryForwardCap = v;
+  const updateType = useUpdateLeaveType(item.type);
+  const updateQuota = useUpdateLeaveQuota(item.type);
+
+  const kind = kindOf(item);
+  const tag = KIND_TAG[kind];
+
+  // Pre-populate draft when entering edit mode.
+  function startEdit() {
+    const initial: Record<string, string> = {};
+    EMPLOYMENT_TYPES.forEach((et) => {
+      const q = item.quotas.find((x) => x.employmentType === et);
+      initial[et] = q?.daysPerYear !== undefined ? String(q.daysPerYear) : '';
+    });
+    initial['__cf'] = item.carryForwardCap !== null ? String(item.carryForwardCap) : '';
+    initial['__me'] = item.maxDaysPerEvent !== null ? String(item.maxDaysPerEvent) : '';
+    setDraft(initial);
+    setEditing(true);
+  }
+
+  async function saveAll() {
+    // Validate
+    const errs: string[] = [];
+    for (const et of EMPLOYMENT_TYPES) {
+      const v = draft[et];
+      if (v === '' || v === undefined) continue;
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 0) errs.push(`${et} must be a non-negative integer`);
     }
-    if (maxEvent !== '') {
-      const v = parseInt(maxEvent, 10);
-      if (isNaN(v) || v < 0) { toast.error('Invalid max', 'Enter a non-negative integer.'); return; }
-      body.maxDaysPerEvent = v;
+    if (draft['__cf'] !== '') {
+      const n = parseInt(draft['__cf'] ?? '', 10);
+      if (isNaN(n) || n < 0) errs.push('Carry-forward cap must be a non-negative integer');
     }
+    if (draft['__me'] !== '') {
+      const n = parseInt(draft['__me'] ?? '', 10);
+      if (isNaN(n) || n < 0) errs.push('Max days per event must be a non-negative integer');
+    }
+    if (errs.length) {
+      toast.error('Invalid input', errs.join(' · '));
+      return;
+    }
+
     try {
-      await updateType.mutateAsync(body);
-      toast.success('Updated', `${item.type} leave type configuration saved.`);
+      // Per-employment-type quotas
+      for (const et of EMPLOYMENT_TYPES) {
+        const before = item.quotas.find((x) => x.employmentType === et);
+        const v = draft[et];
+        if (v === '' || v === undefined) continue;
+        const n = parseInt(v, 10);
+        if (before?.daysPerYear !== n) {
+          await updateQuota.mutateAsync({ employmentType: et, daysPerYear: n });
+        }
+      }
+
+      // Type-level config
+      const body: { carryForwardCap?: number | null; maxDaysPerEvent?: number | null } = {};
+      const cf = draft['__cf'];
+      if (cf !== '' && cf !== undefined) {
+        const n = parseInt(cf, 10);
+        if (item.carryForwardCap !== n) body.carryForwardCap = n;
+      }
+      const me = draft['__me'];
+      if (me !== '' && me !== undefined) {
+        const n = parseInt(me, 10);
+        if (item.maxDaysPerEvent !== n) body.maxDaysPerEvent = n;
+      }
+      if (Object.keys(body).length) {
+        await updateType.mutateAsync(body);
+      }
+
+      toast.success('Saved', `${item.type} leave configuration updated.`);
       setEditing(false);
     } catch (err) {
-      toast.error('Update failed', err instanceof Error ? err.message : 'Please try again.');
+      toast.error('Save failed', err instanceof Error ? err.message : 'Please try again.');
     }
   }
 
+  const pending = updateType.isPending || updateQuota.isPending;
+  const rowTint =
+    kind === 'event'
+      ? 'bg-umberbg/20'
+      : kind === 'sick'
+      ? 'bg-crimsonbg/20'
+      : '';
+
   return (
-    <tr className="hover:bg-offwhite/60">
-      <td className="px-5 py-3.5">
-        <span className="font-semibold text-charcoal">{item.type}</span>
-        {item.isEventBased && (
-          <span className="text-xs text-slate ml-1">(event-based)</span>
-        )}
+    <tr className={clsx('transition-colors hover:bg-offwhite/60', rowTint)}>
+      {/* Leave type */}
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={clsx('w-2 h-2 rounded-full flex-shrink-0', TYPE_DOT[item.type])}
+            aria-hidden="true"
+          />
+          <div>
+            <div className="font-semibold text-charcoal text-sm">{item.type}</div>
+            <div className="mt-0.5">
+              <span className={clsx('inline-block text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded', tag.bg, tag.text)}>
+                {tag.label}
+              </span>
+            </div>
+          </div>
+        </div>
       </td>
-      <td className="px-4 py-3.5 text-center">
-        {editing ? (
+
+      {/* Per-employment quotas */}
+      {EMPLOYMENT_TYPES.map((et) => {
+        const q = item.quotas.find((x) => x.employmentType === et);
+        if (item.type === 'Unpaid') {
+          return (
+            <td key={et} className="px-3 py-4 text-center">
+              <span className="text-slate text-base" aria-label="Unlimited">∞</span>
+            </td>
+          );
+        }
+        return (
+          <td key={et} className="px-3 py-4 text-center">
+            {editing ? (
+              <input
+                type="number"
+                min={0}
+                value={draft[et] ?? ''}
+                onChange={(e) => setDraft({ ...draft, [et]: e.target.value })}
+                aria-label={`${item.type} quota for ${et}`}
+                className="w-16 border border-forest rounded px-1.5 py-1 text-sm text-center font-semibold focus:outline-none focus:ring-1 focus:ring-forest/40"
+              />
+            ) : q?.daysPerYear !== undefined ? (
+              <span className="font-semibold text-charcoal">{q.daysPerYear}</span>
+            ) : (
+              <span className="text-slate text-xs">—</span>
+            )}
+          </td>
+        );
+      })}
+
+      {/* Carry-forward cap */}
+      <td className="px-3 py-4 text-center">
+        {editing && !item.isEventBased && item.type !== 'Unpaid' ? (
           <input
             type="number"
             min={0}
-            value={cfCap}
-            onChange={(e) => setCfCap(e.target.value)}
+            value={draft['__cf'] ?? ''}
+            onChange={(e) => setDraft({ ...draft, __cf: e.target.value })}
             aria-label={`${item.type} carry-forward cap`}
-            className="w-16 border border-forest rounded px-1.5 py-0.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-forest/40"
+            className="w-16 border border-forest rounded px-1.5 py-1 text-sm text-center font-semibold focus:outline-none focus:ring-1 focus:ring-forest/40"
           />
         ) : item.carryForwardCap !== null ? (
           <span className="font-semibold text-charcoal">{item.carryForwardCap}</span>
@@ -164,15 +215,17 @@ function TypeConfigRow({ item }: { item: LeaveTypeCatalogItem }) {
           <span className="text-slate text-xs">—</span>
         )}
       </td>
-      <td className="px-4 py-3.5 text-center">
-        {editing ? (
+
+      {/* Max days per event */}
+      <td className="px-3 py-4 text-center">
+        {editing && item.isEventBased ? (
           <input
             type="number"
             min={0}
-            value={maxEvent}
-            onChange={(e) => setMaxEvent(e.target.value)}
+            value={draft['__me'] ?? ''}
+            onChange={(e) => setDraft({ ...draft, __me: e.target.value })}
             aria-label={`${item.type} max days per event`}
-            className="w-16 border border-forest rounded px-1.5 py-0.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-forest/40"
+            className="w-20 border border-forest rounded px-1.5 py-1 text-sm text-center font-semibold focus:outline-none focus:ring-1 focus:ring-forest/40"
           />
         ) : item.maxDaysPerEvent !== null ? (
           <span className="font-semibold text-charcoal">{item.maxDaysPerEvent}</span>
@@ -180,27 +233,111 @@ function TypeConfigRow({ item }: { item: LeaveTypeCatalogItem }) {
           <span className="text-slate text-xs">—</span>
         )}
       </td>
-      <td className="px-4 py-3.5 text-center">
+
+      {/* Action */}
+      <td className="px-4 py-4 text-right">
         {editing ? (
-          <div className="flex items-center justify-center gap-2">
-            <Button size="sm" variant="primary" loading={updateType.isPending} onClick={handleSave}>
+          <div className="flex items-center justify-end gap-2">
+            <Button size="sm" variant="primary" loading={pending} onClick={saveAll}>
               Save
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => setEditing(false)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setEditing(false)}
+              disabled={pending}
+            >
               Cancel
             </Button>
           </div>
         ) : (
-          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+          <button
+            type="button"
+            onClick={startEdit}
+            className="inline-flex items-center gap-1.5 text-forest hover:text-emerald text-xs font-semibold border border-sage/50 hover:border-forest rounded-lg px-3 py-1.5 transition-colors"
+            aria-label={`Edit ${item.type} leave configuration`}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
             Edit
-          </Button>
+          </button>
         )}
       </td>
     </tr>
   );
 }
 
-// ── Panel ─────────────────────────────────────────────────────────────────────
+// ── Stat strip (top of panel) ───────────────────────────────────────────────
+
+function StatStrip({ items }: { items: LeaveTypeCatalogItem[] }) {
+  const accrualCount = items.filter((x) => !x.isEventBased && x.type !== 'Unpaid').length;
+  const eventCount = items.filter((x) => x.isEventBased).length;
+  const hasSick = items.some((x) => x.type === 'Sick');
+  const hasUnpaid = items.some((x) => x.type === 'Unpaid');
+
+  const tiles: Array<{ label: string; value: string; sub: string; dot: string }> = [
+    {
+      label: 'Accrual types',
+      value: String(accrualCount),
+      sub: 'Annual reset Jan 1',
+      dot: 'bg-forest',
+    },
+    {
+      label: 'Event-based',
+      value: String(eventCount),
+      sub: 'Maternity · Paternity',
+      dot: 'bg-umber',
+    },
+    {
+      label: 'Sick policy',
+      value: hasSick ? 'Reset' : '—',
+      sub: 'Resets to 0 on Jan 1',
+      dot: 'bg-crimson',
+    },
+    {
+      label: 'Unpaid',
+      value: hasUnpaid ? '∞' : '—',
+      sub: 'No cap · always available',
+      dot: 'bg-slate',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {tiles.map((t) => (
+        <div
+          key={t.label}
+          className="bg-white rounded-xl shadow-sm border border-sage/30 px-5 py-4"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className={clsx('w-1.5 h-1.5 rounded-full', t.dot)} aria-hidden="true" />
+            <div className="text-[11px] font-semibold text-slate uppercase tracking-widest">
+              {t.label}
+            </div>
+          </div>
+          <div className="font-heading text-3xl font-bold text-charcoal leading-none">
+            {t.value}
+          </div>
+          <div className="text-xs text-slate mt-2">{t.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Panel ────────────────────────────────────────────────────────────────────
 
 export default function LeaveQuotasPanel() {
   const { data: types, isLoading, error } = useLeaveConfig();
@@ -215,7 +352,10 @@ export default function LeaveQuotasPanel() {
 
   if (error) {
     return (
-      <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-6 py-4 text-sm text-crimson" role="alert">
+      <div
+        className="bg-crimsonbg border border-crimson/20 rounded-xl px-6 py-4 text-sm text-crimson"
+        role="alert"
+      >
         Could not load leave configuration. Please refresh.
       </div>
     );
@@ -225,105 +365,129 @@ export default function LeaveQuotasPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Quota matrix */}
+      <StatStrip items={types} />
+
+      {/* Unified matrix */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-sage/20">
-          <h2 className="font-heading font-bold text-charcoal text-base">Leave Quotas by Employment Type</h2>
-          <p className="text-xs text-slate mt-0.5">Days per year unless specified otherwise. Click a value to edit inline.</p>
+        <div className="px-6 py-4 border-b border-sage/20 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-heading font-bold text-charcoal text-base">
+              Leave Quotas Matrix
+            </h2>
+            <p className="text-xs text-slate mt-0.5">
+              Days per employment type · plus carry-forward cap (accrual) and max days
+              per event (event-based). Click <strong>Edit</strong> to change all fields
+              for a leave type at once.
+            </p>
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-umberbg/80 border border-umber/30" />
+              event-based
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-crimsonbg/70 border border-crimson/30" />
+              fixed reset
+            </span>
+          </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" aria-label="Leave quotas by employment type">
+          <table className="w-full text-sm" aria-label="Leave quotas matrix">
             <thead>
               <tr className="bg-offwhite border-b border-sage/20">
-                <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Leave Type</th>
+                <th
+                  scope="col"
+                  className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
+                >
+                  Leave Type
+                </th>
                 {EMPLOYMENT_TYPES.map((et) => (
-                  <th key={et} scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">{et}</th>
+                  <th
+                    key={et}
+                    scope="col"
+                    className="text-center px-3 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
+                  >
+                    {et}
+                  </th>
                 ))}
+                <th
+                  scope="col"
+                  className="text-center px-3 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
+                >
+                  Carry-fwd
+                </th>
+                <th
+                  scope="col"
+                  className="text-center px-3 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
+                >
+                  Max / event
+                </th>
+                <th
+                  scope="col"
+                  className="text-right px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
+                >
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sage/10">
               {types.map((item) => (
-                <tr key={item.type} className="hover:bg-offwhite/60">
-                  <td className="px-5 py-3.5">
-                    <span className="font-semibold text-charcoal">{item.type}</span>
-                    {item.isEventBased && <span className="text-xs text-slate ml-1">(event-based)</span>}
-                  </td>
-                  {EMPLOYMENT_TYPES.map((et) => {
-                    const quota = item.quotas.find((q) => q.employmentType === et);
-                    return (
-                      <td key={et} className="px-4 py-3.5 text-center">
-                        {item.type === 'Unpaid' ? (
-                          <span className="text-slate text-xs">Unlimited</span>
-                        ) : (
-                          <QuotaCell
-                            type={item.type}
-                            empType={et}
-                            currentValue={quota?.daysPerYear ?? null}
-                          />
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+                <QuotaRow key={item.type} item={item} />
               ))}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Carry-forward caps + event limits */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-sage/20">
-          <h2 className="font-heading font-bold text-charcoal text-base">Carry-Forward Caps &amp; Event Limits</h2>
-          <p className="text-xs text-slate mt-0.5">
-            Carry-forward cap: maximum days carried into next year. Max days per event: applies to Maternity/Paternity.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" aria-label="Carry-forward caps and event limits">
-            <thead>
-              <tr className="bg-offwhite border-b border-sage/20">
-                <th scope="col" className="text-left px-5 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Leave Type</th>
-                <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Carry-forward Cap</th>
-                <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Max Days per Event</th>
-                <th scope="col" className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sage/10">
-              {types.map((item) => (
-                <TypeConfigRow key={item.type} item={item} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Reset rules info */}
+      {/* Annual reset rules */}
       <div className="bg-softmint border border-mint rounded-xl p-5">
         <h3 className="font-heading text-sm font-semibold text-forest mb-3 flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Annual Reset Rules (1 January)
         </h3>
-        <ul className="space-y-2 text-sm text-slate" role="list">
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
-            <span><span className="font-semibold text-charcoal">Annual &amp; Casual:</span> carried forward up to the configured cap (BL-013).</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
-            <span><span className="font-semibold text-charcoal">Sick:</span> resets to zero on Jan 1 — no carry-forward (BL-012).</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
-            <span><span className="font-semibold text-charcoal">Maternity &amp; Paternity:</span> event-based — not affected by annual reset (BL-014).</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
-            <span><span className="font-semibold text-charcoal">Unpaid:</span> always available — no accrual or reset.</span>
-          </li>
-        </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="flex items-start gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-forest mt-1.5 flex-shrink-0" />
+            <p className="text-slate">
+              <span className="font-semibold text-charcoal">Annual &amp; Casual:</span>{' '}
+              carried forward up to the configured cap (BL-013).
+            </p>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-crimson mt-1.5 flex-shrink-0" />
+            <p className="text-slate">
+              <span className="font-semibold text-charcoal">Sick:</span> resets to zero
+              on Jan 1 — no carry-forward (BL-012).
+            </p>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-umber mt-1.5 flex-shrink-0" />
+            <p className="text-slate">
+              <span className="font-semibold text-charcoal">Maternity &amp; Paternity:</span>{' '}
+              event-based — not affected by annual reset (BL-014).
+            </p>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-slate mt-1.5 flex-shrink-0" />
+            <p className="text-slate">
+              <span className="font-semibold text-charcoal">Unpaid:</span> always
+              available — no accrual or reset.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
