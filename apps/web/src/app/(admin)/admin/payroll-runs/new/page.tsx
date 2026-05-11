@@ -135,19 +135,7 @@ export default function NewPayrollRunPage() {
 
   return (
     <>
-      <div className="max-w-3xl mx-auto">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs text-slate mb-4">
-          <Link href="/admin/payroll-runs" className="hover:text-forest transition-colors">
-            Payroll Runs
-          </Link>
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <span className="text-charcoal font-medium">New Run</span>
-        </div>
-
-        {/* Step indicator */}
+      {/* Step indicator */}
         <div className="flex items-center gap-2 mb-6">
           {['Setup', 'Calculate', 'Review', 'Finalise'].map((step, i) => (
             <div key={step} className="flex items-center gap-2">
@@ -231,7 +219,7 @@ export default function NewPayrollRunPage() {
 
               {/* Working Days */}
               <div>
-                <Label htmlFor="working-days">Working Days (optional override)</Label>
+                <Label htmlFor="working-days">Working Days</Label>
                 <input
                   id="working-days"
                   type="number"
@@ -244,7 +232,7 @@ export default function NewPayrollRunPage() {
                 />
                 <FieldError id="working-days-error" message={errors.workingDays} />
                 <p className="text-xs text-slate mt-1.5">
-                  Leave blank to use the server-computed count (holidays + weekends excluded).
+                  Leave blank to use the server-computed count (weekends + holidays excluded).
                 </p>
               </div>
 
@@ -378,11 +366,10 @@ export default function NewPayrollRunPage() {
                 </svg>
               }
             >
-              Initiate Run
+              Initiate &amp; Calculate
             </Button>
           </div>
         </form>
-      </div>
     </>
   );
 }
