@@ -11,21 +11,32 @@
 
 ---
 
-## 2. Interpretation & Open Decisions (need explicit owner answers — `[OQ-N]`)
+## 2. Interpretation & Decisions (approved by owner 2026-05-12)
 
-| # | Question | Default answer (used in the plan below unless owner overrides) |
+All open questions were presented in two rounds — first as defaults, then with a deep-dive on OQ-7 (reversal). Final answers are below. **No further owner input is required before implementation continues.** Defaults that were accepted are explicitly labelled to make future re-reads obvious. The decisions are reflected in the schema, backend, and frontend that have shipped under commits `e776ecf` and `d5553e2`.
+
+| # | Question | Decision (final) | Source |
+|---|---|---|---|
+| OQ-1 | Does "end of calendar year" mean a hard request window, or just a soft semantic? | **Hard window: Dec 1 (year Y) → Jan 15 (year Y+1).** Configurable via `ENCASHMENT_WINDOW_START_MONTH` (12), `ENCASHMENT_WINDOW_END_MONTH` (1), `ENCASHMENT_WINDOW_END_DAY` (15). Outside the window the request endpoint returns `ENCASHMENT_OUT_OF_WINDOW`. | Owner accepted default |
+| OQ-2 | Can an employee submit multiple encashment requests in the same window? | **No — one *approved* encashment per employee per calendar year.** Subsequent requests reject with `ENCASHMENT_ALREADY_USED`. Cancelled / Rejected requests do not consume the quota. | Owner accepted default |
+| OQ-3 | 50% of *what* balance — at request time, at approval time, or at end-of-year cutoff? | **At Admin-Finalise time.** `min(floor(daysRemaining × 0.5), daysRemaining)` evaluated when Admin signs off. The request body carries the employee's requested days; the server clamps at finalisation. | Owner accepted default |
+| OQ-4 | Who approves the request? Manager only, Admin only, or both? | **Two-step: Manager → Admin.** Routing identical to leave (BL-015 / BL-017 / BL-022) for the manager step; Admin-Finalise is *always* required because the action impacts payroll. State machine: `Pending` → `Manager-Approved` → `Admin-Finalised` → `Paid`. | Owner accepted default |
+| OQ-5 | What is "DA"? Is it a new column or maps to an existing allowance component? | **Option A — new nullable column `daPaise` on `SalaryStructure`.** Defaults to 0 for legacy rows. Encashment formula uses `(basicPaise + COALESCE(daPaise, 0))` — companies that do not pay DA work unchanged (formula degrades to just `basicPaise`). | Owner explicitly picked Option A |
+| OQ-6 | "Working-days-in-month" — which month? The month the request is approved, or the month it's paid? | **Month of the payroll run that pays it.** The rate uses the paying run's `workingDays` value (already computed by `workingDaysCalc.ts` per BL-031). | Owner accepted default |
+| OQ-7 | Can encashment be reversed? | **Reverse via payslip reversal only (BL-033).** Reversal payslip emits a negative `encashmentPaise` line and writes `leave.encashment.payment.reverse` audit row. **Leave-balance days are NOT restored** — the days are gone for the year. A dedicated `leave.encashment.reverse` admin endpoint is deferred to v1.1. | Owner accepted default after deep-dive |
+| OQ-8 | Does encashment block carry-forward? | **No — encashment reduces `daysRemaining` immediately at Admin-Finalise.** The Jan 1 carry-forward job (BL-012) operates on the post-deduction balance. Operational guard: encashment cron runs Dec 31 23:50 IST, carry-forward at Jan 1 00:01 IST (11-min buffer). | Owner accepted default |
+| OQ-9 | Should we encash other leave types (Casual, Sick)? | **Annual only.** Hard-coded; not configurable in v1. Sick doesn't carry forward (BL-012); Casual cap is too small to be meaningful. | Owner accepted default |
+| OQ-10 | What about employees who exited mid-year? | **Out of scope for v1.** Full-and-final-settlement encashment is a separate feature. Exited employees cannot submit encashment requests. | Owner accepted default |
+| OQ-11 | Should the encashment amount itself be taxable? | **Yes — taxable as part of gross.** `encashmentPaise` adds to `grossPaise` and flows into the existing `referenceTaxPaise` computation. §10(10AA) exemption is deferred to v1.1 (Indian tax-engine work). | Owner accepted default |
+
+### 2.1 UI follow-up decisions (during frontend implementation)
+
+Two product questions surfaced when the frontend was being built. Both were decided in favour of the recommended defaults:
+
+| # | Question | Decision |
 |---|---|---|
-| OQ-1 | Does "end of calendar year" mean a hard request window, or just a soft semantic? | **Window: Dec 1 (year Y) → Jan 15 (year Y+1).** Configurable via `ENCASHMENT_WINDOW_START_MONTH`, `_END_MONTH`. Outside the window the request endpoint returns `ENCASHMENT_OUT_OF_WINDOW`. |
-| OQ-2 | Can an employee submit multiple encashment requests in the same window? | **No — one approved encashment per employee per calendar year.** Subsequent requests reject with `ENCASHMENT_ALREADY_USED`. Cancelled/Rejected requests do not consume the quota. |
-| OQ-3 | 50% of *what* balance — at request time, at approval time, or at end-of-year cutoff? | **At approval time.** `min(floor(daysRemaining × 0.5), daysRemaining)` evaluated when Admin/Manager approves. The request body carries the employee's requested days; the server clamps. |
-| OQ-4 | Who approves the request? Manager only, Admin only, or both? | **Same routing as leave (BL-015 / BL-017 / BL-022)** — reporting manager first; Admin on no-manager / Exited-manager / 5-day SLA breach. *Encashment-specific tweak:* even after manager approval, Admin must finalise (since it impacts payroll). Two-step: Manager-Approved → Admin-Finalised → balance deducted → queued for payroll. |
-| OQ-5 | What is "DA"? Is it a new column or maps to an existing allowance component? | **New nullable column `daPaise` on `SalaryStructure`.** Defaults to 0 for legacy rows. Frontend salary form gets a new optional field. Encashment formula uses `(basicPaise + daPaise)` — if `daPaise` is null/0, the formula degrades to just `basicPaise`, matching companies without DA. |
-| OQ-6 | "Working-days-in-month" — which month? The month the request is approved, or the month it's paid? | **Month of the payroll run that pays it.** Encashment lands on the next un-initiated payroll run for that employee; the rate uses that run's `workingDays` value (already computed in `workingDaysCalc.ts` per BL-031). |
-| OQ-7 | Can encashment be reversed? | **Yes** — but only via payroll-run reversal (BL-033). Reversing the payslip reverses the *payment*; the balance deduction stays (the days are gone for the year). A separate `leave.encashment.reverse` admin action is NOT exposed in v1 — flag for v1.1. |
-| OQ-8 | Does encashment block carry-forward? | **No.** Encashment reduces `daysRemaining` immediately on approval. The Jan 1 carry-forward job (BL-012) operates on the post-deduction balance — so encashed days are never carried forward. If an Admin approves on Dec 31 23:59, the Jan 1 carry-forward sees the reduced balance. |
-| OQ-9 | Should we encash other leave types (Casual, Sick)? | **Annual only** per the requirement. Sick is "use it or lose it" (BL-012, no carry-forward). Casual is too few days to be meaningful. Hard-coded; not configurable in v1. |
-| OQ-10 | What about employees who exited mid-year? | **Out of scope for v1.** Full final-settlement encashment is a separate ask. This change only covers active employees. Exited employees' Annual balance is zeroed out per BL-018 (exit flow) — they cannot submit encashment requests. |
-| OQ-11 | Should the encashment amount itself be taxable? | **Yes — taxable as part of gross.** Adds to `grossPaise` on the payslip, flows into the existing `referenceTaxPaise` computation. We will NOT introduce a separate "encashment exempt under §10(10AA)" exemption in v1 (that's an India-specific tax-engine v1.1 item). Flag for v1.1. |
+| UI-1 | What does the Admin Encashment Queue show? | **Both `Pending` and `Manager-Approved` items in one queue.** Implemented as tabs in `AdminEncashmentQueue.tsx`: *Manager-Approved (Action needed)* / *Pending (Awaiting Manager)* / *All*. Admin can finalise from the first tab; the second is read-only visibility. |
+| UI-2 | Where does the encashment window config live? | **Inside the existing Leave Config panel.** Added as a collapsible "Encashment" subsection in `LeaveConfigPanel.tsx` rather than a dedicated page. Four controls: start month, end month, end day, max percent. |
 
 ---
 
