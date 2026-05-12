@@ -9,6 +9,7 @@ import type { PayrollRunListQuery, PayslipListQuery } from '@nexora/contracts/pa
 import type { CycleListQuery, ReviewListQuery } from '@nexora/contracts/performance';
 import type { NotificationFilters } from './notifications';
 import type { AuditLogFilters } from './audit';
+import type { LeaveEncashmentListQuery } from '@nexora/contracts/leave-encashment';
 
 export const qk = {
   auth: {
@@ -99,5 +100,13 @@ export const qk = {
   config: {
     attendance: () => ['config', 'attendance'] as const,
     leave: () => ['config', 'leave'] as const,
+    encashment: () => ['config', 'encashment'] as const,
+  },
+
+  encashment: {
+    all: () => ['encashment'] as const,
+    list: (q?: Partial<LeaveEncashmentListQuery>) => ['encashment', 'list', q ?? {}] as const,
+    detail: (id: string) => ['encashment', id] as const,
+    queue: () => ['encashment', 'queue'] as const,
   },
 } as const;

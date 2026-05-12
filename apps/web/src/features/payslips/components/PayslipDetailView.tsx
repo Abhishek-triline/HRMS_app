@@ -491,6 +491,34 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
                     {fmtRupees(payslip.allowancesPaise)}
                   </td>
                 </tr>
+                {/* Leave encashment line — BL-LE-09 / BL-LE-11 */}
+                {payslip.encashmentDays > 0 && payslip.encashmentPaise > 0 && (
+                  <tr>
+                    <td className="py-2.5 text-slate">
+                      Leave Encashment ({payslip.encashmentDays} day{payslip.encashmentDays !== 1 ? 's' : ''}{' '}
+                      @ ₹{Math.floor(payslip.encashmentPaise / (payslip.encashmentDays * 100)).toLocaleString('en-IN')}/day)
+                    </td>
+                    <td className="py-2.5 text-right text-richgreen font-medium">
+                      {fmtRupees(payslip.encashmentPaise)}
+                    </td>
+                  </tr>
+                )}
+                {/* Encashment reversal line — BL-LE-11 (negative encashmentPaise) */}
+                {(payslip.encashmentPaise as number) < 0 && (
+                  <tr>
+                    <td className="py-2.5 text-slate">
+                      <div>
+                        Leave Encashment Reversal ({payslip.encashmentDays} day{payslip.encashmentDays !== 1 ? 's' : ''})
+                        <p className="text-xs text-slate/70 italic mt-0.5">
+                          Money reversed; leave days remain encashed for the year (BL-LE-11)
+                        </p>
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-right text-crimson font-medium">
+                      {fmtRupees(payslip.encashmentPaise)}
+                    </td>
+                  </tr>
+                )}
                 {/* Pro-ration row — only visible when days worked < working days (BL-036) */}
                 {payslip.daysWorked < payslip.workingDays && (
                   <tr>

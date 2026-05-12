@@ -16,6 +16,8 @@ import type {
   AttendanceConfigResponse,
   LeaveConfig,
   LeaveConfigResponse,
+  EncashmentConfig,
+  EncashmentConfigResponse,
 } from '@nexora/contracts/configuration';
 
 const ATT_BASE = '/api/v1/config/attendance';
@@ -56,5 +58,25 @@ export async function updateLeaveConfig(
   body: Partial<LeaveConfig>,
 ): Promise<LeaveConfig> {
   const res = await apiClient.put<LeaveConfigResponse>(LEAVE_BASE, body);
+  return res.data;
+}
+
+// ── Encashment Config ─────────────────────────────────────────────────────────
+
+const ENCASHMENT_BASE = '/api/v1/config/encashment';
+
+/** GET /api/v1/config/encashment */
+export async function getEncashmentConfig(): Promise<EncashmentConfig> {
+  const res = await apiClient.get<EncashmentConfigResponse>(ENCASHMENT_BASE);
+  return res.data;
+}
+
+/**
+ * PUT /api/v1/config/encashment — body may be partial.
+ */
+export async function updateEncashmentConfig(
+  body: Partial<EncashmentConfig>,
+): Promise<EncashmentConfig> {
+  const res = await apiClient.put<EncashmentConfigResponse>(ENCASHMENT_BASE, body);
   return res.data;
 }
