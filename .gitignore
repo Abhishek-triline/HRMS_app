@@ -50,3 +50,6 @@ apps/api/logs/
 .claude/agents.log
 .claude/agents.txt
 .claude/settings.local.json
+
+# Schema v2 refactor — legacy migrations kept locally for reference only
+apps/api/prisma/migrations.legacy_v1/
