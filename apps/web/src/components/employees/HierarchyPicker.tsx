@@ -37,6 +37,12 @@ interface HierarchyPickerProps {
   error?: string;
   required?: boolean;
   disabled?: boolean;
+  /**
+   * Comma-separated list of roles to include in the dropdown.
+   * Defaults to "Manager,Admin". For an Admin being created/edited, pass
+   * "Admin" so the picker shows only other Admins.
+   */
+  eligibleRoles?: string;
 }
 
 function getInitials(name: string) {
@@ -53,6 +59,7 @@ export function HierarchyPicker({
   error,
   required,
   disabled = false,
+  eligibleRoles = 'Manager,Admin',
 }: HierarchyPickerProps) {
   const uid = useId();
   const inputId = `${uid}-manager`;
@@ -75,8 +82,10 @@ export function HierarchyPicker({
 
   const { data, isLoading } = useEmployeesList({
     status: 'Active',
-    // Only Managers and Admins are valid reporting managers (BL-015 / BL-017 / BL-022)
-    role: 'Manager,Admin',
+    // Only Managers and Admins are valid reporting managers (BL-015 / BL-017 / BL-022).
+    // For an Admin employee being created/edited, the caller passes "Admin" only —
+    // an Admin can only report to another Admin.
+    role: eligibleRoles,
     q: debouncedQuery || undefined,
     limit: 10,
   });

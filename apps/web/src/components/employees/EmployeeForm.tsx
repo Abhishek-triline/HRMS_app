@@ -403,17 +403,24 @@ export function EmployeeForm(props: EmployeeFormProps) {
               <Controller
                 name="reportingManagerId"
                 control={control}
-                render={({ field }) => (
-                  <HierarchyPicker
-                    value={field.value}
-                    onChange={(managerId, managerName) => {
-                      field.onChange(managerId);
-                      setPreviewManagerName(managerName ?? null);
-                    }}
-                    label="Reporting Manager"
-                    error={errors.reportingManagerId?.message}
-                  />
-                )}
+                render={({ field }) => {
+                  // Admins may only report to another Admin.
+                  // Other roles may report to Manager or Admin.
+                  const selectedRole = isCreate ? createForm.watch('role') : '';
+                  const eligibleRoles = selectedRole === 'Admin' ? 'Admin' : 'Manager,Admin';
+                  return (
+                    <HierarchyPicker
+                      value={field.value}
+                      onChange={(managerId, managerName) => {
+                        field.onChange(managerId);
+                        setPreviewManagerName(managerName ?? null);
+                      }}
+                      label="Reporting Manager"
+                      error={errors.reportingManagerId?.message}
+                      eligibleRoles={eligibleRoles}
+                    />
+                  );
+                }}
               />
             </div>
 
