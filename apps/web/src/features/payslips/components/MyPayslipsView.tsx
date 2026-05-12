@@ -28,6 +28,7 @@ import { MyOverviewHero } from '@/features/overview/components/MyOverviewHero';
 import { PayslipCard } from './PayslipCard';
 import { Spinner } from '@/components/ui/Spinner';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
   const latestMonthName = latestPayslip
     ? `${MONTH_NAMES[(latestPayslip.month ?? 1) - 1]} ${latestPayslip.year}`
     : '—';
-  const latestFinalisedSubtitle = latestPayslip?.status === 'Finalised'
+  const latestFinalisedSubtitle = latestPayslip?.status === PAYROLL_STATUS.Finalised
     ? `Finalised ${latestPayslip.month ? new Date(latestPayslip.year, latestPayslip.month - 1, 30).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`
     : latestPayslip?.status ?? '—';
 

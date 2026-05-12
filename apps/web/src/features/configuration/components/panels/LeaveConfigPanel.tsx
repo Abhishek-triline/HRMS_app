@@ -17,6 +17,7 @@ import {
   useLeaveConfigSettings,
   useUpdateLeaveConfigSettings,
 } from '@/features/admin/hooks/useLeaveConfigSettings';
+import { LEAVE_TYPE_ID } from '@/lib/status/maps';
 import { useEncashmentConfigSettings, useUpdateEncashmentConfigSettings } from '@/features/admin/hooks/useEncashmentConfigSettings';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
@@ -158,8 +159,8 @@ export default function LeaveConfigPanel() {
   // Hydrate from server
   useEffect(() => {
     if (data) {
-      setAnnualCapDraft(String(data.carryForwardCaps.Annual));
-      setCasualCapDraft(String(data.carryForwardCaps.Casual));
+      setAnnualCapDraft(String(data.carryForwardCaps[LEAVE_TYPE_ID.Annual]));
+      setCasualCapDraft(String(data.carryForwardCaps[LEAVE_TYPE_ID.Casual]));
       setMaternityWeeksDraft(String(Math.round(data.maternityDays / 7)));
       setPaternityDaysDraft(String(data.paternityDays));
       setEscalationDraft(String(data.escalationPeriodDays));
@@ -167,8 +168,8 @@ export default function LeaveConfigPanel() {
   }, [data]);
 
   // ── Dirty flags ───────────────────────────────────────────────────────────
-  const annualDirty = data !== undefined && Number(annualCapDraft) !== data.carryForwardCaps.Annual;
-  const casualDirty = data !== undefined && Number(casualCapDraft) !== data.carryForwardCaps.Casual;
+  const annualDirty = data !== undefined && Number(annualCapDraft) !== data.carryForwardCaps[LEAVE_TYPE_ID.Annual];
+  const casualDirty = data !== undefined && Number(casualCapDraft) !== data.carryForwardCaps[LEAVE_TYPE_ID.Casual];
   const maternityDirty =
     data !== undefined && Number(maternityWeeksDraft) * 7 !== data.maternityDays;
   const paternityDirty =
@@ -195,7 +196,7 @@ export default function LeaveConfigPanel() {
     if (!data) return;
     void save(
       {
-        carryForwardCaps: { ...data.carryForwardCaps, Annual: n },
+        carryForwardCaps: { ...data.carryForwardCaps, [LEAVE_TYPE_ID.Annual]: n },
       },
       'Annual carry-forward cap',
     );
@@ -210,7 +211,7 @@ export default function LeaveConfigPanel() {
     if (!data) return;
     void save(
       {
-        carryForwardCaps: { ...data.carryForwardCaps, Casual: n },
+        carryForwardCaps: { ...data.carryForwardCaps, [LEAVE_TYPE_ID.Casual]: n },
       },
       'Casual carry-forward cap',
     );

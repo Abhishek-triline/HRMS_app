@@ -22,6 +22,25 @@
 
 import type { BadgeStatus } from '../../components/ui/StatusBadge';
 
+// ── Frozen INT status constants ────────────────────────────────────────────────
+// Use these for comparisons; never compare against magic numbers directly.
+
+export const EMPLOYEE_STATUS = { Active: 1, OnNotice: 2, OnLeave: 3, Inactive: 4, Exited: 5 } as const;
+export const LEAVE_STATUS = { Pending: 1, Approved: 2, Rejected: 3, Cancelled: 4, Escalated: 5 } as const;
+export const LEAVE_ENCASHMENT_STATUS = { Pending: 1, ManagerApproved: 2, AdminFinalised: 3, Paid: 4, Rejected: 5, Cancelled: 6 } as const;
+export const ATTENDANCE_STATUS = { Present: 1, Absent: 2, OnLeave: 3, WeeklyOff: 4, Holiday: 5 } as const;
+export const ATTENDANCE_SOURCE = { System: 1, Regularisation: 2 } as const;
+export const REG_STATUS = { Pending: 1, Approved: 2, Rejected: 3 } as const;
+export const PAYROLL_STATUS = { Draft: 1, Review: 2, Finalised: 3, Reversed: 4 } as const;
+export const CYCLE_STATUS = { Open: 1, SelfReview: 2, ManagerReview: 3, Closed: 4 } as const;
+export const GOAL_OUTCOME = { Pending: 1, Met: 2, Partial: 3, Missed: 4 } as const;
+export const ROLE_ID = { Employee: 1, Manager: 2, PayrollOfficer: 3, Admin: 4 } as const;
+export const ROUTED_TO = { Manager: 1, Admin: 2 } as const;
+export const CANCELLED_BY_ROLE = { Self: 1, Manager: 2, Admin: 3 } as const;
+export const PANEL_STATE = { Ready: 1, Working: 2, Confirm: 3 } as const;
+export const LEAVE_TYPE_ID = { Annual: 1, Sick: 2, Casual: 3, Unpaid: 4, Maternity: 5, Paternity: 6 } as const;
+export const NOTIFICATION_CATEGORY_ID = { Leave: 1, Attendance: 2, Payroll: 3, Performance: 4, Status: 5, Configuration: 6, Auth: 7, System: 8 } as const;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 export interface StatusEntry {

@@ -6,14 +6,19 @@
  * The chip set rendered varies by role (BL-044 scoping).
  * "All" and "Unread" are always shown first.
  * Clicking a chip is an instant query update (no debounce needed at chip level).
+ *
+ * v2: category is an INT code (NOTIFICATION_CATEGORY_ID from maps).
  */
 
 import { clsx } from 'clsx';
-import type { NotificationCategory } from '@nexora/contracts/notifications';
+import { NOTIFICATION_CATEGORY_ID } from '@/lib/status/maps';
+import type { NotificationCategoryIdValue } from '@nexora/contracts/notifications';
+
+// ── ChipFilter ────────────────────────────────────────────────────────────────
+
+export type ChipFilter = 'all' | 'unread' | NotificationCategoryIdValue;
 
 // ── Role-scoped chip configs ─────────────────────────────────────────────────
-
-export type ChipFilter = 'all' | 'unread' | NotificationCategory;
 
 type RoleChips = {
   Admin: ChipFilter[];
@@ -23,20 +28,56 @@ type RoleChips = {
 };
 
 export const ROLE_CHIPS: RoleChips = {
-  Admin:         ['all', 'unread', 'Leave', 'Attendance', 'Status', 'Configuration', 'Performance', 'Payroll', 'Auth', 'System'],
-  Manager:       ['all', 'unread', 'Leave', 'Attendance', 'Performance', 'System'],
-  Employee:      ['all', 'unread', 'Leave', 'Attendance', 'Payroll', 'Performance', 'Auth', 'System'],
-  PayrollOfficer:['all', 'unread', 'Payroll', 'System'],
+  Admin: [
+    'all', 'unread',
+    NOTIFICATION_CATEGORY_ID.Leave,
+    NOTIFICATION_CATEGORY_ID.Attendance,
+    NOTIFICATION_CATEGORY_ID.Status,
+    NOTIFICATION_CATEGORY_ID.Configuration,
+    NOTIFICATION_CATEGORY_ID.Performance,
+    NOTIFICATION_CATEGORY_ID.Payroll,
+    NOTIFICATION_CATEGORY_ID.Auth,
+    NOTIFICATION_CATEGORY_ID.System,
+  ],
+  Manager: [
+    'all', 'unread',
+    NOTIFICATION_CATEGORY_ID.Leave,
+    NOTIFICATION_CATEGORY_ID.Attendance,
+    NOTIFICATION_CATEGORY_ID.Performance,
+    NOTIFICATION_CATEGORY_ID.System,
+  ],
+  Employee: [
+    'all', 'unread',
+    NOTIFICATION_CATEGORY_ID.Leave,
+    NOTIFICATION_CATEGORY_ID.Attendance,
+    NOTIFICATION_CATEGORY_ID.Payroll,
+    NOTIFICATION_CATEGORY_ID.Performance,
+    NOTIFICATION_CATEGORY_ID.Auth,
+    NOTIFICATION_CATEGORY_ID.System,
+  ],
+  PayrollOfficer: [
+    'all', 'unread',
+    NOTIFICATION_CATEGORY_ID.Payroll,
+    NOTIFICATION_CATEGORY_ID.System,
+  ],
 };
 
-// Label overrides for chips that need friendlier display names
-const CHIP_LABELS: Partial<Record<ChipFilter, string>> = {
-  all:           'All',
-  unread:        'Unread',
+// Label map for all chips (strings + int category IDs)
+const CHIP_LABELS: Record<string | number, string> = {
+  all:                                            'All',
+  unread:                                         'Unread',
+  [NOTIFICATION_CATEGORY_ID.Leave]:               'Leave',
+  [NOTIFICATION_CATEGORY_ID.Attendance]:          'Attendance',
+  [NOTIFICATION_CATEGORY_ID.Payroll]:             'Payroll',
+  [NOTIFICATION_CATEGORY_ID.Performance]:         'Performance',
+  [NOTIFICATION_CATEGORY_ID.Status]:              'Status',
+  [NOTIFICATION_CATEGORY_ID.Configuration]:       'Configuration',
+  [NOTIFICATION_CATEGORY_ID.Auth]:                'Auth',
+  [NOTIFICATION_CATEGORY_ID.System]:              'System',
 };
 
 function chipLabel(filter: ChipFilter): string {
-  return CHIP_LABELS[filter] ?? filter;
+  return CHIP_LABELS[filter as string | number] ?? String(filter);
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

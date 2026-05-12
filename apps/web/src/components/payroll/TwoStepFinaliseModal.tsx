@@ -81,7 +81,7 @@ export function TwoStepFinaliseModal({
         if (details) {
           setConflictDetails(details);
         } else {
-          setConflictDetails({ winnerId: '', winnerName: 'Another user', winnerAt: new Date().toISOString() });
+          setConflictDetails({ winnerId: 0, winnerName: 'Another user', winnerAt: new Date().toISOString() });
         }
       } else {
         showToast({

@@ -15,31 +15,7 @@ import { useEmployeeDashboard } from '@/features/dashboard/hooks/useEmployeeDash
 import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
-
-type LeaveBalance = {
-  type: string;
-  remaining: number | null;
-  total: number | null;
-};
-
-type LeaveReqSummary = {
-  id: string;
-  type: string;
-  fromDate: string;
-  toDate: string;
-  days: number;
-  status: string;
-};
-
-type Payslip = {
-  id: string;
-  code: string;
-  month: number;
-  year: number;
-  status: string;
-  grossPaise: number;
-  netPayPaise: number;
-};
+import { LEAVE_STATUS, LEAVE_TYPE_MAP, PAYROLL_STATUS, PANEL_STATE } from '@/lib/status/maps';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -56,14 +32,14 @@ function monthName(n: number): string {
   return new Date(2000, n - 1, 1).toLocaleString('en-IN', { month: 'long' });
 }
 
-function leaveStatusBadge(status: string) {
-  if (status === 'Approved') {
+function leaveStatusBadge(status: number) {
+  if (status === LEAVE_STATUS.Approved) {
     return <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded">Approved</span>;
   }
-  if (status === 'Rejected') {
+  if (status === LEAVE_STATUS.Rejected) {
     return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">Rejected</span>;
   }
-  if (status === 'Cancelled') {
+  if (status === LEAVE_STATUS.Cancelled) {
     return <span className="bg-lockedbg text-lockedfg text-xs font-bold px-2 py-1 rounded">Cancelled</span>;
   }
   return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Pending</span>;
@@ -93,9 +69,9 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
     return `${get('weekday')} · ${get('day')} ${get('month')} ${get('year')}`;
   })();
 
-  const annualBalance = dash.annualBalance as LeaveBalance | null;
-  const sickBalance = dash.sickBalance as LeaveBalance | null;
-  const payslip = dash.latestPayslip as Payslip | null;
+  const annualBalance = dash.annualBalance;
+  const sickBalance = dash.sickBalance;
+  const payslip = dash.latestPayslip;
 
   const annualPct =
     annualBalance?.total && annualBalance.remaining != null
@@ -220,7 +196,7 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-charcoal">My Attendance Today</h3>
             <div className="flex items-center gap-3">
-              {dash.todayRecord?.panelState === 'Working' || dash.todayRecord?.panelState === 'Confirm' ? (
+              {dash.todayRecord?.panelStateId === PANEL_STATE.Working || dash.todayRecord?.panelStateId === PANEL_STATE.Confirm ? (
                 <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">
                   Present
                 </span>
@@ -243,17 +219,17 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
               <div className="flex items-center gap-3 text-sm">
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    dash.todayRecord.panelState === 'Working' ? 'bg-richgreen' : 'bg-sage'
+                    dash.todayRecord.panelStateId === PANEL_STATE.Working ? 'bg-richgreen' : 'bg-sage'
                   }`}
                   aria-hidden="true"
                 />
                 <span className="text-slate">Status:</span>
                 <span className={`font-semibold ${
-                  dash.todayRecord.panelState === 'Working' ? 'text-richgreen' :
-                  dash.todayRecord.panelState === 'Confirm' ? 'text-forest' : 'text-slate'
+                  dash.todayRecord.panelStateId === PANEL_STATE.Working ? 'text-richgreen' :
+                  dash.todayRecord.panelStateId === PANEL_STATE.Confirm ? 'text-forest' : 'text-slate'
                 }`}>
-                  {dash.todayRecord.panelState === 'Ready' ? 'Not checked in' :
-                   dash.todayRecord.panelState === 'Working' ? 'Present' : 'Checked out'}
+                  {dash.todayRecord.panelStateId === PANEL_STATE.Ready ? 'Not checked in' :
+                   dash.todayRecord.panelStateId === PANEL_STATE.Working ? 'Present' : 'Checked out'}
                 </span>
               </div>
               {dash.todayRecord.record?.checkInTime && (
@@ -289,7 +265,7 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
               Latest Payslip{payslip ? ` · ${monthName(payslip.month)} ${payslip.year}` : ''}
             </h3>
             <div className="flex items-center gap-3">
-              {payslip?.status === 'Finalised' && (
+              {payslip?.status === PAYROLL_STATUS.Finalised && (
                 <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -359,10 +335,12 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
             <p className="text-sm text-slate py-4">No leave requests yet.</p>
           ) : (
             <div className="space-y-3">
-              {(dash.recentLeaveRequests as LeaveReqSummary[]).map((req) => (
+              {dash.recentLeaveRequests.map((req) => (
                 <div key={req.id} className="flex items-center justify-between py-2.5 border-b border-sage/20 last:border-0">
                   <div>
-                    <div className="text-sm font-medium text-charcoal">{req.type} Leave</div>
+                    <div className="text-sm font-medium text-charcoal">
+                      {LEAVE_TYPE_MAP[req.leaveTypeId]?.label ?? req.leaveTypeName} Leave
+                    </div>
                     <div className="text-xs text-slate mt-0.5">
                       {formatDate(req.fromDate)}{req.fromDate !== req.toDate && ` – ${formatDate(req.toDate)}`}
                       {' '}· {req.days} day{req.days !== 1 ? 's' : ''}

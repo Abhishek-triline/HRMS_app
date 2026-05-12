@@ -369,7 +369,7 @@ export function RegularisationForm() {
                       <td className="px-4 py-4 text-slate">{r.date}</td>
                       <td className="px-4 py-4 text-slate">{r.ageDaysAtSubmit} days</td>
                       <td className="px-4 py-4">
-                        <RegularisationStatusBadge status={r.status} routedTo={r.routedTo} />
+                        <RegularisationStatusBadge status={r.status} routedToId={r.routedToId} />
                       </td>
                       <td className="px-4 py-4 text-slate">{r.approverName ?? '—'}</td>
                     </tr>

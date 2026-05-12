@@ -23,17 +23,19 @@ import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 import type { SelfRatingRequest } from '@nexora/contracts/performance';
 
 export default function EmployeeSelfRatingPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
 
-  const { data, isLoading, isError } = useReview(reviewId);
+  const reviewIdNum = Number(reviewId);
+  const { data, isLoading, isError } = useReview(reviewIdNum);
   // Fetch cycle to get deadline dates (not on the review directly).
-  const cycleId = data?.cycleId ?? '';
+  const cycleId = data?.cycleId ?? 0;
   const { data: cycleData } = useCycle(cycleId);
-  const { mutateAsync: submitSelfRating, isPending: isSubmitting } = useSubmitSelfRating(reviewId);
-  const { mutateAsync: proposeGoal } = useProposeGoal(reviewId);
+  const { mutateAsync: submitSelfRating, isPending: isSubmitting } = useSubmitSelfRating(reviewIdNum);
+  const { mutateAsync: proposeGoal } = useProposeGoal(reviewIdNum);
 
   async function handleSelfRating(ratingData: SelfRatingRequest) {
     try {
@@ -88,7 +90,7 @@ export default function EmployeeSelfRatingPage() {
   const review = data;
   const selfReviewDeadline = cycleData?.cycle.selfReviewDeadline ?? '';
   // Employee can propose goals during the Self-Review window only (BL-038).
-  const inSelfReviewWindow = review.cycleStatus === 'Self-Review';
+  const inSelfReviewWindow = review.cycleStatus === CYCLE_STATUS.SelfReview;
   const selfReviewDeadlinePassed = selfReviewDeadline ? new Date(selfReviewDeadline) < new Date() : false;
   const canProposeGoal = inSelfReviewWindow && !selfReviewDeadlinePassed && !review.isMidCycleJoiner && !review.lockedAt;
 

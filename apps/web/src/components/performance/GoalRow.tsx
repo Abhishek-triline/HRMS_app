@@ -5,37 +5,45 @@
  *
  * Manager mode: shows outcome dropdown (editable if not locked).
  * Employee mode: display-only with "Proposed by employee" tag.
- * BL-038: outcomes are Met / Partial / Missed / Pending.
+ * BL-038: outcomes are Met / Partial / Missed / Pending (INT codes).
  */
 
 import { clsx } from 'clsx';
-import type { Goal, GoalOutcome } from '@nexora/contracts/performance';
+import { GOAL_OUTCOME } from '@/lib/status/maps';
+import type { Goal } from '@nexora/contracts/performance';
 
-const OUTCOME_OPTIONS: GoalOutcome[] = ['Pending', 'Met', 'Partial', 'Missed'];
+type OutcomeCode = 1 | 2 | 3 | 4;
+
+const OUTCOME_OPTIONS: OutcomeCode[] = [
+  GOAL_OUTCOME.Pending,
+  GOAL_OUTCOME.Met,
+  GOAL_OUTCOME.Partial,
+  GOAL_OUTCOME.Missed,
+] as OutcomeCode[];
 
 const outcomeConfig: Record<
-  GoalOutcome,
+  OutcomeCode,
   { label: string; badgeClassName: string; cardClassName: string; selectClassName: string }
 > = {
-  Pending: {
+  [GOAL_OUTCOME.Pending]: {
     label: 'Pending',
     badgeClassName: 'bg-umberbg text-umber',
     cardClassName: 'bg-offwhite border-sage/30',
     selectClassName: 'border-sage focus:border-forest',
   },
-  Met: {
+  [GOAL_OUTCOME.Met]: {
     label: 'Met',
     badgeClassName: 'bg-greenbg text-richgreen',
     cardClassName: 'bg-greenbg border-richgreen/20',
     selectClassName: 'border-richgreen bg-white font-semibold text-richgreen',
   },
-  Partial: {
+  [GOAL_OUTCOME.Partial]: {
     label: 'Partially Met',
     badgeClassName: 'bg-softmint text-forest',
     cardClassName: 'bg-offwhite border-sage/30',
     selectClassName: 'border-sage focus:border-forest',
   },
-  Missed: {
+  [GOAL_OUTCOME.Missed]: {
     label: 'Missed',
     badgeClassName: 'bg-crimsonbg text-crimson',
     cardClassName: 'bg-umberbg border-umber/20',
@@ -45,14 +53,15 @@ const outcomeConfig: Record<
 
 interface GoalRowProps {
   goal: Goal;
-  /** If provided and non-null, renders an outcome dropdown */
-  onOutcomeChange?: (goalId: string, outcome: GoalOutcome) => void;
+  /** If provided and non-null, renders an outcome dropdown (INT code). */
+  onOutcomeChange?: (goalId: number, outcomeId: OutcomeCode) => void;
   disabled?: boolean;
   className?: string;
 }
 
 export function GoalRow({ goal, onOutcomeChange, disabled = false, className }: GoalRowProps) {
-  const config = outcomeConfig[goal.outcome];
+  const outcomeId = (goal.outcomeId ?? GOAL_OUTCOME.Pending) as OutcomeCode;
+  const config = outcomeConfig[outcomeId] ?? outcomeConfig[GOAL_OUTCOME.Pending]!;
   const isManagerMode = !!onOutcomeChange;
 
   return (
@@ -70,17 +79,17 @@ export function GoalRow({ goal, onOutcomeChange, disabled = false, className }: 
         </span>
         {isManagerMode && !disabled ? (
           <select
-            value={goal.outcome}
-            onChange={(e) => onOutcomeChange(goal.id, e.target.value as GoalOutcome)}
+            value={outcomeId}
+            onChange={(e) => onOutcomeChange(goal.id, Number(e.target.value) as OutcomeCode)}
             aria-label={`Outcome for goal: ${goal.text}`}
             className={clsx(
               'text-xs border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-forest/20',
               config.selectClassName,
             )}
           >
-            {OUTCOME_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {outcomeConfig[o].label}
+            {OUTCOME_OPTIONS.map((code) => (
+              <option key={code} value={code}>
+                {outcomeConfig[code]!.label}
               </option>
             ))}
           </select>

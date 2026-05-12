@@ -21,7 +21,7 @@ export default function TeamAttendancePage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [employeeId, setEmployeeId] = useState('');
+  const [employeeIdStr, setEmployeeIdStr] = useState('');
   const [view, setView] = useState<'calendar' | 'table'>('table');
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -31,7 +31,7 @@ export default function TeamAttendancePage() {
   const { data, isLoading, isError, error } = useAttendanceList('team', {
     from,
     to,
-    ...(employeeId ? { employeeId } : {}),
+    ...(employeeIdStr ? { employeeId: Number(employeeIdStr) } : {}),
   });
 
   const rows: CalendarDay[] = (data?.data ?? []).map((r) => ({
@@ -85,8 +85,8 @@ export default function TeamAttendancePage() {
           <input
             id="att-emp"
             type="text"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
+            value={employeeIdStr}
+            onChange={(e) => setEmployeeIdStr(e.target.value)}
             placeholder="Employee ID…"
             className="border border-sage rounded-lg px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
           />
@@ -128,7 +128,7 @@ export default function TeamAttendancePage() {
             ) : view === 'table' ? (
               <AttendanceTable
                 rows={rows}
-                showEmployee={!employeeId}
+                showEmployee={!employeeIdStr}
                 caption={`Team attendance for ${MONTH_NAMES[month - 1]} ${year}`}
               />
             ) : (

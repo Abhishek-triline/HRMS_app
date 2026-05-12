@@ -6,6 +6,8 @@
  *
  * Props drive the role-specific back/forward paths; the underlying components
  * and API hooks are identical for all roles (BL-004 — every role is an employee).
+ *
+ * v2: employeeId is a number; status filter uses INT constants.
  */
 
 import { useState } from 'react';
@@ -21,16 +23,17 @@ import { CancelLeaveModal } from './CancelLeaveModal';
 import { useLeaveBalances, useLeaveList, useCancelLeave, useLeave } from '@/lib/hooks/useLeave';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
-import type { LeaveRequestSummary, LeaveStatus } from '@nexora/contracts/leave';
+import { LEAVE_STATUS } from '@/lib/status/maps';
+import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 import type { LeaveRequest } from '@nexora/contracts/leave';
 
 type TabKey = 'all' | 'pending' | 'approved' | 'rejected';
 
-const tabs: { key: TabKey; label: string; status?: LeaveStatus }[] = [
+const tabs: { key: TabKey; label: string; status?: number }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending', status: 'Pending' },
-  { key: 'approved', label: 'Approved', status: 'Approved' },
-  { key: 'rejected', label: 'Rejected', status: 'Rejected' },
+  { key: 'pending', label: 'Pending', status: LEAVE_STATUS.Pending },
+  { key: 'approved', label: 'Approved', status: LEAVE_STATUS.Approved },
+  { key: 'rejected', label: 'Rejected', status: LEAVE_STATUS.Rejected },
 ];
 
 function CancelWrapper({
@@ -38,7 +41,7 @@ function CancelWrapper({
   isOpen,
   onClose,
 }: {
-  summaryId: string;
+  summaryId: number;
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -87,8 +90,8 @@ function CancelWrapper({
 }
 
 interface MyLeaveShellProps {
-  /** Current authenticated user's employee ID */
-  employeeId: string;
+  /** Current authenticated user's employee ID (INT) */
+  employeeId: number;
   /** Role-aware base path, e.g. "/manager/leave" */
   basePath: string;
   /** Page title shown in header section */
@@ -102,14 +105,14 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
   const listQuery = useLeaveList(activeStatus ? { status: activeStatus } : {});
 
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   function isCancellable(req: LeaveRequestSummary): boolean {
-    if (req.status === 'Pending') return true;
-    if (req.status === 'Approved') {
+    if (req.status === LEAVE_STATUS.Pending) return true;
+    if (req.status === LEAVE_STATUS.Approved) {
       const start = new Date(req.fromDate + 'T00:00:00');
       return start > today;
     }
@@ -117,7 +120,6 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   }
 
   // ── FY subtitle ──────────────────────────────────────────────────────────
-  // Format: "FY 2026-27 — as of May 11, 2026"
   const todayDate = new Date();
   const fiscalYear = todayDate.getMonth() >= 3 ? todayDate.getFullYear() : todayDate.getFullYear() - 1;
   const fiscalYearLabel = `FY ${fiscalYear}-${String(fiscalYear + 1).slice(-2)}`;
@@ -260,10 +262,10 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
         </p>
       </div>
 
-      {cancelTarget && (
+      {cancelTarget !== null && (
         <CancelWrapper
           summaryId={cancelTarget}
-          isOpen={Boolean(cancelTarget)}
+          isOpen={cancelTarget !== null}
           onClose={() => setCancelTarget(null)}
         />
       )}

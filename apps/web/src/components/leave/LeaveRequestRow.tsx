@@ -11,6 +11,7 @@
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { LeaveStatusBadge } from './LeaveStatusBadge';
+import { LEAVE_STATUS } from '@/lib/status/maps';
 import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 
 function formatDate(iso: string): string {
@@ -63,8 +64,10 @@ export function LeaveRequestRow({
   const beforeStart = today < fromDate;
 
   const isCancellable =
-    request.status === 'Pending' || (request.status === 'Approved' && beforeStart);
-  const isPending = request.status === 'Pending' || request.status === 'Escalated';
+    request.status === LEAVE_STATUS.Pending ||
+    (request.status === LEAVE_STATUS.Approved && beforeStart);
+  const isPending =
+    request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated;
 
   const truncatedReason =
     request.reason.length > 60 ? request.reason.slice(0, 60) + '…' : request.reason;
@@ -77,7 +80,7 @@ export function LeaveRequestRow({
           <div className="text-xs text-slate">{request.employeeCode}</div>
         </td>
       )}
-      <td className="px-6 py-4 font-medium text-charcoal text-sm">{request.type}</td>
+      <td className="px-6 py-4 font-medium text-charcoal text-sm">{request.leaveTypeName}</td>
       <td className="px-4 py-4 text-slate text-sm">
         {formatDuration(request.fromDate, request.toDate)}
       </td>
@@ -165,22 +168,24 @@ export function LeaveRequestCard({
   onApprove,
   onReject,
 }: Omit<LeaveRequestRowProps, 'showEmployee'>) {
-  const isCancellable = request.status === 'Pending' || request.status === 'Approved';
-  const isPending = request.status === 'Pending' || request.status === 'Escalated';
+  const isCancellable =
+    request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Approved;
+  const isPending =
+    request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated;
 
   return (
     <div className="bg-white rounded-xl border border-sage/30 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-semibold text-charcoal text-sm">{request.type} Leave</div>
+          <div className="font-semibold text-charcoal text-sm">{request.leaveTypeName} Leave</div>
           <div className="text-xs text-slate mt-0.5">{request.code}</div>
         </div>
         <LeaveStatusBadge status={request.status} />
       </div>
       <div className="text-xs text-slate">
         {request.fromDate === request.toDate
-          ? formatDate(request.fromDate)
-          : `${formatDate(request.fromDate)} – ${formatDate(request.toDate)}`}{' '}
+          ? new Date(request.fromDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : `${new Date(request.fromDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} – ${new Date(request.toDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`}{' '}
         · {request.days} day{request.days !== 1 ? 's' : ''}
       </div>
       <div className="flex items-center gap-2 flex-wrap">

@@ -27,7 +27,7 @@ import Link from 'next/link';
 import { useEmployeesCount, useEmployeesList } from '@/lib/hooks/useEmployees';
 import { EmployeeDirectoryTable } from '@/features/employees/components/EmployeeDirectoryTable';
 import { Button } from '@/components/ui/Button';
-import type { EmployeeStatus, Role, EmploymentType } from '@nexora/contracts/common';
+import { EMPLOYEE_STATUS } from '@/lib/status/maps';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -36,9 +36,9 @@ const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations'];
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
-type FilterStatus = EmployeeStatus | '';
-type FilterRole = Role | '';
-type FilterEmpType = EmploymentType | '';
+type FilterStatus = number | '';
+type FilterRole = number | '';
+type FilterEmpType = number | '';
 
 /** Maps page number (1-based) → cursor string (or undefined for page 1). */
 type CursorMap = Record<number, string | undefined>;
@@ -87,17 +87,17 @@ export default function EmployeesPage() {
 
   // ── filter change handlers (reset page) ──────────────────────────────────────
   function handleStatusChange(v: string) {
-    setStatus(v as FilterStatus);
+    setStatus(v ? Number(v) : '');
     setCurrentPage(1);
     setCursorMap({ 1: undefined });
   }
   function handleRoleChange(v: string) {
-    setRole(v as FilterRole);
+    setRole(v ? Number(v) : '');
     setCurrentPage(1);
     setCursorMap({ 1: undefined });
   }
   function handleEmpTypeChange(v: string) {
-    setEmpType(v as FilterEmpType);
+    setEmpType(v ? Number(v) : '');
     setCurrentPage(1);
     setCursorMap({ 1: undefined });
   }
@@ -110,10 +110,10 @@ export default function EmployeesPage() {
   // ── main query ───────────────────────────────────────────────────────────────
   const mainQuery = useEmployeesList({
     q: search || undefined,
-    status: (status || undefined) as EmployeeStatus | undefined,
-    role: (role || undefined) as Role | undefined,
-    employmentType: (empType || undefined) as EmploymentType | undefined,
-    department: department || undefined,
+    status: (status || undefined) as number | undefined,
+    roleId: (role || undefined) as number | undefined,
+    employmentTypeId: (empType || undefined) as number | undefined,
+    departmentId: department ? Number(department) : undefined,
     limit: PAGE_SIZE,
     cursor: cursorMap[currentPage],
   });
@@ -130,9 +130,9 @@ export default function EmployeesPage() {
   // useEmployeesCount walks all cursor pages so the count is exact regardless
   // of org size (up to 1,000 per bucket). v1.1: backend pagination.total would
   // replace this with a single fetch.
-  const activeCountQuery = useEmployeesCount({ status: 'Active' });
-  const onNoticeCountQuery = useEmployeesCount({ status: 'On-Notice' });
-  const exitedCountQuery = useEmployeesCount({ status: 'Exited' });
+  const activeCountQuery = useEmployeesCount({ status: EMPLOYEE_STATUS.Active });
+  const onNoticeCountQuery = useEmployeesCount({ status: EMPLOYEE_STATUS.OnNotice });
+  const exitedCountQuery = useEmployeesCount({ status: EMPLOYEE_STATUS.Exited });
 
   function subCount(q: { count: number | null }): string {
     if (q.count === null) return '—';
@@ -154,10 +154,10 @@ export default function EmployeesPage() {
       exitedCountQuery.count!
     : null;
 
-  const bucketCountForStatus = (s: string): number | null => {
-    if (s === 'Active') return activeCountQuery.count;
-    if (s === 'On-Notice') return onNoticeCountQuery.count;
-    if (s === 'Exited') return exitedCountQuery.count;
+  const bucketCountForStatus = (s: number): number | null => {
+    if (s === EMPLOYEE_STATUS.Active) return activeCountQuery.count;
+    if (s === EMPLOYEE_STATUS.OnNotice) return onNoticeCountQuery.count;
+    if (s === EMPLOYEE_STATUS.Exited) return exitedCountQuery.count;
     return null;
   };
 
@@ -166,7 +166,7 @@ export default function EmployeesPage() {
   const onlyStatusFilter =
     !!status && !searchRaw && !role && !empType && !department;
   const trueTotal: number | null = onlyStatusFilter
-    ? bucketCountForStatus(status)
+    ? bucketCountForStatus(status as number)
     : !status && !searchRaw && !role && !empType && !department
       ? orgTotal
       : null;
@@ -251,10 +251,10 @@ export default function EmployeesPage() {
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
             <option value="">All Status</option>
-            <option value="Active">Active</option>
-            <option value="On-Notice">On Notice</option>
-            <option value="Exited">Exited</option>
-            <option value="On-Leave">On Leave</option>
+            <option value={EMPLOYEE_STATUS.Active}>Active</option>
+            <option value={EMPLOYEE_STATUS.OnNotice}>On Notice</option>
+            <option value={EMPLOYEE_STATUS.Exited}>Exited</option>
+            <option value={EMPLOYEE_STATUS.OnLeave}>On Leave</option>
           </select>
 
           {/* Role */}
@@ -265,10 +265,10 @@ export default function EmployeesPage() {
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
             <option value="">All Roles</option>
-            <option value="Admin">Admin</option>
-            <option value="Manager">Manager</option>
-            <option value="Employee">Employee</option>
-            <option value="PayrollOfficer">Payroll Officer</option>
+            <option value="4">Admin</option>
+            <option value="2">Manager</option>
+            <option value="1">Employee</option>
+            <option value="3">Payroll Officer</option>
           </select>
 
           {/* Employment Type */}
@@ -279,10 +279,10 @@ export default function EmployeesPage() {
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white"
           >
             <option value="">Employment Type</option>
-            <option value="Permanent">Permanent</option>
-            <option value="Contract">Contract</option>
-            <option value="Intern">Intern</option>
-            <option value="Probation">Probation</option>
+            <option value="1">Permanent</option>
+            <option value="2">Contract</option>
+            <option value="3">Intern</option>
+            <option value="4">Probation</option>
           </select>
 
           {/* Department */}

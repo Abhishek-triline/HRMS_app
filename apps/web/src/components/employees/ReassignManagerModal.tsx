@@ -27,7 +27,7 @@ interface ReassignManagerModalProps {
 }
 
 export function ReassignManagerModal({ isOpen, onClose, employee }: ReassignManagerModalProps) {
-  const [newManagerId, setNewManagerId] = useState<string | null>(
+  const [newManagerId, setNewManagerId] = useState<number | null>(
     employee.reportingManagerId ?? null,
   );
   const [effectiveDate, setEffectiveDate] = useState(TODAY);
@@ -38,7 +38,7 @@ export function ReassignManagerModal({ isOpen, onClose, employee }: ReassignMana
   const reassign = useReassignManager(employee.id);
 
   function handleClose() {
-    setNewManagerId(employee.reportingManagerId ?? null);
+    setNewManagerId((employee.reportingManagerId as number | null | undefined) ?? null);
     setEffectiveDate(TODAY);
     setNote('');
     setCircularError('');

@@ -14,20 +14,22 @@ import { useMe } from '@/lib/hooks/useAuth';
 import { usePayrollDashboard } from '@/features/dashboard/hooks/usePayrollDashboard';
 import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
+// v2: IDs are number, status is INT
 type PayrollRun = {
-  id: string;
+  id: number;
   code: string;
   month: number;
   year: number;
-  status: string;
+  status: number;
   employeeCount: number;
   totalGrossPaise: number;
   totalNetPaise: number;
 };
 
 type ReversalRun = {
-  reversalRunId: string;
+  reversalRunId: number;
   reversalRunCode: string;
   originalRunCode: string;
   reversedAt: string;
@@ -46,22 +48,22 @@ function formatMoney(paise?: number | null): string {
   return `₹${rupees.toLocaleString('en-IN')}`;
 }
 
-function statusPill(status?: string) {
-  if (status === 'Finalised') {
+function statusPill(status?: number) {
+  if (status === PAYROLL_STATUS.Finalised) {
     return (
       <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded">
         Finalised
       </span>
     );
   }
-  if (status === 'Review') {
+  if (status === PAYROLL_STATUS.Review) {
     return (
       <span className="bg-softmint text-forest text-xs font-bold px-2 py-1 rounded">
         Review
       </span>
     );
   }
-  if (status === 'Reversed') {
+  if (status === PAYROLL_STATUS.Reversed) {
     return (
       <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">
         Reversed
@@ -108,7 +110,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
 
   const now = new Date();
   const currentMonthLabel = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-  const currentRun = dash.currentRun as PayrollRun | null;
+  const currentRun = dash.currentRun as unknown as PayrollRun | null;
 
   return (
     <div>
@@ -198,8 +200,8 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
               <div className="flex items-center gap-2 mt-2">
                 {statusPill(currentRun.status)}
                 <span className="text-xs text-slate">
-                  {currentRun.status === 'Draft' ? 'Awaiting finalise' :
-                   currentRun.status === 'Review' ? 'Under review' : ''}
+                  {currentRun.status === PAYROLL_STATUS.Draft ? 'Awaiting finalise' :
+                   currentRun.status === PAYROLL_STATUS.Review ? 'Under review' : ''}
                 </span>
               </div>
             </>
@@ -292,7 +294,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/10">
-                {(dash.recentRuns as PayrollRun[]).map((run) => (
+                {(dash.recentRuns as unknown as PayrollRun[]).map((run) => (
                   <tr key={run.id} className="hover:bg-offwhite/50 transition-colors">
                     <td className="px-5 py-3 text-sm font-semibold text-charcoal">
                       {monthName(run.month, run.year)}
@@ -305,7 +307,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
                         href={`/payroll/payroll-runs/${run.id}`}
                         className="text-xs text-emerald font-semibold hover:underline"
                       >
-                        {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
+                        {run.status === PAYROLL_STATUS.Draft || run.status === PAYROLL_STATUS.Review ? 'Continue →' : 'View →'}
                       </Link>
                     </td>
                   </tr>
@@ -345,7 +347,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
             </div>
           ) : (
             <div className="space-y-4">
-              {(dash.recentReversals as ReversalRun[]).map((rev) => (
+              {(dash.recentReversals as unknown as ReversalRun[]).map((rev) => (
                 <div key={rev.reversalRunId} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-crimsonbg flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
                     <svg className="w-3 h-3 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">

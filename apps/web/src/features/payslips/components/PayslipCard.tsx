@@ -15,6 +15,7 @@
 
 import Link from 'next/link';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
+import { PAYROLL_STATUS, PAYROLL_STATUS_MAP } from '@/lib/status/maps';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -36,7 +37,7 @@ function StatusBadge({
   status: PayslipSummary['status'];
   isLatest: boolean;
 }) {
-  if (status === 'Finalised') {
+  if (status === PAYROLL_STATUS.Finalised) {
     return (
       <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded inline-flex items-center gap-1">
         Finalised
@@ -48,7 +49,7 @@ function StatusBadge({
       </span>
     );
   }
-  if (status === 'Reversed') {
+  if (status === PAYROLL_STATUS.Reversed) {
     return (
       <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">
         Reversed
@@ -58,7 +59,7 @@ function StatusBadge({
   // Draft | Review
   return (
     <span className="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">
-      {status}
+      {PAYROLL_STATUS_MAP[status]?.label ?? String(status)}
     </span>
   );
 }

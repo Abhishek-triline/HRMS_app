@@ -18,6 +18,7 @@ import { useEncashmentQueue, useManagerApproveEncashment, useRejectEncashment } 
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
+import { LEAVE_ENCASHMENT_STATUS } from '@/lib/status/maps';
 import type { LeaveEncashmentSummary } from '@nexora/contracts/leave-encashment';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ export function ManagerEncashmentQueue() {
   const [rejectTarget, setRejectTarget] = useState<LeaveEncashmentSummary | null>(null);
 
   // Manager sees only Pending items
-  const items = (queueQuery.data?.data ?? []).filter((e) => e.status === 'Pending');
+  const items = (queueQuery.data?.data ?? []).filter((e) => e.status === LEAVE_ENCASHMENT_STATUS.Pending);
 
   return (
     <>

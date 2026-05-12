@@ -11,20 +11,23 @@
  *   - Two particle dots scattered on the card
  *   - Avatar square with rounded-2xl + employee initials
  *   - Right block: name, meta line, status pill
+ *
+ * v2: status is an INT code (1–5), role is optional string label resolved by caller.
  */
 
-import type { EmployeeStatus } from '@nexora/contracts/common';
+import { EMPLOYEE_STATUS, EMPLOYEE_STATUS_MAP } from '@/lib/status/maps';
 
 export interface ProfileHeroProps {
   name: string;
   empCode: string;
   designation?: string | null;
   department?: string | null;
-  status: EmployeeStatus;
+  /** INT status code: 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited */
+  status: number;
   /** Computed from name if not provided */
   initials?: string;
-  /** Optional role label shown after the meta line */
-  role?: string;
+  /** Optional role label shown after the meta line (e.g. "Manager") */
+  role?: string | null;
   /** Optional join date ISO string */
   joinDate?: string | null;
 }
@@ -52,28 +55,14 @@ function formatJoinDate(iso: string | null | undefined): string | null {
  * Returns Tailwind classes for the status pill on the dark hero background.
  * We use bg-white/20 variants so the pills stay readable on the forest gradient.
  */
-function statusPillClasses(status: EmployeeStatus): string {
+function statusPillClasses(status: number): string {
   switch (status) {
-    case 'Active':
-      return 'bg-greenbg text-richgreen';
-    case 'On-Notice':
-      return 'bg-umberbg text-umber';
-    case 'Exited':
-      return 'bg-lockedbg text-lockedfg';
-    case 'On-Leave':
-      return 'bg-mint text-forest';
-    case 'Inactive':
-      return 'bg-lockedbg text-lockedfg';
-    default:
-      return 'bg-greenbg text-richgreen';
-  }
-}
-
-function statusLabel(status: EmployeeStatus): string {
-  switch (status) {
-    case 'On-Notice': return 'On Notice';
-    case 'On-Leave':  return 'On Leave';
-    default:          return status;
+    case EMPLOYEE_STATUS.Active:   return 'bg-greenbg text-richgreen';
+    case EMPLOYEE_STATUS.OnNotice: return 'bg-umberbg text-umber';
+    case EMPLOYEE_STATUS.Exited:   return 'bg-lockedbg text-lockedfg';
+    case EMPLOYEE_STATUS.OnLeave:  return 'bg-mint text-forest';
+    case EMPLOYEE_STATUS.Inactive: return 'bg-lockedbg text-lockedfg';
+    default:                       return 'bg-greenbg text-richgreen';
   }
 }
 
@@ -89,6 +78,7 @@ export function ProfileHero({
 }: ProfileHeroProps) {
   const avatarInitials = initials ?? computeInitials(name);
   const joinedLabel = formatJoinDate(joinDate);
+  const statusLabel = EMPLOYEE_STATUS_MAP[status]?.label ?? 'Unknown';
 
   // Meta line: designation · empCode · department  (omit empty segments)
   const metaParts = [designation, empCode, department].filter(Boolean);
@@ -205,7 +195,7 @@ export function ProfileHero({
         <span
           className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 self-start ${statusPillClasses(status)}`}
         >
-          {statusLabel(status)}
+          {statusLabel}
         </span>
       </div>
     </div>

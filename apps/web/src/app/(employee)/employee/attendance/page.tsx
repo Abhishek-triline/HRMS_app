@@ -19,6 +19,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import type { CalendarDay } from '@/components/attendance/AttendanceCalendar';
+import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
+import type { AttendanceStatusValue } from '@nexora/contracts/attendance';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -104,16 +106,16 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
 
 // ── Status badge for table ─────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Present: 'bg-greenbg text-richgreen',
-    Absent: 'bg-crimsonbg text-crimson',
-    'On-Leave': 'bg-amber-50 text-amber-700 border border-amber-200',
-    'Weekly-Off': 'bg-gray-100 text-slate',
-    Holiday: 'bg-softmint text-forest',
+function StatusBadge({ status }: { status: AttendanceStatusValue }) {
+  const map: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]: 'bg-greenbg text-richgreen',
+    [ATTENDANCE_STATUS.Absent]: 'bg-crimsonbg text-crimson',
+    [ATTENDANCE_STATUS.OnLeave]: 'bg-amber-50 text-amber-700 border border-amber-200',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'bg-gray-100 text-slate',
+    [ATTENDANCE_STATUS.Holiday]: 'bg-softmint text-forest',
   };
   const cls = map[status] ?? 'bg-gray-100 text-slate';
-  const label = status === 'On-Leave' ? 'On Leave' : status === 'Weekly-Off' ? 'Weekly Off' : status;
+  const label = ATTENDANCE_STATUS_MAP[status]?.label ?? String(status);
   return (
     <span className={`text-xs font-bold px-2 py-1 rounded ${cls}`}>{label}</span>
   );
@@ -148,10 +150,10 @@ export default function MyAttendancePage() {
 
   // ── Computed stats ──────────────────────────────────────────────────────────
 
-  const workingRows = rows.filter((r) => r.status !== 'Weekly-Off' && r.status !== 'Holiday');
-  const presentRows = rows.filter((r) => r.status === 'Present');
+  const workingRows = rows.filter((r) => r.status !== ATTENDANCE_STATUS.WeeklyOff && r.status !== ATTENDANCE_STATUS.Holiday);
+  const presentRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.Present);
   const lateRows = rows.filter((r) => r.late);
-  const leaveRows = rows.filter((r) => r.status === 'On-Leave');
+  const leaveRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.OnLeave);
 
   const presentCount = presentRows.length;
   const workingDayCount = workingRows.length;
@@ -174,7 +176,7 @@ export default function MyAttendancePage() {
 
   // ── Bar chart data — last 14 working days with hours ──────────────────────
   const chartBars = rows
-    .filter((r) => r.status === 'Present' && r.hoursWorkedMinutes !== null)
+    .filter((r) => r.status === ATTENDANCE_STATUS.Present && r.hoursWorkedMinutes !== null)
     .slice(-14)
     .map((r) => {
       const d = new Date(r.date);
@@ -494,7 +496,7 @@ export default function MyAttendancePage() {
                         ? minutesToHM(r.hoursWorkedMinutes)
                         : '—'}
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} /></td>
                     <td className="px-4 py-3">
                       {r.late ? (
                         <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded" aria-label="Late">Late</span>

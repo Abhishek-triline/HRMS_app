@@ -7,12 +7,15 @@
  * Click-through opens detail page.
  * Mobile: stacks to card layout (≤768 px).
  * Accessibility: <th scope="col">, keyboard nav on rows.
+ *
+ * v2: status and employmentTypeId are INT codes.
  */
 
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { EmployeeStatusBadge } from './EmployeeStatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
+import { EMPLOYEE_STATUS, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 import type { EmployeeListItem } from '@nexora/contracts/employees';
 
 function getInitials(name: string) {
@@ -133,9 +136,10 @@ export function EmployeeTable({
           </thead>
           <tbody className="divide-y divide-sage/10">
             {employees.map((emp) => {
-              const initials = getInitials(emp.name);
+              const empInitials = getInitials(emp.name);
               const color = avatarColor(emp.name);
-              const isExited = emp.status === 'Exited';
+              const isExited = emp.status === EMPLOYEE_STATUS.Exited;
+              const employmentTypeLabel = EMPLOYMENT_TYPE_MAP[emp.employmentTypeId]?.label ?? `Type ${emp.employmentTypeId}`;
 
               return (
                 <tr
@@ -157,7 +161,7 @@ export function EmployeeTable({
                         )}
                         aria-hidden="true"
                       >
-                        {initials}
+                        {empInitials}
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-charcoal">{emp.name}</div>
@@ -167,7 +171,7 @@ export function EmployeeTable({
                   </td>
                   <td className="px-4 py-3.5 text-sm text-slate">{emp.designation ?? '—'}</td>
                   <td className="px-4 py-3.5 text-sm text-slate">{emp.department ?? '—'}</td>
-                  <td className="px-4 py-3.5 text-xs text-slate">{emp.employmentType}</td>
+                  <td className="px-4 py-3.5 text-xs text-slate">{employmentTypeLabel}</td>
                   <td className="px-4 py-3.5">
                     <EmployeeStatusBadge status={emp.status} />
                   </td>
@@ -200,9 +204,10 @@ export function EmployeeTable({
       {/* Mobile card layout */}
       <div className="md:hidden divide-y divide-sage/10">
         {employees.map((emp) => {
-          const initials = getInitials(emp.name);
+          const empInitials = getInitials(emp.name);
           const color = avatarColor(emp.name);
-          const isExited = emp.status === 'Exited';
+          const isExited = emp.status === EMPLOYEE_STATUS.Exited;
+          const employmentTypeLabel = EMPLOYMENT_TYPE_MAP[emp.employmentTypeId]?.label ?? `Type ${emp.employmentTypeId}`;
 
           return (
             <div key={emp.id} className={clsx('p-4', isExited && 'opacity-75')}>
@@ -216,7 +221,7 @@ export function EmployeeTable({
                   )}
                   aria-hidden="true"
                 >
-                  {initials}
+                  {empInitials}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -229,7 +234,7 @@ export function EmployeeTable({
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate mb-3">
                 {emp.department && <span>{emp.department}</span>}
-                <span>{emp.employmentType}</span>
+                <span>{employmentTypeLabel}</span>
                 {emp.reportingManagerName && <span>Reports to: {emp.reportingManagerName}</span>}
               </div>
               {showViewButton && (

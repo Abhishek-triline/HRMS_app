@@ -19,6 +19,7 @@ import { EmployeeStatusBadge } from '@/components/employees/EmployeeStatusBadge'
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
 import type { TeamMember } from '@nexora/contracts/employees';
+import { EMPLOYEE_STATUS, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 
 type Tab = 'current' | 'past';
 
@@ -57,7 +58,7 @@ function CurrentMemberCard({ member }: { member: TeamMember }) {
       </div>
       <div className="flex flex-wrap gap-2 mb-3">
         <span className="bg-softmint text-forest text-xs font-bold px-2 py-1 rounded">
-          {member.employmentType}
+          {EMPLOYMENT_TYPE_MAP[member.employmentTypeId]?.label ?? String(member.employmentTypeId)}
         </span>
         <EmployeeStatusBadge status={member.status} />
         {!member.isDirect && (
@@ -97,12 +98,12 @@ function PastMemberCard({ member }: { member: TeamMember }) {
       </div>
       <div className="flex flex-wrap gap-2 mb-3">
         <span className="bg-softmint text-forest text-xs font-bold px-2 py-1 rounded">
-          {member.employmentType}
+          {EMPLOYMENT_TYPE_MAP[member.employmentTypeId]?.label ?? String(member.employmentTypeId)}
         </span>
-        {member.pastReason === 'Reassigned' && (
+        {member.pastReasonId === 2 && (
           <StatusBadge status="on-notice" label="Reassigned" />
         )}
-        {member.pastReason === 'Exited' && (
+        {member.pastReasonId === 3 && (
           <StatusBadge status="exited" label="Exited" />
         )}
       </div>
@@ -130,15 +131,15 @@ export default function MyTeamPage() {
   const [activeTab, setActiveTab] = useState<Tab>('current');
 
   const { data: meData } = useMe();
-  const myId = meData?.data?.user?.id ?? '';
+  const myId = meData?.data?.user?.id ?? 0;
 
   const { data: teamData, isLoading, isError, refetch } = useTeam(myId);
   const current = teamData?.current ?? [];
   const past = teamData?.past ?? [];
 
-  const activeCount = current.filter((m) => m.status === 'Active').length;
-  const onLeaveCount = current.filter((m) => m.status === 'On-Leave').length;
-  const onNoticeCount = current.filter((m) => m.status === 'On-Notice').length;
+  const activeCount = current.filter((m) => m.status === EMPLOYEE_STATUS.Active).length;
+  const onLeaveCount = current.filter((m) => m.status === EMPLOYEE_STATUS.OnLeave).length;
+  const onNoticeCount = current.filter((m) => m.status === EMPLOYEE_STATUS.OnNotice).length;
 
   if (isLoading) {
     return (

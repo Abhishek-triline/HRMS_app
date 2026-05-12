@@ -17,12 +17,21 @@ import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
 import { showToast } from '@/components/ui/Toast';
+import { ATTENDANCE_STATUS, GOAL_OUTCOME, LEAVE_TYPE_MAP } from '@/lib/status/maps';
+
+// v2: all IDs are number
+type GoalRow = {
+  id: number;
+  text: string;
+  outcomeId: number;
+};
 
 type LeaveReq = {
-  id: string;
+  id: number;
   employeeName: string;
   employeeCode: string;
-  type: string;
+  leaveTypeId: number;
+  leaveTypeName: string;
   fromDate: string;
   toDate: string;
   days: number;
@@ -30,27 +39,21 @@ type LeaveReq = {
 };
 
 type AttendanceRow = {
-  employeeId: string;
+  employeeId: number;
   employeeName?: string;
   employeeCode?: string;
-  status: string;
+  status: number;
   late: boolean;
   checkInTime?: string | null;
 };
 
 type ReviewRow = {
-  id: string;
+  id: number;
   employeeName: string;
   employeeCode: string;
   selfRating?: number | null;
   selfSubmittedAt?: string | null;
-  managerId?: string | null;
-};
-
-type GoalRow = {
-  id: string;
-  text: string;
-  outcome: string;
+  managerId?: number | null;
 };
 
 function formatDate(iso?: string | null): string {
@@ -67,15 +70,15 @@ function formatCheckIn(iso?: string | null): string {
   return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-function statusBadge(status: string, late: boolean) {
-  if (status === 'On-Leave') {
+function statusBadge(status: number, late: boolean) {
+  if (status === ATTENDANCE_STATUS.OnLeave) {
     return (
       <span className="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">
         On Leave
       </span>
     );
   }
-  if (status === 'Absent') {
+  if (status === ATTENDANCE_STATUS.Absent) {
     return (
       <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">
         Absent
@@ -96,14 +99,14 @@ function statusBadge(status: string, late: boolean) {
   );
 }
 
-function goalBadge(outcome: string) {
-  if (outcome === 'Met') {
+function goalBadge(outcomeId: number) {
+  if (outcomeId === GOAL_OUTCOME.Met) {
     return <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded">Met</span>;
   }
-  if (outcome === 'Partial') {
+  if (outcomeId === GOAL_OUTCOME.Partial) {
     return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-1 rounded">Partial</span>;
   }
-  if (outcome === 'Missed') {
+  if (outcomeId === GOAL_OUTCOME.Missed) {
     return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">Missed</span>;
   }
   return <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded">On Track</span>;
@@ -283,13 +286,15 @@ export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDash
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/20">
-                {(dash.pendingMine as LeaveReq[]).slice(0, 5).map((req) => (
+                {(dash.pendingMine as unknown as LeaveReq[]).slice(0, 5).map((req) => (
                   <tr key={req.id}>
                     <td className="py-3">
                       <div className="font-medium text-charcoal text-xs">{req.employeeName}</div>
                       <div className="text-xs text-slate">{req.employeeCode}</div>
                     </td>
-                    <td className="py-3 text-slate text-xs">{req.type}</td>
+                    <td className="py-3 text-slate text-xs">
+                      {LEAVE_TYPE_MAP[req.leaveTypeId]?.label ?? req.leaveTypeName}
+                    </td>
                     <td className="py-3 text-slate text-xs">
                       {formatDate(req.fromDate)}
                       {req.fromDate !== req.toDate && `–${formatDate(req.toDate)}`}
@@ -317,13 +322,13 @@ export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDash
           skeletonRows={5}
         >
           <div className="px-5 py-4 space-y-3" aria-live="polite">
-            {(dash.teamToday as AttendanceRow[]).slice(0, 8).map((row) => (
+            {(dash.teamToday as unknown as AttendanceRow[]).slice(0, 8).map((row) => (
               <div key={row.employeeId} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      row.status === 'On-Leave' ? 'bg-umber' :
-                      row.status === 'Absent' ? 'bg-crimson' : 'bg-richgreen'
+                      row.status === ATTENDANCE_STATUS.OnLeave ? 'bg-umber' :
+                      row.status === ATTENDANCE_STATUS.Absent ? 'bg-crimson' : 'bg-richgreen'
                     }`}
                     aria-hidden="true"
                   />
@@ -363,7 +368,7 @@ export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDash
             <p className="text-sm text-slate py-4">All reviews submitted — no action needed.</p>
           ) : (
             <div className="space-y-3">
-              {(dash.pendingReviews as ReviewRow[]).slice(0, 4).map((rev) => (
+              {(dash.pendingReviews as unknown as ReviewRow[]).slice(0, 4).map((rev) => (
                 <div key={rev.id} className="flex items-center justify-between p-3 rounded-lg bg-offwhite border border-sage/30">
                   <div>
                     <div className="font-medium text-sm text-charcoal">{rev.employeeName}</div>
@@ -419,7 +424,7 @@ export function ManagerDashboardClient({ firstName: firstNameProp }: ManagerDash
                 <div key={goal.id} className="p-3 rounded-lg border border-sage/30">
                   <div className="flex items-start justify-between">
                     <p className="text-sm font-semibold text-charcoal flex-1">{goal.text}</p>
-                    <span className="ml-3 shrink-0">{goalBadge(goal.outcome)}</span>
+                    <span className="ml-3 shrink-0">{goalBadge(goal.outcomeId)}</span>
                   </div>
                 </div>
               ))}

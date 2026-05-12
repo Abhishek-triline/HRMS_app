@@ -1,46 +1,32 @@
 /**
- * RegularisationStatusBadge — maps RegStatus to colour chips.
- *
- * Pending  → umberbg / umber
- * Approved → greenbg / richgreen
- * Rejected → crimsonbg / crimson
+ * RegularisationStatusBadge — maps regularisation status INT codes → StatusBadge.
+ * Status codes: 1=Pending, 2=Approved, 3=Rejected
  */
 
-import { clsx } from 'clsx';
-import type { RegStatus } from '@nexora/contracts/attendance';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { ROUTED_TO } from '@/lib/status/maps';
 
 interface RegularisationStatusBadgeProps {
-  status: RegStatus;
-  /** Append "routedTo" label, e.g. "Pending (Manager)" */
-  routedTo?: string;
+  /** INT status code from the API (1–3) */
+  status: number;
+  /** Append "routedTo" label, e.g. "Pending (Manager)" — pass routedToId from request */
+  routedToId?: number;
   className?: string;
 }
 
-const config: Record<RegStatus, { bg: string; text: string }> = {
-  Pending: { bg: 'bg-umberbg', text: 'text-umber' },
-  Approved: { bg: 'bg-greenbg', text: 'text-richgreen' },
-  Rejected: { bg: 'bg-crimsonbg', text: 'text-crimson' },
-};
-
 export function RegularisationStatusBadge({
   status,
-  routedTo,
+  routedToId,
   className,
 }: RegularisationStatusBadgeProps) {
-  const cfg = config[status];
-  const label =
-    status === 'Pending' && routedTo ? `Pending (${routedTo})` : status;
+  // Build a label override for pending state: "Pending (Manager)" / "Pending (Admin)"
+  let label: string | undefined;
+  if (status === 1 && routedToId != null) {
+    const routedToLabel = routedToId === ROUTED_TO.Admin ? 'Admin' : 'Manager';
+    label = `Pending (${routedToLabel})`;
+  }
 
   return (
-    <span
-      className={clsx(
-        'inline-flex items-center text-xs font-bold px-2 py-0.5 rounded tracking-[0.03em]',
-        cfg.bg,
-        cfg.text,
-        className,
-      )}
-    >
-      {label}
-    </span>
+    <StatusBadge entity="regStatus" code={status} label={label} className={className} />
   );
 }

@@ -60,9 +60,10 @@ function daysRemainingClass(d: number | null): string {
 
 export default function MissingReviewsPage() {
   const { id } = useParams<{ id: string }>();
+  const idNum = Number(id);
 
-  const { data: cycleData, isLoading: cycleLoading } = useCycle(id);
-  const { data, isLoading, isError } = useMissingReviews(id);
+  const { data: cycleData, isLoading: cycleLoading } = useCycle(idNum);
+  const { data, isLoading, isError } = useMissingReviews(idNum);
 
   const isLoadingAny = isLoading || cycleLoading;
   const cycle: PerformanceCycle | undefined = cycleData?.cycle;

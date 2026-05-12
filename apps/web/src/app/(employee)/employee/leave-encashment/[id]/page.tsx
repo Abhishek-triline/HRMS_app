@@ -9,5 +9,5 @@ interface Props {
 
 export default function EmployeeEncashmentDetailPage({ params }: Props) {
   const { id } = use(params);
-  return <EncashmentDetailView encashmentId={id} backHref="/employee/leave-encashment" />;
+  return <EncashmentDetailView encashmentId={Number(id)} backHref="/employee/leave-encashment" />;
 }

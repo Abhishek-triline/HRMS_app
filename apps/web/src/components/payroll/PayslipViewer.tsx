@@ -154,7 +154,7 @@ interface PayslipViewerProps {
 
 export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLabel }: PayslipViewerProps) {
   const downloadMutation = useDownloadPayslipPdf(payslip.code);
-  const isFinalised = payslip.status === 'Finalised';
+  const isFinalised = payslip.status === 3; // 3=Finalised
 
   async function handleDownload() {
     try {
@@ -370,7 +370,7 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
               <LineItem
                 label="Income Tax (TDS)"
                 sub={
-                  payslip.status === 'Finalised'
+                  payslip.status === 3 // 3=Finalised
                     ? 'Entered by Payroll Officer (BL-036a)'
                     : `Reference: ₹${Math.floor(payslip.referenceTaxPaise / 100).toLocaleString('en-IN')}`
                 }

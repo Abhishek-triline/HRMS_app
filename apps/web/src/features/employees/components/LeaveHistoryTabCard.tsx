@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useLeaveList, useLeaveBalances } from '@/lib/hooks/useLeave';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { usePayslipsList } from '@/lib/hooks/usePayslips';
-import type { LeaveStatus } from '@nexora/contracts/leave';
+import { LEAVE_STATUS, LEAVE_STATUS_MAP, LEAVE_TYPE_ID } from '@/lib/status/maps';
 
 type Tab = 'leave' | 'attendance' | 'payslips' | 'reviews';
 
@@ -36,23 +36,24 @@ function formatDate(iso: string | null | undefined) {
   }
 }
 
-function LeaveStatusBadge({ status }: { status: LeaveStatus }) {
-  const map: Record<LeaveStatus, string> = {
-    Pending: 'bg-umberbg text-umber',
-    Approved: 'bg-greenbg text-richgreen',
-    Rejected: 'bg-crimsonbg text-crimson',
-    Cancelled: 'bg-sage/20 text-slate',
-    Escalated: 'bg-umberbg text-umber',
+function LeaveStatusBadge({ status }: { status: number }) {
+  const map: Record<number, string> = {
+    [LEAVE_STATUS.Pending]:   'bg-umberbg text-umber',
+    [LEAVE_STATUS.Approved]:  'bg-greenbg text-richgreen',
+    [LEAVE_STATUS.Rejected]:  'bg-crimsonbg text-crimson',
+    [LEAVE_STATUS.Cancelled]: 'bg-sage/20 text-slate',
+    [LEAVE_STATUS.Escalated]: 'bg-umberbg text-umber',
   };
+  const label = LEAVE_STATUS_MAP[status]?.label ?? String(status);
   return (
     <span className={`text-xs font-bold px-2 py-1 rounded ${map[status] ?? 'bg-sage/20 text-slate'}`}>
-      {status}
+      {label}
     </span>
   );
 }
 
 interface Props {
-  employeeId: string;
+  employeeId: number;
 }
 
 export function LeaveHistoryTabCard({ employeeId }: Props) {
@@ -65,9 +66,9 @@ export function LeaveHistoryTabCard({ employeeId }: Props) {
 
   const balanceSummary = useMemo(() => {
     const balances = balancesQuery.data?.balances ?? [];
-    const casual = balances.find((b) => b.type === 'Casual')?.remaining ?? '—';
-    const sick = balances.find((b) => b.type === 'Sick')?.remaining ?? '—';
-    const annual = balances.find((b) => b.type === 'Annual')?.remaining ?? '—';
+    const casual = balances.find((b) => b.leaveTypeId === LEAVE_TYPE_ID.Casual)?.remaining ?? '—';
+    const sick = balances.find((b) => b.leaveTypeId === LEAVE_TYPE_ID.Sick)?.remaining ?? '—';
+    const annual = balances.find((b) => b.leaveTypeId === LEAVE_TYPE_ID.Annual)?.remaining ?? '—';
     return { casual, sick, annual };
   }, [balancesQuery.data]);
 
@@ -133,7 +134,7 @@ export function LeaveHistoryTabCard({ employeeId }: Props) {
               ) : (
                 leaveRows.map((req) => (
                   <tr key={req.id} className="hover:bg-offwhite/50 transition-colors">
-                    <td className="px-5 py-3 text-sm text-charcoal font-medium">{req.type} Leave</td>
+                    <td className="px-5 py-3 text-sm text-charcoal font-medium">{req.leaveTypeName} Leave</td>
                     <td className="px-4 py-3 text-xs text-slate">{formatDate(req.fromDate)}</td>
                     <td className="px-4 py-3 text-xs text-slate">{formatDate(req.toDate)}</td>
                     <td className="px-4 py-3 text-xs font-medium text-charcoal">{req.days}</td>

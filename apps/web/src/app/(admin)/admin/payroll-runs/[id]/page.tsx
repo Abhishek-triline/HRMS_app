@@ -29,6 +29,7 @@ import { EditableTaxEntry } from '@/components/payroll/EditableTaxEntry';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
+import { PayrollRunStatus } from '@nexora/contracts/payroll';
 
 const MONTH_NAMES = [
   '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -37,7 +38,8 @@ const MONTH_NAMES = [
 
 export default function PayrollRunDetailPage() {
   const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id ?? '';
+  const idStr = Array.isArray(params.id) ? params.id[0] : params.id ?? '';
+  const id = Number(idStr);
 
   const { data, isLoading, isError } = usePayrollRun(id);
   const [finaliseOpen, setFinaliseOpen] = useState(false);
@@ -62,9 +64,9 @@ export default function PayrollRunDetailPage() {
   }
 
   const { run, payslips } = data;
-  const isReview = run.status === 'Review';
-  const isFinalised = run.status === 'Finalised';
-  const isDraft = run.status === 'Draft';
+  const isReview = run.status === PayrollRunStatus.Review;
+  const isFinalised = run.status === PayrollRunStatus.Finalised;
+  const isDraft = run.status === PayrollRunStatus.Draft;
 
   // Count pro-rated payslips (mid-month joiners) from the payslip list.
   // PayslipSummary exposes lopDays; a positive lopDays with a full workingDays count

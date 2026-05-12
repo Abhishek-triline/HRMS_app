@@ -19,63 +19,51 @@
 
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LeaveApprovalActions } from '@/components/leave/LeaveApprovalActions';
 import { useLeave } from '@/lib/hooks/useLeave';
+import { LEAVE_STATUS, LEAVE_TYPE_ID } from '@/lib/status/maps';
 import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 
 // ── Avatar background for different statuses ────────────────────────────────
 
 function avatarBg(req: LeaveRequestSummary): string {
-  if (req.status === 'Escalated') return 'bg-softmint';
-  if (req.status === 'Approved') return 'bg-greenbg';
-  if (req.status === 'Rejected') return 'bg-crimsonbg';
-  if (req.type === 'Maternity' || req.type === 'Paternity') return 'bg-mint';
+  if (req.status === LEAVE_STATUS.Escalated) return 'bg-softmint';
+  if (req.status === LEAVE_STATUS.Approved) return 'bg-greenbg';
+  if (req.status === LEAVE_STATUS.Rejected) return 'bg-crimsonbg';
+  if (
+    req.leaveTypeId === LEAVE_TYPE_ID.Maternity ||
+    req.leaveTypeId === LEAVE_TYPE_ID.Paternity
+  )
+    return 'bg-mint';
   return 'bg-mint';
 }
 
 function avatarText(req: LeaveRequestSummary): string {
-  if (req.status === 'Approved') return 'text-richgreen';
-  if (req.status === 'Rejected') return 'text-crimson';
+  if (req.status === LEAVE_STATUS.Approved) return 'text-richgreen';
+  if (req.status === LEAVE_STATUS.Rejected) return 'text-crimson';
   return 'text-forest';
 }
 
 // ── Card border classes based on status ─────────────────────────────────────
 
 function cardBorderClass(req: LeaveRequestSummary): string {
-  if (req.status === 'Escalated') {
+  if (req.status === LEAVE_STATUS.Escalated) {
     return 'border-l-4 border-crimson border-y border-r border-sage/30';
   }
-  if (req.type === 'Maternity' || req.type === 'Paternity') {
+  if (
+    req.leaveTypeId === LEAVE_TYPE_ID.Maternity ||
+    req.leaveTypeId === LEAVE_TYPE_ID.Paternity
+  ) {
     return 'border-l-4 border-umber border-y border-r border-sage/30';
   }
-  if (req.status === 'Approved') {
+  if (req.status === LEAVE_STATUS.Approved) {
     return 'border-l-4 border-richgreen border-y border-r border-sage/30';
   }
-  if (req.status === 'Rejected') {
+  if (req.status === LEAVE_STATUS.Rejected) {
     return 'border-l-4 border-crimson border-y border-r border-sage/30';
   }
   return 'border border-sage/30';
-}
-
-// ── Status badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ req }: { req: LeaveRequestSummary }) {
-  if (req.status === 'Escalated') {
-    return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Escalated</span>;
-  }
-  if (req.type === 'Maternity') {
-    return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Maternity</span>;
-  }
-  if (req.type === 'Paternity') {
-    return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Paternity</span>;
-  }
-  if (req.status === 'Approved') {
-    return <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Approved</span>;
-  }
-  if (req.status === 'Rejected') {
-    return <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded">Rejected</span>;
-  }
-  return <span className="bg-umberbg text-umber text-xs font-bold px-2 py-0.5 rounded">Pending</span>;
 }
 
 // ── Initials from employee name ───────────────────────────────────────────────
@@ -118,30 +106,42 @@ function formatDateRange(from: string, to: string, days: number): string {
 
 function renderMetaLine(req: LeaveRequestSummary, submittedAgo: string): string {
   // Maternity → routes direct to Admin
-  if (req.type === 'Maternity' && req.status !== 'Approved' && req.status !== 'Rejected') {
+  if (
+    req.leaveTypeId === LEAVE_TYPE_ID.Maternity &&
+    req.status !== LEAVE_STATUS.Approved &&
+    req.status !== LEAVE_STATUS.Rejected
+  ) {
     return 'Maternity routes directly to Admin (manager bypass)';
   }
-  if (req.type === 'Paternity' && req.status !== 'Approved' && req.status !== 'Rejected') {
+  if (
+    req.leaveTypeId === LEAVE_TYPE_ID.Paternity &&
+    req.status !== LEAVE_STATUS.Approved &&
+    req.status !== LEAVE_STATUS.Rejected
+  ) {
     return 'Within 6 months of birth window · Routes to Admin (event-based)';
   }
   // Escalated — show manager + how long it sat
-  if (req.status === 'Escalated') {
+  if (req.status === LEAVE_STATUS.Escalated) {
     const mgr = req.approverName ?? 'Manager';
     return `Submitted ${submittedAgo} · ${mgr} did not act in time`;
   }
   // Approved / Rejected — show decider + decision time
-  if (req.status === 'Approved' || req.status === 'Rejected') {
+  if (req.status === LEAVE_STATUS.Approved || req.status === LEAVE_STATUS.Rejected) {
     const decider = (req as unknown as { decidedBy?: string }).decidedBy;
     const decidedAt = (req as unknown as { decidedAt?: string }).decidedAt;
     const when = decidedAt
-      ? new Date(decidedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+      ? new Date(decidedAt).toLocaleTimeString('en-IN', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
       : '';
-    const verb = req.status === 'Approved' ? 'Approved by' : 'Rejected by';
+    const verb = req.status === LEAVE_STATUS.Approved ? 'Approved by' : 'Rejected by';
     return decider ? `${verb} ${decider}${when ? ` · ${when}` : ''}` : verb.replace(' by', '');
   }
-  // Default pending
-  const mgr = req.approverName ?? req.routedTo;
-  return `Awaiting ${mgr ?? 'approval'} · Submitted ${submittedAgo}`;
+  // Default pending — use approverName (resolved name) or routedToId label
+  const mgr = req.approverName ?? (req.routedToId === 2 ? 'Admin' : 'Manager');
+  return `Awaiting ${mgr} · Submitted ${submittedAgo}`;
 }
 
 // ── Relative time since submission ────────────────────────────────────────────
@@ -174,10 +174,7 @@ function CardActions({
   if (!request) return null;
   return (
     <div className="flex gap-2">
-      <LeaveApprovalActions
-        request={request}
-        onDecision={onDecision}
-      />
+      <LeaveApprovalActions request={request} onDecision={onDecision} />
     </div>
   );
 }
@@ -204,7 +201,7 @@ export function LeaveQueueCard({
 }: LeaveQueueCardProps) {
   const isActionable =
     showActions &&
-    (request.status === 'Pending' || request.status === 'Escalated');
+    (request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated);
 
   const avatarInitials = initials(request.employeeName);
   const borderClass = cardBorderClass(request);
@@ -238,19 +235,19 @@ export function LeaveQueueCard({
                   ? ` · ${(request as unknown as { department: string }).department}`
                   : ''}
               </span>
-              <StatusBadge req={request} />
+              <StatusBadge entity="leaveStatus" code={request.status} />
             </div>
 
             {/* Leave type + date range */}
             <div className="text-sm text-slate mb-2">
-              {request.type} Leave ·{' '}
+              {request.leaveTypeName} Leave ·{' '}
               <strong className="text-charcoal">{dateRange}</strong>
             </div>
 
             {/* Reason quote */}
-            {(request as unknown as { reason?: string }).reason && (
+            {request.reason && (
               <div className="text-xs text-slate">
-                &ldquo;{(request as unknown as { reason: string }).reason}&rdquo;
+                &ldquo;{request.reason}&rdquo;
               </div>
             )}
 

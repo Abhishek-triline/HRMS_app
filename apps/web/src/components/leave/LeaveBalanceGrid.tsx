@@ -30,7 +30,7 @@ export function LeaveBalanceGrid({ data, className }: LeaveBalanceGridProps) {
       )}
     >
       {data.balances.map((balance) => (
-        <LeaveBalanceCard key={balance.type} balance={balance} />
+        <LeaveBalanceCard key={balance.leaveTypeId} balance={balance} />
       ))}
     </div>
   );

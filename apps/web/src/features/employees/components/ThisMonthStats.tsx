@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
-import type { AttendanceStatus } from '@nexora/contracts/attendance';
+import { ATTENDANCE_STATUS } from '@/lib/status/maps';
 
 function getMonthBounds(): { from: string; to: string; label: string } {
   const now = new Date();
@@ -23,7 +23,7 @@ function getMonthBounds(): { from: string; to: string; label: string } {
 }
 
 interface Props {
-  employeeId: string;
+  employeeId: number;
 }
 
 export function ThisMonthStats({ employeeId }: Props) {
@@ -39,8 +39,8 @@ export function ThisMonthStats({ employeeId }: Props) {
   const stats = useMemo(() => {
     if (!data) return null;
     const records = data.data;
-    const present = records.filter((r) => r.status === 'Present').length;
-    const absent = records.filter((r) => r.status === 'Absent').length;
+    const present = records.filter((r) => r.status === ATTENDANCE_STATUS.Present).length;
+    const absent = records.filter((r) => r.status === ATTENDANCE_STATUS.Absent).length;
     const late = records.filter((r) => r.late).length;
     // LOP: days where status=Absent and lopApplied is true (full AttendanceRecord shape)
     // AttendanceCalendarItem (the list shape) doesn't include lopApplied — so we show 0.

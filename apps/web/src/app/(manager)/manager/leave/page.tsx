@@ -6,7 +6,7 @@ import { useMe } from '@/lib/hooks/useAuth';
 
 export default function ManagerMyLeavePage() {
   const { data: me, isLoading } = useMe();
-  const employeeId = me?.data?.user?.id ?? '';
+  const employeeId = me?.data?.user?.id ?? 0;
 
   if (isLoading) {
     return (

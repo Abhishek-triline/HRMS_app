@@ -22,7 +22,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
-import type { CycleStatus, PerformanceCycleSummary } from '@nexora/contracts/performance';
+import type { PerformanceCycleSummary } from '@nexora/contracts/performance';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 
 // ── Edit Dates modal (simple inline modal) ───────────────────────────────────
 
@@ -100,7 +101,7 @@ function ActiveCycleCard({ cycle }: { cycle: PerformanceCycleSummary }) {
   const selfPct = total > 0 ? Math.round((selfSubmitted / total) * 100) : 0;
   const mgrPct = total > 0 ? Math.round((mgrSubmitted / total) * 100) : 0;
 
-  async function handleClose(cycleId: string, version: number) {
+  async function handleClose(cycleId: number, version: number) {
     try {
       await closeCycle({ confirm: 'CLOSE', version });
       showToast({ type: 'success', title: 'Cycle closed', message: 'All final ratings are now locked.' });
@@ -210,8 +211,8 @@ export default function PerformanceCyclesPage() {
   const { data, isLoading, isError } = useCycles({});
 
   const cycles = data?.data ?? [];
-  const activeCycle = cycles.find((c) => c.status !== 'Closed');
-  const pastCycles = cycles.filter((c) => c.status === 'Closed');
+  const activeCycle = cycles.find((c) => c.status !== CYCLE_STATUS.Closed);
+  const pastCycles = cycles.filter((c) => c.status === CYCLE_STATUS.Closed);
 
   return (
     <>

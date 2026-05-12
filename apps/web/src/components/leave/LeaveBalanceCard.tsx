@@ -4,35 +4,58 @@
  * Renders: label, remaining/total, progress bar, carry-forward note.
  * Handles event-based (Maternity/Paternity), unpaid (no total), and
  * standard accrual types.
+ *
+ * v2: balance.leaveTypeId is an INT code; name resolved from leaveTypes catalog.
  */
 
 import { clsx } from 'clsx';
-import type { LeaveBalance } from '@nexora/contracts/leave';
+import type { LeaveBalance, LeaveTypeCatalogItem } from '@nexora/contracts/leave';
+import { LEAVE_TYPE_ID } from '@/lib/status/maps';
 
 interface LeaveBalanceCardProps {
   balance: LeaveBalance;
+  /** Catalog for resolving leaveTypeId → name. Falls back to numeric label. */
+  leaveTypes?: LeaveTypeCatalogItem[];
   className?: string;
 }
 
-const typeColors: Record<string, { bar: string; badge: string; badgeText: string }> = {
-  Annual: { bar: 'bg-richgreen', badge: 'bg-greenbg', badgeText: 'text-richgreen' },
-  Sick: { bar: 'bg-emerald', badge: 'bg-greenbg', badgeText: 'text-richgreen' },
-  Casual: { bar: 'bg-forest', badge: 'bg-greenbg', badgeText: 'text-richgreen' },
-  Unpaid: { bar: 'bg-slate/40', badge: 'bg-umberbg', badgeText: 'text-umber' },
-  Maternity: { bar: 'bg-mint', badge: 'bg-softmint', badgeText: 'text-forest' },
-  Paternity: { bar: 'bg-mint', badge: 'bg-softmint', badgeText: 'text-forest' },
+const typeColors: Record<number, { bar: string; badge: string; badgeText: string }> = {
+  [LEAVE_TYPE_ID.Annual]:    { bar: 'bg-richgreen', badge: 'bg-greenbg',   badgeText: 'text-richgreen' },
+  [LEAVE_TYPE_ID.Sick]:      { bar: 'bg-emerald',   badge: 'bg-greenbg',   badgeText: 'text-richgreen' },
+  [LEAVE_TYPE_ID.Casual]:    { bar: 'bg-forest',    badge: 'bg-greenbg',   badgeText: 'text-richgreen' },
+  [LEAVE_TYPE_ID.Unpaid]:    { bar: 'bg-slate/40',  badge: 'bg-umberbg',   badgeText: 'text-umber' },
+  [LEAVE_TYPE_ID.Maternity]: { bar: 'bg-mint',      badge: 'bg-softmint',  badgeText: 'text-forest' },
+  [LEAVE_TYPE_ID.Paternity]: { bar: 'bg-mint',      badge: 'bg-softmint',  badgeText: 'text-forest' },
 };
+
+const defaultColors = { bar: 'bg-forest', badge: 'bg-greenbg', badgeText: 'text-richgreen' };
 
 function getPercent(remaining: number | null, total: number | null): number {
   if (remaining === null || total === null || total === 0) return 0;
   return Math.min(100, Math.round((remaining / total) * 100));
 }
 
-export function LeaveBalanceCard({ balance, className }: LeaveBalanceCardProps) {
-  const colors = typeColors[balance.type] ?? typeColors.Annual;
-  const isEventBased = balance.type === 'Maternity' || balance.type === 'Paternity';
-  const isUnpaid = balance.type === 'Unpaid';
+export function LeaveBalanceCard({ balance, leaveTypes, className }: LeaveBalanceCardProps) {
+  const colors = typeColors[balance.leaveTypeId] ?? defaultColors;
+  const isEventBased =
+    balance.leaveTypeId === LEAVE_TYPE_ID.Maternity ||
+    balance.leaveTypeId === LEAVE_TYPE_ID.Paternity;
+  const isUnpaid = balance.leaveTypeId === LEAVE_TYPE_ID.Unpaid;
   const percent = getPercent(balance.remaining, balance.total);
+
+  // Resolve name from catalog, or fallback to a built-in map
+  const builtInNames: Record<number, string> = {
+    [LEAVE_TYPE_ID.Annual]: 'Annual',
+    [LEAVE_TYPE_ID.Sick]: 'Sick',
+    [LEAVE_TYPE_ID.Casual]: 'Casual',
+    [LEAVE_TYPE_ID.Unpaid]: 'Unpaid',
+    [LEAVE_TYPE_ID.Maternity]: 'Maternity',
+    [LEAVE_TYPE_ID.Paternity]: 'Paternity',
+  };
+  const typeName =
+    leaveTypes?.find((lt) => lt.id === balance.leaveTypeId)?.name ??
+    builtInNames[balance.leaveTypeId] ??
+    `Type ${balance.leaveTypeId}`;
 
   return (
     <div
@@ -44,7 +67,7 @@ export function LeaveBalanceCard({ balance, className }: LeaveBalanceCardProps) 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-bold text-slate uppercase tracking-wide">
-          {balance.type}
+          {typeName}
         </span>
         {isUnpaid ? (
           <span className={clsx('text-xs font-bold px-2 py-0.5 rounded', colors.badge, colors.badgeText)}>
@@ -92,7 +115,7 @@ export function LeaveBalanceCard({ balance, className }: LeaveBalanceCardProps) 
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`${balance.type} leave: ${percent}% remaining`}
+        aria-label={`${typeName} leave: ${percent}% remaining`}
       >
         <div
           className={clsx('h-2 rounded-full transition-all', colors.bar)}
@@ -107,14 +130,17 @@ export function LeaveBalanceCard({ balance, className }: LeaveBalanceCardProps) 
         ) : isEventBased ? (
           <>
             <span className="font-semibold text-forest">Event-based:</span>{' '}
-            Admin approves — {balance.type === 'Maternity' ? 'up to 26 weeks per event' : '10 working days, within 6 months of birth'}
+            Admin approves —{' '}
+            {balance.leaveTypeId === LEAVE_TYPE_ID.Maternity
+              ? 'up to 26 weeks per event'
+              : '10 working days, within 6 months of birth'}
           </>
-        ) : balance.carryForwardCap !== null && balance.type !== 'Sick' ? (
+        ) : balance.carryForwardCap !== null && balance.leaveTypeId !== LEAVE_TYPE_ID.Sick ? (
           <>
             <span className="font-semibold text-forest">Carry-forward cap:</span>{' '}
             {balance.carryForwardCap} days
           </>
-        ) : balance.type === 'Sick' ? (
+        ) : balance.leaveTypeId === LEAVE_TYPE_ID.Sick ? (
           <>
             <span className="font-semibold text-forest">Resets:</span> Jan 1 — no carry-forward
           </>

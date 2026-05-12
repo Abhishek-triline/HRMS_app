@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/Button';
 import { showToast } from '@/components/ui/Toast';
 import { useUpdateEmployee } from '@/lib/hooks/useEmployees';
 import { ApiError } from '@/lib/api/client';
+import { EMPLOYMENT_TYPE_MAP, EMPLOYEE_STATUS_MAP } from '@/lib/status/maps';
 import type { EmployeeDetail } from '@nexora/contracts/employees';
 
 // ── Schema — subset of UpdateEmployeeRequest safe for self-edit ───────────────
@@ -49,17 +50,18 @@ const SelfEditSchema = z.object({
   /** Optional personal info — now exposed once the API contract includes them. */
   phone: z.string().max(20).nullable().optional(),
   dateOfBirth: z.string().nullable().optional(), // YYYY-MM-DD date string
-  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
+  // v2: genderId is INT code (1=Male, 2=Female, 3=Other, 4=Prefer not to say)
+  genderId: z.coerce.number().int().min(1).max(4).nullable().optional(),
   version: z.number().int().nonnegative(),
 });
 
 type SelfEditValues = z.infer<typeof SelfEditSchema>;
 
-const GENDER_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Male', label: 'Male' },
-  { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Non-binary' },
-  { value: 'PreferNotToSay', label: 'Prefer not to say' },
+const GENDER_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: 'Male' },
+  { value: 2, label: 'Female' },
+  { value: 3, label: 'Non-binary / Other' },
+  { value: 4, label: 'Prefer not to say' },
 ];
 
 // Must mirror the list in components/employees/EmployeeForm.tsx so the create
@@ -91,7 +93,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
       department: employee.department ?? '',
       phone: employee.phone ?? null,
       dateOfBirth: employee.dateOfBirth ?? null,
-      gender: employee.gender ?? null,
+      genderId: employee.genderId ?? null,
       version: employee.version,
     },
   });
@@ -104,7 +106,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
       department: employee.department ?? '',
       phone: employee.phone ?? null,
       dateOfBirth: employee.dateOfBirth ?? null,
-      gender: employee.gender ?? null,
+      genderId: employee.genderId ?? null,
       version: employee.version,
     });
   }, [employee, reset]);
@@ -237,7 +239,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             <Label htmlFor="self-gender">Gender</Label>
             <select
               id="self-gender"
-              {...register('gender')}
+              {...register('genderId', { setValueAs: (v) => v === '' ? null : Number(v) })}
               className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
             >
               <option value="">Select gender</option>
@@ -245,7 +247,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-            <FieldError id="self-gender-error" message={errors.gender?.message} />
+            <FieldError id="self-gender-error" message={errors.genderId?.message} />
           </div>
         </div>
       </div>
@@ -284,7 +286,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             <label className="block text-xs font-medium text-slate mb-1">Employment Type</label>
             <input
               type="text"
-              value={employee.employmentType}
+              value={EMPLOYMENT_TYPE_MAP[employee.employmentTypeId]?.label ?? String(employee.employmentTypeId)}
               readOnly
               disabled
               className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
@@ -304,7 +306,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             <label className="block text-xs font-medium text-slate mb-1">Status</label>
             <input
               type="text"
-              value={employee.status}
+              value={EMPLOYEE_STATUS_MAP[employee.status]?.label ?? String(employee.status)}
               readOnly
               disabled
               className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
@@ -341,7 +343,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
               department: employee.department ?? '',
               phone: employee.phone ?? null,
               dateOfBirth: employee.dateOfBirth ?? null,
-              gender: employee.gender ?? null,
+              genderId: employee.genderId ?? null,
               version: employee.version,
             })
           }

@@ -6,6 +6,8 @@
  * Reject requires a note (REQUIRED per RejectLeaveRequestSchema).
  * Uses React Hook Form + zod for reject modal validation.
  * On VERSION_MISMATCH: shows toast and invalidates the query.
+ *
+ * v2: request.status is an INT code (1=Pending, 5=Escalated), request.type → request.leaveTypeName.
  */
 
 import { useState } from 'react';
@@ -23,6 +25,7 @@ import { useToast } from '@/lib/hooks/useToast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
 import { qk } from '@/lib/api/query-keys';
+import { LEAVE_STATUS } from '@/lib/status/maps';
 import type { LeaveRequest } from '@nexora/contracts/leave';
 
 // ── Reject form schema ────────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ export function LeaveApprovalActions({
     resolver: zodResolver(RejectFormSchema),
   });
 
-  function handleVersionMismatch(id: string) {
+  function handleVersionMismatch(id: number) {
     toast.error(
       'Request was modified',
       'This request was modified by someone else. Reloading…',
@@ -115,7 +118,8 @@ export function LeaveApprovalActions({
     }
   }
 
-  const isPending = request.status === 'Pending' || request.status === 'Escalated';
+  const isPending =
+    request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated;
   if (!isPending) return null;
 
   return (
@@ -150,7 +154,7 @@ export function LeaveApprovalActions({
         onClose={approveModal.close}
         title="Approve Leave Request"
         requireConfirm
-        consequenceText={`You are approving ${request.code} (${request.type} leave, ${request.days} day${request.days !== 1 ? 's' : ''} for ${request.employeeName}). The balance will be deducted immediately on approval (BL-021).`}
+        consequenceText={`You are approving ${request.code} (${request.leaveTypeName} leave, ${request.days} day${request.days !== 1 ? 's' : ''} for ${request.employeeName}). The balance will be deducted immediately on approval (BL-021).`}
         footer={
           <>
             <Button variant="secondary" onClick={approveModal.close} disabled={approveMutation.isPending}>
@@ -174,7 +178,7 @@ export function LeaveApprovalActions({
             </div>
             <div className="flex justify-between">
               <span className="text-slate">Leave type</span>
-              <span className="font-semibold text-charcoal">{request.type}</span>
+              <span className="font-semibold text-charcoal">{request.leaveTypeName}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate">Duration</span>
@@ -230,7 +234,7 @@ export function LeaveApprovalActions({
             </div>
             <div className="flex justify-between">
               <span className="text-slate">Leave type</span>
-              <span className="font-semibold text-charcoal">{request.type}</span>
+              <span className="font-semibold text-charcoal">{request.leaveTypeName}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate">Duration</span>

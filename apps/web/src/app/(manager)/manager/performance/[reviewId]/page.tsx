@@ -28,18 +28,20 @@ import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
-import type { GoalOutcome } from '@nexora/contracts/performance';
+import { CYCLE_STATUS } from '@/lib/status/maps';
+import type { GoalOutcomeIdValue } from '@nexora/contracts/performance';
 
 export default function ManagerReviewDetailPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
   const [newGoalText, setNewGoalText] = useState('');
   const [addingGoal, setAddingGoal] = useState(false);
 
-  const { data, isLoading, isError } = useReview(reviewId);
-  const cycleId = data?.cycleId ?? '';
+  const reviewIdNum = Number(reviewId);
+  const { data, isLoading, isError } = useReview(reviewIdNum);
+  const cycleId = data?.cycleId ?? 0;
   const { data: cycleData } = useCycle(cycleId);
-  const { mutateAsync: createGoal, isPending: isCreatingGoal } = useCreateGoal(reviewId);
-  const { mutateAsync: submitManagerRating, isPending: isSubmitting } = useSubmitManagerRating(reviewId);
+  const { mutateAsync: createGoal, isPending: isCreatingGoal } = useCreateGoal(reviewIdNum);
+  const { mutateAsync: submitManagerRating, isPending: isSubmitting } = useSubmitManagerRating(reviewIdNum);
 
   async function handleCreateGoal(text: string) {
     try {
@@ -63,7 +65,7 @@ export default function ManagerReviewDetailPage() {
   async function handleManagerRating(ratingData: {
     managerRating: number;
     managerNote?: string;
-    goals?: Array<{ id: string; outcome: GoalOutcome }>;
+    goals?: Array<{ id: number; outcomeId: GoalOutcomeIdValue }>;
     version: number;
   }) {
     try {
@@ -102,7 +104,7 @@ export default function ManagerReviewDetailPage() {
 
   const review = data;
   const managerReviewDeadline = cycleData?.cycle.managerReviewDeadline ?? '';
-  const isCycleOpen = review.cycleStatus === 'Open' || review.cycleStatus === 'Self-Review';
+  const isCycleOpen = review.cycleStatus === CYCLE_STATUS.Open || review.cycleStatus === CYCLE_STATUS.SelfReview;
 
   return (
     <div className="space-y-5">

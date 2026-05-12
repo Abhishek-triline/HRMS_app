@@ -1,25 +1,16 @@
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import type { BadgeStatus } from '@/components/ui/StatusBadge';
-import type { PayrollRunStatus } from '@nexora/contracts/payroll';
+/**
+ * PayrollRunStatusBadge — maps payroll run status INT codes → StatusBadge.
+ * Status codes: 1=Draft, 2=Review, 3=Finalised, 4=Reversed
+ */
 
-const statusMap: Record<PayrollRunStatus, BadgeStatus> = {
-  Draft: 'draft',
-  Review: 'review',
-  Finalised: 'finalised',
-  Reversed: 'exited',
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
 
 interface PayrollRunStatusBadgeProps {
-  status: PayrollRunStatus;
+  /** INT status code from the API (1–4) */
+  status: number;
   className?: string;
 }
 
 export function PayrollRunStatusBadge({ status, className }: PayrollRunStatusBadgeProps) {
-  return (
-    <StatusBadge
-      status={statusMap[status]}
-      label={status}
-      className={className}
-    />
-  );
+  return <StatusBadge entity="payrollStatus" code={status} className={className} />;
 }

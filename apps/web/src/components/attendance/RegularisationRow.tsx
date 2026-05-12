@@ -40,7 +40,7 @@ export function RegularisationRow({ reg, detailHref, showEmployee = false }: Reg
       <td className="px-4 py-4 text-charcoal">{reg.date}</td>
       <td className="px-4 py-4 text-slate">{reg.ageDaysAtSubmit} days</td>
       <td className="px-4 py-4">
-        <RegularisationStatusBadge status={reg.status} routedTo={reg.routedTo} />
+        <RegularisationStatusBadge status={reg.status} routedToId={reg.routedToId} />
       </td>
       <td className="px-4 py-4 text-slate">{reg.approverName ?? '—'}</td>
       <td className="px-4 py-4 text-slate text-xs">{submittedAt}</td>

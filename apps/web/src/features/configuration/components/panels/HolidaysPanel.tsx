@@ -17,7 +17,7 @@ import type { Holiday } from '@nexora/contracts/attendance';
 // ── Local row type ────────────────────────────────────────────────────────────
 
 type EditableHoliday = {
-  id: string;
+  id: number | string; // string for locally-created rows before save, number from API
   date: string;
   name: string;
   isNew?: boolean;
@@ -62,7 +62,7 @@ export default function HolidaysPanel() {
     setLocalRows((prev) => [...(prev ?? (serverHolidays ?? []).map(holidayToEditable)), newRow]);
   }, [year, serverHolidays]);
 
-  const handleEdit = useCallback((id: string) => {
+  const handleEdit = useCallback((id: string | number) => {
     setLocalRows((prev) =>
       (prev ?? (serverHolidays ?? []).map(holidayToEditable)).map((r) =>
         r.id === id ? { ...r, editing: true } : r,
@@ -71,7 +71,7 @@ export default function HolidaysPanel() {
   }, [serverHolidays]);
 
   const handleFieldChange = useCallback(
-    (id: string, field: 'date' | 'name', value: string) => {
+    (id: string | number, field: 'date' | 'name', value: string) => {
       setLocalRows((prev) =>
         (prev ?? (serverHolidays ?? []).map(holidayToEditable)).map((r) =>
           r.id === id ? { ...r, [field]: value } : r,
@@ -81,13 +81,13 @@ export default function HolidaysPanel() {
     [serverHolidays],
   );
 
-  const handleSaveRow = useCallback((id: string) => {
+  const handleSaveRow = useCallback((id: string | number) => {
     setLocalRows((prev) =>
       (prev ?? []).map((r) => (r.id === id ? { ...r, editing: false, isNew: false } : r)),
     );
     setSaveErrors((e) => {
       const next = { ...e };
-      delete next[id];
+      delete next[String(id)];
       return next;
     });
   }, []);

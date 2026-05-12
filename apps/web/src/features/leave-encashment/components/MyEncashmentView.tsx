@@ -30,6 +30,7 @@ import {
 } from '@/lib/hooks/useLeaveEncashment';
 import { ApiError } from '@/lib/api/client';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
+import { LEAVE_ENCASHMENT_STATUS, LEAVE_TYPE_ID } from '@/lib/status/maps';
 import type { LeaveEncashmentSummary } from '@nexora/contracts/leave-encashment';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -212,7 +213,7 @@ function CancelEncashmentWrapper({
   encashmentId,
   onClose,
 }: {
-  encashmentId: string;
+  encashmentId: number;
   onClose: () => void;
 }) {
   const { data: enc, isLoading } = useEncashment(encashmentId);
@@ -312,18 +313,18 @@ export interface MyEncashmentViewProps {
 
 export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
   const { data: me, isLoading: meLoading } = useMe();
-  const employeeId = me?.data?.user?.id ?? '';
+  const employeeId: number = me?.data?.user?.id ?? 0;
   const currentYear = new Date().getFullYear();
 
   const balancesQuery = useLeaveBalances(employeeId);
   const encashmentsQuery = useMyEncashments(currentYear);
 
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
-  // Annual balance — using contract field names: type + remaining
+  // Annual balance — using contract field names: leaveTypeId + remaining
   // getLeaveBalances returns { year, balances } — we read .balances
-  const annualBalance = balancesQuery.data?.balances.find((b) => b.type === 'Annual');
+  const annualBalance = balancesQuery.data?.balances.find((b) => b.leaveTypeId === LEAVE_TYPE_ID.Annual);
   const daysRemaining = annualBalance?.remaining ?? 0;
   // daysEncashed is a new field on LeaveBalance (BL-LE-06); may be absent on older API responses
   const daysEncashed = (annualBalance as (typeof annualBalance & { daysEncashed?: number }) | undefined)?.daysEncashed ?? 0;
@@ -340,16 +341,16 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
     if (!encashmentsQuery.data) return false;
     return encashmentsQuery.data.data.some(
       (e) =>
-        e.status === 'Pending' ||
-        e.status === 'ManagerApproved' ||
-        e.status === 'AdminFinalised',
+        e.status === LEAVE_ENCASHMENT_STATUS.Pending ||
+        e.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved ||
+        e.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised,
     );
   }, [encashmentsQuery.data]);
 
   const canApply = inWindow && !hasOpenRequest && maxEncashable >= 1;
 
   function isCancellable(enc: LeaveEncashmentSummary): boolean {
-    return enc.status === 'Pending';
+    return enc.status === LEAVE_ENCASHMENT_STATUS.Pending;
   }
 
   return (

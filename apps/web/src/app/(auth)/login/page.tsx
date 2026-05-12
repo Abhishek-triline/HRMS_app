@@ -36,11 +36,13 @@ const ShieldIcon = () => (
   </svg>
 );
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  Admin: '/admin/dashboard',
-  Manager: '/manager/dashboard',
-  Employee: '/employee/dashboard',
-  PayrollOfficer: '/payroll/dashboard',
+import { ROLE_ID } from '@/lib/status/maps';
+
+const ROLE_DASHBOARD: Record<number, string> = {
+  [ROLE_ID.Admin]: '/admin/dashboard',
+  [ROLE_ID.Manager]: '/manager/dashboard',
+  [ROLE_ID.Employee]: '/employee/dashboard',
+  [ROLE_ID.PayrollOfficer]: '/payroll/dashboard',
 };
 
 export default function LoginPage() {
@@ -61,7 +63,7 @@ export default function LoginPage() {
     try {
       const response = await login(data);
       // Login response includes the role — use it directly, no extra /auth/me call needed
-      const destination = ROLE_DASHBOARD[response.data.role] ?? '/employee/dashboard';
+      const destination = ROLE_DASHBOARD[response.data.roleId] ?? '/employee/dashboard';
       router.push(destination);
     } catch (err) {
       if (err instanceof ApiError) {

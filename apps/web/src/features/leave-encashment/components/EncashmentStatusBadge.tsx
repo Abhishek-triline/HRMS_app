@@ -3,25 +3,20 @@
 /**
  * EncashmentStatusBadge — status pill for leave encashment requests.
  *
- * Status pill colors (from design system):
- *   Pending         = umberbg/umber
- *   ManagerApproved = softmint/forest
- *   AdminFinalised  = greenbg/richgreen
- *   Paid            = greenbg/richgreen + lock icon
- *   Rejected        = crimsonbg/crimson
- *   Cancelled       = sage/slate
+ * v2: status is INT code (1=Pending, 2=ManagerApproved, 3=AdminFinalised,
+ *     4=Paid, 5=Rejected, 6=Cancelled).
  */
 
-import type { LeaveEncashmentStatus } from '@nexora/contracts/leave-encashment';
+import { LEAVE_ENCASHMENT_STATUS } from '@/lib/status/maps';
 
 interface EncashmentStatusBadgeProps {
-  status: LeaveEncashmentStatus;
+  status: number;
   className?: string;
 }
 
 export function EncashmentStatusBadge({ status, className = '' }: EncashmentStatusBadgeProps) {
   switch (status) {
-    case 'Pending':
+    case LEAVE_ENCASHMENT_STATUS.Pending:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-umberbg text-umber text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
@@ -29,7 +24,7 @@ export function EncashmentStatusBadge({ status, className = '' }: EncashmentStat
           Pending
         </span>
       );
-    case 'ManagerApproved':
+    case LEAVE_ENCASHMENT_STATUS.ManagerApproved:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-softmint text-forest text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
@@ -37,7 +32,7 @@ export function EncashmentStatusBadge({ status, className = '' }: EncashmentStat
           Manager Approved
         </span>
       );
-    case 'AdminFinalised':
+    case LEAVE_ENCASHMENT_STATUS.AdminFinalised:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-greenbg text-richgreen text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
@@ -45,7 +40,7 @@ export function EncashmentStatusBadge({ status, className = '' }: EncashmentStat
           Admin Finalised
         </span>
       );
-    case 'Paid':
+    case LEAVE_ENCASHMENT_STATUS.Paid:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-greenbg text-richgreen text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
@@ -56,7 +51,7 @@ export function EncashmentStatusBadge({ status, className = '' }: EncashmentStat
           Paid
         </span>
       );
-    case 'Rejected':
+    case LEAVE_ENCASHMENT_STATUS.Rejected:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-crimsonbg text-crimson text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}
@@ -64,7 +59,7 @@ export function EncashmentStatusBadge({ status, className = '' }: EncashmentStat
           Rejected
         </span>
       );
-    case 'Cancelled':
+    case LEAVE_ENCASHMENT_STATUS.Cancelled:
       return (
         <span
           className={`inline-flex items-center gap-1 bg-sage/30 text-slate text-xs font-semibold px-2.5 py-1 rounded-full ${className}`}

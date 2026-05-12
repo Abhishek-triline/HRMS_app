@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useEncashment } from '@/lib/hooks/useLeaveEncashment';
 import { Spinner } from '@/components/ui/Spinner';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
+import { LEAVE_ENCASHMENT_STATUS, ROUTED_TO, getRoutedTo } from '@/lib/status/maps';
 import type { LeaveEncashmentDetail } from '@nexora/contracts/leave-encashment';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Routed To</p>
-            <p className="font-semibold text-charcoal mt-0.5">{enc.routedTo}</p>
+            <p className="font-semibold text-charcoal mt-0.5">{getRoutedTo(enc.routedToId).label}</p>
           </div>
           {enc.approverName && (
             <div>
@@ -184,25 +185,25 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           />
 
           {/* Manager decision */}
-          {enc.routedTo === 'Manager' ? (
+          {enc.routedToId === ROUTED_TO.Manager ? (
             <TimelineEvent
               completed={
-                enc.status !== 'Pending' &&
-                enc.status !== 'Cancelled'
+                enc.status !== LEAVE_ENCASHMENT_STATUS.Pending &&
+                enc.status !== LEAVE_ENCASHMENT_STATUS.Cancelled
               }
-              iconBg={enc.status === 'Rejected' && !enc.decidedBy?.includes('Admin') ? 'bg-crimson' : 'bg-forest'}
+              iconBg={enc.status === LEAVE_ENCASHMENT_STATUS.Rejected ? 'bg-crimson' : 'bg-forest'}
               title={
-                enc.status === 'ManagerApproved' ||
-                enc.status === 'AdminFinalised' ||
-                enc.status === 'Paid'
+                enc.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved ||
+                enc.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised ||
+                enc.status === LEAVE_ENCASHMENT_STATUS.Paid
                   ? 'Manager approved'
-                  : enc.status === 'Rejected'
+                  : enc.status === LEAVE_ENCASHMENT_STATUS.Rejected
                   ? 'Rejected by manager'
                   : 'Awaiting manager approval'
               }
               subtitle={enc.approverName ? `Approver: ${enc.approverName}` : undefined}
               timestamp={
-                enc.status !== 'Pending' && enc.status !== 'Cancelled' ? enc.decidedAt : null
+                enc.status !== LEAVE_ENCASHMENT_STATUS.Pending && enc.status !== LEAVE_ENCASHMENT_STATUS.Cancelled ? enc.decidedAt : null
               }
               note={enc.decisionNote}
               icon={
@@ -214,8 +215,8 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           ) : (
             <TimelineEvent
               completed={
-                enc.status !== 'Pending' &&
-                enc.status !== 'Cancelled'
+                enc.status !== LEAVE_ENCASHMENT_STATUS.Pending &&
+                enc.status !== LEAVE_ENCASHMENT_STATUS.Cancelled
               }
               iconBg="bg-umber"
               title="Escalated to Admin (no reporting manager)"
@@ -231,23 +232,23 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           {/* Admin decision */}
           <TimelineEvent
             completed={
-              enc.status === 'AdminFinalised' ||
-              enc.status === 'Paid' ||
-              (enc.status === 'Rejected' && Boolean(enc.decidedBy))
+              enc.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised ||
+              enc.status === LEAVE_ENCASHMENT_STATUS.Paid ||
+              (enc.status === LEAVE_ENCASHMENT_STATUS.Rejected && Boolean(enc.decidedBy))
             }
-            iconBg={enc.status === 'Rejected' ? 'bg-crimson' : 'bg-richgreen'}
+            iconBg={enc.status === LEAVE_ENCASHMENT_STATUS.Rejected ? 'bg-crimson' : 'bg-richgreen'}
             title={
-              enc.status === 'AdminFinalised' || enc.status === 'Paid'
+              enc.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised || enc.status === LEAVE_ENCASHMENT_STATUS.Paid
                 ? `Admin finalised — ${enc.daysApproved} day${(enc.daysApproved ?? 0) !== 1 ? 's' : ''} at ${ratePerDay}`
-                : enc.status === 'Rejected'
+                : enc.status === LEAVE_ENCASHMENT_STATUS.Rejected
                 ? 'Rejected'
                 : 'Awaiting Admin finalisation'
             }
             timestamp={
-              enc.status === 'AdminFinalised' || enc.status === 'Paid' ? enc.decidedAt : null
+              enc.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised || enc.status === LEAVE_ENCASHMENT_STATUS.Paid ? enc.decidedAt : null
             }
             note={
-              (enc.status === 'AdminFinalised' || enc.status === 'Paid' || enc.status === 'Rejected')
+              (enc.status === LEAVE_ENCASHMENT_STATUS.AdminFinalised || enc.status === LEAVE_ENCASHMENT_STATUS.Paid || enc.status === LEAVE_ENCASHMENT_STATUS.Rejected)
                 ? enc.decisionNote
                 : null
             }
@@ -260,9 +261,9 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
 
           {/* Payslip paid */}
           <TimelineEvent
-            completed={enc.status === 'Paid'}
+            completed={enc.status === LEAVE_ENCASHMENT_STATUS.Paid}
             iconBg="bg-richgreen"
-            title={enc.status === 'Paid' ? `Paid via payslip ${enc.paidInPayslipId ?? ''}` : 'Payment pending next payroll run'}
+            title={enc.status === LEAVE_ENCASHMENT_STATUS.Paid ? `Paid via payslip ${enc.paidInPayslipId ?? ''}` : 'Payment pending next payroll run'}
             timestamp={enc.paidAt}
             icon={
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -272,7 +273,7 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           />
 
           {/* Cancellation */}
-          {enc.status === 'Cancelled' && (
+          {enc.status === LEAVE_ENCASHMENT_STATUS.Cancelled && (
             <TimelineEvent
               completed
               iconBg="bg-slate"
@@ -308,7 +309,7 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
 // ── Exported view ─────────────────────────────────────────────────────────────
 
 interface EncashmentDetailViewProps {
-  encashmentId: string;
+  encashmentId: number;
   backHref: string;
 }
 

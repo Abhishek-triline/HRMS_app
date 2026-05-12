@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { LeaveStatusBadge } from '@/components/leave/LeaveStatusBadge';
 import { LeaveApprovalActions } from '@/components/leave/LeaveApprovalActions';
 import { useLeave } from '@/lib/hooks/useLeave';
+import { LEAVE_STATUS, LEAVE_TYPE_MAP, LEAVE_TYPE_ID, ROUTED_TO } from '@/lib/status/maps';
 
 function formatDate(iso: string): string {
   try {
@@ -41,7 +42,7 @@ function formatDateTime(iso: string): string {
 export default function AdminLeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: request, isLoading, error } = useLeave(id);
+  const { data: request, isLoading, error } = useLeave(Number(id));
 
   if (isLoading) {
     return (
@@ -66,7 +67,7 @@ export default function AdminLeaveDetailPage() {
     );
   }
 
-  const isPending = request.status === 'Pending' || request.status === 'Escalated';
+  const isPending = request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated;
 
   return (
     <>
@@ -86,15 +87,15 @@ export default function AdminLeaveDetailPage() {
 
       {/* Status banner with Admin badge */}
       <div className={`border rounded-xl px-6 py-4 mb-6 flex items-center gap-3 ${
-        request.status === 'Pending' || request.status === 'Escalated'
+        request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated
           ? 'bg-umberbg border-umber/20'
-          : request.status === 'Approved'
+          : request.status === LEAVE_STATUS.Approved
           ? 'bg-greenbg border-richgreen/20'
           : 'bg-crimsonbg border-crimson/20'
       }`}>
         <LeaveStatusBadge status={request.status} />
         <span className="text-sm text-charcoal font-medium ml-2">
-          {request.employeeName} — {request.type} Leave
+          {request.employeeName} — {LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave
         </span>
         <span className="ml-auto flex items-center gap-2">
           <span className="text-xs bg-forest text-white font-bold px-2 py-0.5 rounded-full">Admin</span>
@@ -116,8 +117,8 @@ export default function AdminLeaveDetailPage() {
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Leave Type</div>
             <div className="text-sm font-semibold text-charcoal flex items-center gap-2">
-              {request.type} Leave
-              {(request.type === 'Maternity' || request.type === 'Paternity') && (
+              {LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave
+              {(request.leaveTypeId === LEAVE_TYPE_ID.Maternity || request.leaveTypeId === LEAVE_TYPE_ID.Paternity) && (
                 <span className="text-xs bg-softmint text-forest font-bold px-1.5 py-0.5 rounded">Event-based</span>
               )}
             </div>
@@ -142,7 +143,7 @@ export default function AdminLeaveDetailPage() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Routing</div>
-            <div className="text-sm font-semibold text-charcoal">{request.routedTo}</div>
+            <div className="text-sm font-semibold text-charcoal">{request.routedToId === ROUTED_TO.Admin ? 'Admin' : 'Manager'}</div>
           </div>
           <div className="sm:col-span-2">
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Reason</div>

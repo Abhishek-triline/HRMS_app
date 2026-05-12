@@ -29,6 +29,7 @@ import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
 import { clsx } from 'clsx';
 import type { PerformanceReviewSummary } from '@nexora/contracts/performance';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 
 // ── Inline review status badge matching prototype exactly ───────────────────
 
@@ -105,10 +106,11 @@ export default function CycleDetailPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [applied, setApplied] = useState({ dept: '', status: '' });
 
-  const { data, isLoading, isError } = useCycle(id);
-  const { mutateAsync: closeCycle, isPending: isClosing } = useCloseCycle(id);
+  const cycleIdNum = Number(id);
+  const { data, isLoading, isError } = useCycle(cycleIdNum);
+  const { mutateAsync: closeCycle, isPending: isClosing } = useCloseCycle(cycleIdNum);
 
-  async function handleClose(cycleId: string, version: number) {
+  async function handleClose(cycleId: number, version: number) {
     try {
       await closeCycle({ confirm: 'CLOSE', version });
       showToast({ type: 'success', title: 'Cycle closed', message: 'All final ratings are now locked.' });
@@ -162,7 +164,7 @@ export default function CycleDetailPage() {
   }
 
   const { cycle, reviews } = data;
-  const isClosed = cycle.status === 'Closed';
+  const isClosed = cycle.status === CYCLE_STATUS.Closed;
   const pending = pendingCount(reviews);
 
   return (

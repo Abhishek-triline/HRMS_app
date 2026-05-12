@@ -24,16 +24,17 @@ import { useLeaveBalances, useLeaveList, useCancelLeave, useLeave } from '@/lib/
 import { useMe } from '@/lib/hooks/useAuth';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
-import type { LeaveRequestSummary, LeaveStatus } from '@nexora/contracts/leave';
+import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 import type { LeaveRequest } from '@nexora/contracts/leave';
+import { LEAVE_STATUS } from '@/lib/status/maps';
 
 type TabKey = 'all' | 'pending' | 'approved' | 'rejected';
 
-const tabs: { key: TabKey; label: string; status?: LeaveStatus }[] = [
+const tabs: { key: TabKey; label: string; status?: number }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending', status: 'Pending' },
-  { key: 'approved', label: 'Approved', status: 'Approved' },
-  { key: 'rejected', label: 'Rejected', status: 'Rejected' },
+  { key: 'pending', label: 'Pending', status: LEAVE_STATUS.Pending },
+  { key: 'approved', label: 'Approved', status: LEAVE_STATUS.Approved },
+  { key: 'rejected', label: 'Rejected', status: LEAVE_STATUS.Rejected },
 ];
 
 // Inner component that handles cancel after we fetch the full request
@@ -42,7 +43,7 @@ function CancelWrapper({
   isOpen,
   onClose,
 }: {
-  summaryId: string;
+  summaryId: number;
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -92,22 +93,22 @@ function CancelWrapper({
 
 export default function MyLeavePage() {
   const { data: me, isLoading: meLoading } = useMe();
-  const employeeId = me?.data?.user?.id ?? '';
+  const employeeId = me?.data?.user?.id ?? 0;
 
   const balancesQuery = useLeaveBalances(employeeId);
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
-  const listQuery = useLeaveList(activeStatus ? { status: activeStatus } : {});
+  const listQuery = useLeaveList(activeStatus !== undefined ? { status: activeStatus } : {});
 
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   function isCancellable(req: LeaveRequestSummary): boolean {
-    if (req.status === 'Pending') return true;
-    if (req.status === 'Approved') {
+    if (req.status === LEAVE_STATUS.Pending) return true;
+    if (req.status === LEAVE_STATUS.Approved) {
       const start = new Date(req.fromDate + 'T00:00:00');
       return start > today;
     }

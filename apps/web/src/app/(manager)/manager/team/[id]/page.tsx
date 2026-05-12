@@ -13,6 +13,7 @@ import { EmployeeStatusBadge } from '@/components/employees/EmployeeStatusBadge'
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { ApiError } from '@/lib/api/client';
+import { EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -31,7 +32,7 @@ export default function TeamMemberProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const { data: employee, isLoading, isError, error } = useEmployee(id ?? '');
+  const { data: employee, isLoading, isError, error } = useEmployee(Number(id));
 
   if (!id) return null;
 
@@ -123,7 +124,7 @@ export default function TeamMemberProfilePage() {
                 <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <span className="text-xs text-slate">{employee.employmentType}</span>
+                <span className="text-xs text-slate">{EMPLOYMENT_TYPE_MAP[employee.employmentTypeId]?.label ?? String(employee.employmentTypeId)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

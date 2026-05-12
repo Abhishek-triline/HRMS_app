@@ -27,7 +27,7 @@ import { Spinner } from '@/components/ui/Spinner';
 export default function AdminReviewDetailPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
 
-  const { data, isLoading, isError } = useReview(reviewId);
+  const { data, isLoading, isError } = useReview(Number(reviewId));
 
   if (isLoading) {
     return (

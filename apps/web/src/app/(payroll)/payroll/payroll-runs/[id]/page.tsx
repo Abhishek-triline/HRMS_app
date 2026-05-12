@@ -21,6 +21,7 @@ import { TwoStepFinaliseModal } from '@/components/payroll/TwoStepFinaliseModal'
 import { EditableTaxEntry } from '@/components/payroll/EditableTaxEntry';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { PayrollRunStatus } from '@nexora/contracts/payroll';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
 
 const MONTH_NAMES = [
@@ -30,7 +31,8 @@ const MONTH_NAMES = [
 
 export default function POPayrollRunDetailPage() {
   const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id ?? '';
+  const idStr = Array.isArray(params.id) ? params.id[0] : params.id ?? '';
+  const id = Number(idStr);
 
   const { data, isLoading, isError } = usePayrollRun(id);
   const [finaliseOpen, setFinaliseOpen] = useState(false);
@@ -54,9 +56,9 @@ export default function POPayrollRunDetailPage() {
   }
 
   const { run, payslips } = data;
-  const isReview = run.status === 'Review';
-  const isFinalised = run.status === 'Finalised';
-  const isDraft = run.status === 'Draft';
+  const isReview = run.status === PayrollRunStatus.Review;
+  const isFinalised = run.status === PayrollRunStatus.Finalised;
+  const isDraft = run.status === PayrollRunStatus.Draft;
 
   // Count pro-rated payslips using lopDays as proxy for mid-month joiners.
   const proRatedCount = payslips.filter(

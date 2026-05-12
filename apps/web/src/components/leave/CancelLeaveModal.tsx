@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { LeaveRequest } from '@nexora/contracts/leave';
 
 interface CancelLeaveModalProps {
@@ -53,7 +54,7 @@ export function CancelLeaveModal({
       onClose={onClose}
       title="Cancel Leave Request"
       requireConfirm
-      consequenceText={`This will cancel request ${request.code} (${request.type} leave, ${request.fromDate}${request.toDate !== request.fromDate ? ` – ${request.toDate}` : ''}). ${restoreHint}`}
+      consequenceText={`This will cancel request ${request.code} (${request.leaveTypeName} leave, ${request.fromDate}${request.toDate !== request.fromDate ? ` – ${request.toDate}` : ''}). ${restoreHint}`}
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
@@ -74,7 +75,7 @@ export function CancelLeaveModal({
         <div className="bg-softmint rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-slate">Leave type</span>
-            <span className="font-semibold text-charcoal">{request.type}</span>
+            <span className="font-semibold text-charcoal">{request.leaveTypeName}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate">Duration</span>
@@ -84,7 +85,7 @@ export function CancelLeaveModal({
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate">Status</span>
-            <span className="font-semibold text-charcoal">{request.status}</span>
+            <StatusBadge entity="leaveStatus" code={request.status} />
           </div>
         </div>
 

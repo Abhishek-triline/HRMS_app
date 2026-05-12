@@ -11,12 +11,14 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { GoalRow } from './GoalRow';
 import { Button } from '@/components/ui/Button';
-import type { Goal, GoalOutcome } from '@nexora/contracts/performance';
+import type { Goal } from '@nexora/contracts/performance';
+
+type OutcomeCode = 1 | 2 | 3 | 4;
 
 interface GoalListProps {
   goals: Goal[];
-  /** Manager mode: called when an outcome changes */
-  onOutcomeChange?: (goalId: string, outcome: GoalOutcome) => void;
+  /** Manager mode: called when an outcome changes (INT code) */
+  onOutcomeChange?: (goalId: number, outcomeId: OutcomeCode) => void;
   /** Employee mode: show "Propose goal" button (window-gated) */
   canProposeGoal?: boolean;
   onProposeGoal?: (text: string) => Promise<void>;

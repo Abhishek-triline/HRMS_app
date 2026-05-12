@@ -4,16 +4,19 @@
  * useAdminDashboard — aggregates all queries needed for the Admin dashboard.
  *
  * KPI sources (no new endpoints; client-side filters from existing hooks):
- *   Employees:         listEmployees({ status: 'Active', limit: 1 }) → pagination.total
- *   On Leave Today:    listLeave({ status: 'Approved', from: today, to: today })
- *   Pending Approvals: listLeave({ status: 'Pending' })
- *   Payroll:           listPayrollRuns({ limit: 1 }) filtered to current month/year
+ *   Employees:         useEmployeesCount({ status: 1 }) → active count
+ *   On Leave Today:    useLeaveList({ status: 2, from: today, to: today })
+ *   Pending Approvals: useLeaveList({ status: 1 })
+ *   Payroll:           usePayrollRuns({ limit: 5 }) filtered to current month/year
+ *
+ * v2: status codes are INT (1=Active, 2=Approved, 1=Pending).
  */
 
-import { useEmployeesCount, useEmployeesList } from '@/lib/hooks/useEmployees';
+import { useEmployeesCount } from '@/lib/hooks/useEmployees';
 import { useLeaveList } from '@/lib/hooks/useLeave';
 import { usePayrollRuns } from '@/lib/hooks/usePayroll';
 import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
+import { EMPLOYEE_STATUS, LEAVE_STATUS } from '@/lib/status/maps';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -28,11 +31,9 @@ export function useAdminDashboard() {
   const today = todayISO();
   const { month, year } = currentMonthYear();
 
-  // Cursor-walks all Active employees (up to 1,000) for an exact count.
-  // v1.1: backend should add pagination.total so this can become a single fetch.
-  const activeCount = useEmployeesCount({ status: 'Active' });
-  const onLeaveToday = useLeaveList({ status: 'Approved', fromDate: today, toDate: today });
-  const pendingLeave = useLeaveList({ status: 'Pending' });
+  const activeCount = useEmployeesCount({ status: EMPLOYEE_STATUS.Active });
+  const onLeaveToday = useLeaveList({ status: LEAVE_STATUS.Approved, fromDate: today, toDate: today });
+  const pendingLeave = useLeaveList({ status: LEAVE_STATUS.Pending });
   const payrollRuns = usePayrollRuns({ limit: 5 });
   const auditLogs = useAuditLogs({});
 

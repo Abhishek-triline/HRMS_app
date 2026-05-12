@@ -13,7 +13,7 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationItem } from './NotificationItem';
 import { EmptyFeed } from './EmptyFeed';
-import type { Notification, NotificationCategory } from '@nexora/contracts/notifications';
+import type { Notification } from '@nexora/contracts/notifications';
 import type { ChipFilter } from './NotificationCategoryChips';
 
 // ── Loading skeleton ─────────────────────────────────────────────────────────
@@ -45,12 +45,13 @@ interface NotificationFeedProps {
 
 export function NotificationFeed({ activeFilter }: NotificationFeedProps) {
   // Translate chip filter → API params
+  // INT category IDs are passed as-is; 'all' and 'unread' are meta-filters.
   const apiFilters =
     activeFilter === 'all'
       ? {}
       : activeFilter === 'unread'
       ? { unread: true }
-      : { category: activeFilter as NotificationCategory };
+      : { categoryId: activeFilter as number };
 
   const {
     data,
@@ -64,16 +65,16 @@ export function NotificationFeed({ activeFilter }: NotificationFeedProps) {
   } = useNotifications(apiFilters);
 
   // Optimistic: track locally-read IDs until refetch settles
-  const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set());
+  const [localReadIds, setLocalReadIds] = useState<Set<number>>(new Set());
 
-  const handleRead = useCallback((id: string) => {
+  const handleRead = useCallback((id: number) => {
     setLocalReadIds((prev) => new Set(prev).add(id));
   }, []);
 
   // Flatten pages → single notification array
   const notifications: Notification[] = (data?.pages ?? []).flatMap((page) =>
     page.data.map((n) =>
-      localReadIds.has(n.id) ? { ...n, unread: false } : n,
+      localReadIds.has(n.id as number) ? { ...n, unread: false } : n,
     ),
   );
 

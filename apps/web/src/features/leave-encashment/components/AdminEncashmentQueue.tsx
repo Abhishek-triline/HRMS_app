@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
+import { LEAVE_ENCASHMENT_STATUS } from '@/lib/status/maps';
 import type { LeaveEncashmentSummary } from '@nexora/contracts/leave-encashment';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -306,7 +307,7 @@ function QueueTable({ items, showActions, onFinalise, onReject }: QueueTableProp
                 {showActions && (
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {enc.status === 'ManagerApproved' && onFinalise && (
+                      {enc.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved && onFinalise && (
                         <Button
                           type="button"
                           variant="primary"
@@ -377,8 +378,8 @@ export function AdminEncashmentQueue() {
   const [rejectTarget, setRejectTarget] = useState<LeaveEncashmentSummary | null>(null);
 
   const queueItems = queueQuery.data?.data ?? [];
-  const managerApprovedItems = queueItems.filter((e) => e.status === 'ManagerApproved');
-  const pendingItems = queueItems.filter((e) => e.status === 'Pending');
+  const managerApprovedItems = queueItems.filter((e) => e.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved);
+  const pendingItems = queueItems.filter((e) => e.status === LEAVE_ENCASHMENT_STATUS.Pending);
   const allItems = allQuery.data?.data ?? [];
 
   const currentYear = new Date().getFullYear();

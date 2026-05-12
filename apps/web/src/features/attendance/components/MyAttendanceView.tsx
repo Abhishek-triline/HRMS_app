@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { MyOverviewHero } from '@/features/overview/components/MyOverviewHero';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { ATTENDANCE_STATUS } from '@/lib/status/maps';
 import type { CalendarDay } from '@/components/attendance/AttendanceCalendar';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -111,19 +112,23 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
 
 // ── Status badge for the log table ────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Present: 'bg-greenbg text-richgreen',
-    Absent: 'bg-crimsonbg text-crimson',
-    'On-Leave': 'bg-amber-50 text-amber-700 border border-amber-200',
-    'Weekly-Off': 'bg-gray-100 text-slate',
-    Holiday: 'bg-softmint text-forest',
+function StatusBadge({ status }: { status: number }) {
+  const map: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]:   'bg-greenbg text-richgreen',
+    [ATTENDANCE_STATUS.Absent]:    'bg-crimsonbg text-crimson',
+    [ATTENDANCE_STATUS.OnLeave]:   'bg-amber-50 text-amber-700 border border-amber-200',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'bg-gray-100 text-slate',
+    [ATTENDANCE_STATUS.Holiday]:   'bg-softmint text-forest',
+  };
+  const labels: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]:   'Present',
+    [ATTENDANCE_STATUS.Absent]:    'Absent',
+    [ATTENDANCE_STATUS.OnLeave]:   'On Leave',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'Weekly Off',
+    [ATTENDANCE_STATUS.Holiday]:   'Holiday',
   };
   const cls = map[status] ?? 'bg-gray-100 text-slate';
-  const label =
-    status === 'On-Leave' ? 'On Leave'
-    : status === 'Weekly-Off' ? 'Weekly Off'
-    : status;
+  const label = labels[status] ?? String(status);
   return <span className={`text-xs font-bold px-2 py-1 rounded ${cls}`}>{label}</span>;
 }
 
@@ -156,10 +161,10 @@ export function MyAttendanceView() {
 
   // ── Computed stats ──────────────────────────────────────────────────────────
 
-  const workingRows = rows.filter((r) => r.status !== 'Weekly-Off' && r.status !== 'Holiday');
-  const presentRows = rows.filter((r) => r.status === 'Present');
+  const workingRows = rows.filter((r) => r.status !== ATTENDANCE_STATUS.WeeklyOff && r.status !== ATTENDANCE_STATUS.Holiday);
+  const presentRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.Present);
   const lateRows = rows.filter((r) => r.late);
-  const leaveRows = rows.filter((r) => r.status === 'On-Leave');
+  const leaveRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.OnLeave);
 
   const presentCount = presentRows.length;
   const workingDayCount = workingRows.length;
@@ -181,7 +186,7 @@ export function MyAttendanceView() {
 
   // Last 14 working days with hours for chart
   const chartBars = rows
-    .filter((r) => r.status === 'Present' && r.hoursWorkedMinutes !== null)
+    .filter((r) => r.status === ATTENDANCE_STATUS.Present && r.hoursWorkedMinutes !== null)
     .slice(-14)
     .map((r) => {
       const d = new Date(r.date);

@@ -45,7 +45,7 @@ interface PersonalHistoryTableProps {
   payslips: PayslipSummary[];
   basePath: string; // e.g. '/employee/payslips'
   onDownload: (payslip: PayslipSummary) => void;
-  downloadingId?: string;
+  downloadingId?: number;
   isLoading?: boolean;
 }
 
@@ -106,7 +106,7 @@ function PersonalPayslipCard({ payslip, basePath, onDownload, downloadingId }: {
   payslip: PayslipSummary;
   basePath: string;
   onDownload: (ps: PayslipSummary) => void;
-  downloadingId?: string;
+  downloadingId?: number;
 }) {
   const monthLabel = `${MONTH_NAMES[payslip.month]} ${payslip.year}`;
   return (

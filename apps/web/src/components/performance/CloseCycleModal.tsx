@@ -18,7 +18,7 @@ interface CloseCycleModalProps {
   isOpen: boolean;
   onClose: () => void;
   cycle: Pick<PerformanceCycle, 'id' | 'code' | 'version'>;
-  onConfirm: (cycleId: string, version: number) => Promise<void>;
+  onConfirm: (cycleId: number, version: number) => Promise<void>;
   isSubmitting?: boolean;
 }
 

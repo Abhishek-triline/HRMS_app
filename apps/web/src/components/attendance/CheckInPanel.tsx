@@ -407,7 +407,9 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
     undoCheckOutMutation.mutate();
   }, [undoCheckOutMutation]);
 
-  const panelState = data?.panelState ?? 'Ready';
+  // panelStateId: 1=Ready, 2=Working, 3=Confirm
+  const panelStateId = data?.panelStateId ?? 1;
+  const panelState = panelStateId === 2 ? 'Working' : panelStateId === 3 ? 'Confirm' : 'Ready';
   const record = data?.record ?? null;
   const lateThreshold = data?.lateThreshold ?? '10:30';
   const standardDailyHours = data?.standardDailyHours ?? 8;

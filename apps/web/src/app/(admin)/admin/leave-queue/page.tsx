@@ -20,6 +20,8 @@ import {
   LeaveQueueCardSkeleton,
 } from '@/features/leave-queue/components/LeaveQueueCard';
 import { useLeaveList } from '@/lib/hooks/useLeave';
+import { LEAVE_STATUS, LEAVE_TYPE_ID, ROUTED_TO } from '@/lib/status/maps';
+import type { LeaveListQuery } from '@nexora/contracts/leave';
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
@@ -46,25 +48,25 @@ function buildQuery(
   typeFilter: string,
   deptFilter: string,
   searchQuery: string,
-): Record<string, string> {
-  const base: Record<string, string> = { routedTo: 'Admin' };
+): Partial<LeaveListQuery> {
+  const base: Partial<LeaveListQuery> = { routedToId: ROUTED_TO.Admin };
 
   if (activeTab === 'escalated') {
-    base.status = 'Escalated';
+    base.status = LEAVE_STATUS.Escalated;
   } else if (activeTab === 'all-pending') {
-    base.status = 'Pending';
+    base.status = LEAVE_STATUS.Pending;
   } else if (activeTab === 'maternity') {
     // maternity/paternity route direct to admin — fetch pending + event-based types
-    base.status = 'Pending';
+    base.status = LEAVE_STATUS.Pending;
   } else if (activeTab === 'approved') {
-    base.status = 'Approved';
+    base.status = LEAVE_STATUS.Approved;
   } else if (activeTab === 'rejected') {
-    base.status = 'Rejected';
+    base.status = LEAVE_STATUS.Rejected;
   }
 
-  if (typeFilter) base.type = typeFilter;
-  if (deptFilter) base.department = deptFilter;
-  if (searchQuery) base.search = searchQuery;
+  if (typeFilter) base.leaveTypeId = Number(typeFilter);
+  if (deptFilter) (base as Record<string, unknown>).department = deptFilter;
+  if (searchQuery) (base as Record<string, unknown>).search = searchQuery;
 
   return base;
 }
@@ -81,15 +83,15 @@ export default function AdminLeaveQueuePage() {
   const query = useLeaveList(buildQuery(activeTab, typeFilter, deptFilter, searchQuery));
 
   // Per-tab counts — small parallel queries so all 5 badges show real numbers.
-  const allPendingCount = useLeaveList({ routedTo: 'Admin', status: 'Pending', limit: 1});
-  const escalatedCount = useLeaveList({ routedTo: 'Admin', status: 'Escalated', limit: 1});
-  const todayApprovedCount = useLeaveList({ routedTo: 'Admin', status: 'Approved', limit: 1});
-  const todayRejectedCount = useLeaveList({ routedTo: 'Admin', status: 'Rejected', limit: 1});
+  const allPendingCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Pending, limit: 1});
+  const escalatedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Escalated, limit: 1});
+  const todayApprovedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Approved, limit: 1});
+  const todayRejectedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Rejected, limit: 1});
 
   const tabCounts: Record<TabKey, number | null> = {
     'all-pending': allPendingCount.data?.data?.length ?? null,
     'escalated':   escalatedCount.data?.data?.length ?? null,
-    'maternity':   (allPendingCount.data?.data ?? []).filter((r) => r.type === 'Maternity' || r.type === 'Paternity').length,
+    'maternity':   (allPendingCount.data?.data ?? []).filter((r) => r.leaveTypeId === LEAVE_TYPE_ID.Maternity || r.leaveTypeId === LEAVE_TYPE_ID.Paternity).length,
     'approved':    todayApprovedCount.data?.data?.length ?? null,
     'rejected':    todayRejectedCount.data?.data?.length ?? null,
   };
@@ -98,7 +100,7 @@ export default function AdminLeaveQueuePage() {
     if (!query.data?.data) return [];
     let list = query.data.data;
     if (activeTab === 'maternity') {
-      list = list.filter((r) => r.type === 'Maternity' || r.type === 'Paternity');
+      list = list.filter((r) => r.leaveTypeId === LEAVE_TYPE_ID.Maternity || r.leaveTypeId === LEAVE_TYPE_ID.Paternity);
     }
     if (dateFilter) {
       list = list.filter((r) => r.fromDate <= dateFilter && r.toDate >= dateFilter);

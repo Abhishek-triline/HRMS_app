@@ -14,7 +14,8 @@ import { PayrollRunStatusBadge } from '@/components/payroll/PayrollRunStatusBadg
 import { MoneyDisplay } from '@/components/payroll/MoneyDisplay';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import type { PayrollRunStatus, PayrollRunSummary } from '@nexora/contracts/payroll';
+import { PayrollRunStatus } from '@nexora/contracts/payroll';
+import type { PayrollRunStatusValue, PayrollRunSummary } from '@nexora/contracts/payroll';
 
 /** PayrollRunSummary doesn't include LOP/Tax — access them safely from the runtime payload. */
 function getLopPaise(run: PayrollRunSummary): number {
@@ -32,27 +33,27 @@ const MONTH_NAMES = [
 const CURRENT_YEAR = new Date().getFullYear();
 const FY_OPTIONS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
-const STATUS_OPTIONS: Array<{ label: string; value: PayrollRunStatus | '' }> = [
+const STATUS_OPTIONS: Array<{ label: string; value: PayrollRunStatusValue | '' }> = [
   { label: 'All Status', value: '' },
-  { label: 'Draft', value: 'Draft' },
-  { label: 'Review', value: 'Review' },
-  { label: 'Finalised', value: 'Finalised' },
-  { label: 'Reversed', value: 'Reversed' },
+  { label: 'Draft', value: PayrollRunStatus.Draft },
+  { label: 'Review', value: PayrollRunStatus.Review },
+  { label: 'Finalised', value: PayrollRunStatus.Finalised },
+  { label: 'Reversed', value: PayrollRunStatus.Reversed },
 ];
 
 export default function POPayrollRunsPage() {
   const [year, setYear] = useState<number | undefined>(undefined);
-  const [status, setStatus] = useState<PayrollRunStatus | ''>('');
+  const [status, setStatus] = useState<PayrollRunStatusValue | ''>('');
 
   const { data, isLoading, isError } = usePayrollRuns({ year, status: status || undefined });
   const runs = data?.data ?? [];
 
   // Stat tile computations
-  const finalised = runs.filter((r) => r.status === 'Finalised');
+  const finalised = runs.filter((r) => r.status === PayrollRunStatus.Finalised);
   const lastFinalised = finalised[0];
   const ytdNet = finalised.reduce((acc, r) => acc + r.totalNetPaise, 0);
-  const reversalCount = runs.filter((r) => r.status === 'Reversed').length;
-  const draftRun = runs.find((r) => r.status === 'Draft');
+  const reversalCount = runs.filter((r) => r.status === PayrollRunStatus.Reversed).length;
+  const draftRun = runs.find((r) => r.status === PayrollRunStatus.Draft);
 
   return (
     <>
@@ -139,7 +140,7 @@ export default function POPayrollRunsPage() {
             </select>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as PayrollRunStatus | '')}
+              onChange={(e) => setStatus(e.target.value ? Number(e.target.value) as PayrollRunStatusValue : '')}
               className="border border-sage/50 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-forest/20"
               aria-label="Filter by status"
             >
@@ -183,7 +184,7 @@ export default function POPayrollRunsPage() {
                         <td className="px-4 py-3.5 text-center text-slate">{run.employeeCount}</td>
                         <td className="px-4 py-3.5 text-right text-charcoal">
                           <MoneyDisplay paise={run.totalGrossPaise} />
-                          {(run.status === 'Draft' || run.status === 'Review') && <span className="text-slate text-[10px]">*</span>}
+                          {(run.status === PayrollRunStatus.Draft || run.status === PayrollRunStatus.Review) && <span className="text-slate text-[10px]">*</span>}
                         </td>
                         <td className="px-4 py-3.5 text-right text-crimson font-semibold">
                           <MoneyDisplay paise={getLopPaise(run)} />
@@ -193,14 +194,14 @@ export default function POPayrollRunsPage() {
                         </td>
                         <td className="px-4 py-3.5 text-right font-semibold text-charcoal">
                           <MoneyDisplay paise={run.totalNetPaise} />
-                          {(run.status === 'Draft' || run.status === 'Review') && <span className="text-slate text-[10px]">*</span>}
+                          {(run.status === PayrollRunStatus.Draft || run.status === PayrollRunStatus.Review) && <span className="text-slate text-[10px]">*</span>}
                         </td>
                         <td className="px-4 py-3.5">
                           <PayrollRunStatusBadge status={run.status} />
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           <Link href={`/payroll/payroll-runs/${run.id}`} className="text-forest text-xs font-semibold hover:underline">
-                            {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
+                            {run.status === PayrollRunStatus.Draft || run.status === PayrollRunStatus.Review ? 'Continue →' : 'View →'}
                           </Link>
                         </td>
                       </tr>

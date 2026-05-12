@@ -45,7 +45,8 @@ import { usePayslip, useDownloadPayslipPdf } from '@/lib/hooks/usePayslips';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
-import type { Payslip, PayslipStatus } from '@nexora/contracts/payroll';
+import type { Payslip } from '@nexora/contracts/payroll';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -165,11 +166,11 @@ function fiscalYearLabel(month: number, year: number): string {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
-interface StatusBadgeProps { status: PayslipStatus }
+interface StatusBadgeProps { status: number }
 
 function InlineStatusBadge({ status }: StatusBadgeProps) {
   switch (status) {
-    case 'Finalised':
+    case PAYROLL_STATUS.Finalised:
       return (
         <span className="bg-greenbg text-richgreen text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -178,19 +179,19 @@ function InlineStatusBadge({ status }: StatusBadgeProps) {
           Finalised
         </span>
       );
-    case 'Reversed':
+    case PAYROLL_STATUS.Reversed:
       return (
         <span className="bg-crimsonbg text-crimson text-xs font-bold px-3 py-1 rounded-full">
           Reversed
         </span>
       );
-    case 'Review':
+    case PAYROLL_STATUS.Review:
       return (
         <span className="bg-umberbg text-umber text-xs font-bold px-3 py-1 rounded-full">
           Under Review
         </span>
       );
-    case 'Draft':
+    case PAYROLL_STATUS.Draft:
     default:
       return (
         <span className="bg-umberbg text-umber text-xs font-bold px-3 py-1 rounded-full">
@@ -262,8 +263,8 @@ interface PayslipDocumentProps {
 }
 
 function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocumentProps) {
-  const isFinalised = payslip.status === 'Finalised';
-  const isReversed = payslip.status === 'Reversed';
+  const isFinalised = payslip.status === PAYROLL_STATUS.Finalised;
+  const isReversed = payslip.status === PAYROLL_STATUS.Reversed;
   const netWorkingDays = payslip.workingDays - payslip.lopDays;
   const monthLabel = `${MONTH_NAMES[payslip.month] ?? ''} ${payslip.year}`;
   const monthLabelUpper = `${(MONTH_NAMES[payslip.month] ?? '').toUpperCase()} ${payslip.year}`;
@@ -656,16 +657,16 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
 // ── PayslipDetailView — the exported shared component ────────────────────────
 
 interface PayslipDetailViewProps {
-  /** The payslip ID from the URL param. */
-  payslipId: string;
+  /** The payslip ID from the URL param (numeric string from Next.js params). */
+  payslipId: string | number;
   /** Role-prefixed back-link, e.g. "/admin/payslips" or "/employee/payslips". */
   backHref: string;
 }
 
 export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProps) {
-  const { data: payslip, isLoading, isError } = usePayslip(payslipId);
+  const { data: payslip, isLoading, isError } = usePayslip(Number(payslipId));
 
-  const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? payslipId);
+  const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? String(payslipId));
 
   async function handleDownload() {
     if (!payslip) return;

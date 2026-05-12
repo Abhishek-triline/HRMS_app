@@ -18,28 +18,28 @@ import {
   LeaveQueueCardSkeleton,
 } from '@/features/leave-queue/components/LeaveQueueCard';
 import { useLeaveList } from '@/lib/hooks/useLeave';
-import type { LeaveStatus, LeaveType } from '@nexora/contracts/leave';
+import { LEAVE_STATUS, LEAVE_TYPE_ID } from '@/lib/status/maps';
 
-type FilterTab = 'Pending' | 'Escalated' | 'All';
+type FilterTab = 'pending' | 'escalated' | 'all';
 
 const TABS: { key: FilterTab; label: string }[] = [
-  { key: 'Pending', label: 'Pending' },
-  { key: 'Escalated', label: 'Escalated' },
-  { key: 'All', label: 'All Requests' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'escalated', label: 'Escalated' },
+  { key: 'all', label: 'All Requests' },
 ];
 
 export default function ManagerLeaveQueuePage() {
-  const [filterTab, setFilterTab] = useState<FilterTab>('Pending');
-  const [typeFilter, setTypeFilter] = useState<LeaveType | ''>('');
+  const [filterTab, setFilterTab] = useState<FilterTab>('pending');
+  const [typeFilter, setTypeFilter] = useState<number | ''>('');
 
   const query = useLeaveList({
-    ...(filterTab !== 'All' ? { status: filterTab as LeaveStatus } : {}),
-    ...(typeFilter ? { type: typeFilter } : {}),
+    ...(filterTab === 'pending' ? { status: LEAVE_STATUS.Pending } : filterTab === 'escalated' ? { status: LEAVE_STATUS.Escalated } : {}),
+    ...(typeFilter ? { leaveTypeId: typeFilter } : {}),
   });
 
   const requests = query.data?.data ?? [];
 
-  const isActionable = filterTab === 'Pending' || filterTab === 'Escalated';
+  const isActionable = filterTab === 'pending' || filterTab === 'escalated';
 
   function clearFilters() {
     setTypeFilter('');
@@ -111,16 +111,16 @@ export default function ManagerLeaveQueuePage() {
             <select
               id="mgr-type-filter"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as LeaveType | '')}
+              onChange={(e) => setTypeFilter(e.target.value ? Number(e.target.value) : '')}
               className="border border-sage/50 rounded-lg px-3 py-1.5 text-sm bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition-colors"
             >
               <option value="">All Types</option>
-              <option value="Annual">Annual</option>
-              <option value="Sick">Sick</option>
-              <option value="Casual">Casual</option>
-              <option value="Paternity">Paternity</option>
-              <option value="Maternity">Maternity</option>
-              <option value="Unpaid">Unpaid</option>
+              <option value={LEAVE_TYPE_ID.Annual}>Annual</option>
+              <option value={LEAVE_TYPE_ID.Sick}>Sick</option>
+              <option value={LEAVE_TYPE_ID.Casual}>Casual</option>
+              <option value={LEAVE_TYPE_ID.Paternity}>Paternity</option>
+              <option value={LEAVE_TYPE_ID.Maternity}>Maternity</option>
+              <option value={LEAVE_TYPE_ID.Unpaid}>Unpaid</option>
             </select>
           </div>
 
@@ -174,7 +174,7 @@ export default function ManagerLeaveQueuePage() {
               />
             </svg>
             <p className="text-slate text-sm font-medium">
-              No {filterTab !== 'All' ? filterTab.toLowerCase() : ''} leave requests in your queue.
+              No {filterTab !== 'all' ? filterTab : ''} leave requests in your queue.
             </p>
           </div>
         ) : (

@@ -21,7 +21,9 @@ import { GoalRow } from './GoalRow';
 import { OverrideTag } from './OverrideTag';
 import { Button } from '@/components/ui/Button';
 import { FieldError } from '@/components/ui/FieldError';
-import type { PerformanceReview, GoalOutcome } from '@nexora/contracts/performance';
+import type { PerformanceReview } from '@nexora/contracts/performance';
+
+type OutcomeCode = 1 | 2 | 3 | 4;
 
 const MAX_NOTE = 500;
 
@@ -54,7 +56,7 @@ interface ManagerRatingFormProps {
   onSubmit: (data: {
     managerRating: number;
     managerNote?: string;
-    goals?: Array<{ id: string; outcome: GoalOutcome }>;
+    goals?: Array<{ id: number; outcomeId: OutcomeCode }>;
     version: number;
   }) => Promise<void>;
   isSubmitting?: boolean;
@@ -157,9 +159,9 @@ export function ManagerRatingForm({
   const waitingForSelfReview =
     review.selfSubmittedAt === null && !isClosed;
 
-  // Track per-goal outcomes in local state (seeded from review.goals).
-  const [goalOutcomes, setGoalOutcomes] = useState<Record<string, GoalOutcome>>(
-    () => Object.fromEntries(review.goals.map((g) => [g.id, g.outcome])),
+  // Track per-goal outcomes in local state (seeded from review.goals, INT codes).
+  const [goalOutcomes, setGoalOutcomes] = useState<Record<number, OutcomeCode>>(
+    () => Object.fromEntries(review.goals.map((g) => [g.id, g.outcomeId as OutcomeCode])),
   );
 
   const {
@@ -184,7 +186,10 @@ export function ManagerRatingForm({
     currentRating !== review.selfRating;
 
   async function onValid(data: ManagerRatingFormValues) {
-    const goalsPayload = Object.entries(goalOutcomes).map(([id, outcome]) => ({ id, outcome }));
+    const goalsPayload = Object.entries(goalOutcomes).map(([id, outcomeId]) => ({
+      id: Number(id),
+      outcomeId: outcomeId as OutcomeCode,
+    }));
     await onSubmit({
       managerRating: data.managerRating,
       managerNote: data.managerNote || undefined,
@@ -353,12 +358,12 @@ export function ManagerRatingForm({
             {review.goals.map((goal) => (
               <GoalRow
                 key={goal.id}
-                goal={{ ...goal, outcome: goalOutcomes[goal.id] ?? goal.outcome }}
+                goal={{ ...goal, outcomeId: goalOutcomes[goal.id] ?? goal.outcomeId }}
                 onOutcomeChange={
                   isDisabled
                     ? undefined
-                    : (goalId, outcome) =>
-                        setGoalOutcomes((prev) => ({ ...prev, [goalId]: outcome }))
+                    : (goalId, outcomeId) =>
+                        setGoalOutcomes((prev) => ({ ...prev, [goalId]: outcomeId }))
                 }
                 disabled={isDisabled}
               />

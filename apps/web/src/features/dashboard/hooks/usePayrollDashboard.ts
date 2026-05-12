@@ -12,6 +12,7 @@
 
 import { useMemo } from 'react';
 import { usePayrollRuns, useReversals } from '@/lib/hooks/usePayroll';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
 function currentMonthYear(): { month: number; year: number } {
   const now = new Date();
@@ -43,7 +44,7 @@ export function usePayrollDashboard() {
 
   // Pending runs (not yet finalised)
   const pendingRuns = useMemo(
-    () => allRuns.filter((r) => r.status === 'Draft' || r.status === 'Review'),
+    () => allRuns.filter((r) => r.status === PAYROLL_STATUS.Draft || r.status === PAYROLL_STATUS.Review),
     [allRuns],
   );
 

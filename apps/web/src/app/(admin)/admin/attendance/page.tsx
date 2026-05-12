@@ -22,7 +22,9 @@ import { useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { MyAttendanceView } from '@/features/attendance/components/MyAttendanceView';
-import type { AttendanceStatus } from '@nexora/contracts/attendance';
+import type { AttendanceStatusValue } from '@nexora/contracts/attendance';
+import { AttendanceStatus } from '@nexora/contracts/attendance';
+import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -42,8 +44,8 @@ const PAGE_SIZE = 10;
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status, late }: { status: AttendanceStatus; late?: boolean }) {
-  if (late && status === 'Present') {
+function StatusBadge({ status, late }: { status: AttendanceStatusValue; late?: boolean }) {
+  if (late && status === ATTENDANCE_STATUS.Present) {
     return (
       <div className="flex items-center gap-1">
         <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Present</span>
@@ -51,15 +53,15 @@ function StatusBadge({ status, late }: { status: AttendanceStatus; late?: boolea
       </div>
     );
   }
-  const map: Record<AttendanceStatus, string> = {
-    Present: 'bg-greenbg text-richgreen',
-    Absent: 'bg-crimsonbg text-crimson',
-    'On-Leave': 'bg-umberbg text-umber',
-    'Weekly-Off': 'bg-gray-100 text-slate',
-    Holiday: 'bg-softmint text-forest',
+  const map: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]: 'bg-greenbg text-richgreen',
+    [ATTENDANCE_STATUS.Absent]: 'bg-crimsonbg text-crimson',
+    [ATTENDANCE_STATUS.OnLeave]: 'bg-umberbg text-umber',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'bg-gray-100 text-slate',
+    [ATTENDANCE_STATUS.Holiday]: 'bg-softmint text-forest',
   };
-  const label = status === 'On-Leave' ? 'On Leave' : status === 'Weekly-Off' ? 'Weekly Off' : status;
-  return <span className={`text-xs font-bold px-2 py-0.5 rounded ${map[status]}`}>{label}</span>;
+  const label = ATTENDANCE_STATUS_MAP[status]?.label ?? String(status);
+  return <span className={`text-xs font-bold px-2 py-0.5 rounded ${map[status] ?? ''}`}>{label}</span>;
 }
 
 // ── KPI Tile ───────────────────────────────────────────────────────────────────
@@ -171,7 +173,7 @@ function OrgAttendancePage() {
 
   // Date picker: default to today, query month data then filter client-side
   const [selectedDate, setSelectedDate] = useState(todayISO());
-  const [statusFilter, setStatusFilter] = useState<AttendanceStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<AttendanceStatusValue | 0>(0);
   const [deptFilter, setDeptFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -185,7 +187,7 @@ function OrgAttendancePage() {
   const { data, isLoading, isError, error } = useAttendanceList('all', {
     from,
     to,
-    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
     ...(deptFilter && deptFilter !== 'All Departments' ? { department: deptFilter } : {}),
   });
 
@@ -209,13 +211,13 @@ function OrgAttendancePage() {
   }, [dayRows, search]);
 
   // KPI counts from the day's slice
-  const kpiPresent = filteredRows.filter((r) => r.status === 'Present').length;
-  const kpiLeave = filteredRows.filter((r) => r.status === 'On-Leave').length;
-  const kpiAbsent = filteredRows.filter((r) => r.status === 'Absent').length;
+  const kpiPresent = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.Present).length;
+  const kpiLeave = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.OnLeave).length;
+  const kpiAbsent = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.Absent).length;
   const kpiLate = filteredRows.filter((r) => r.late).length;
   // "Yet to check-in" = absent + no check-in (simple approximation)
   const kpiYetToCheckIn = filteredRows.filter(
-    (r) => r.status === 'Absent' && !r.checkInTime,
+    (r) => r.status === ATTENDANCE_STATUS.Absent && !r.checkInTime,
   ).length;
 
   const totalActive = filteredRows.length;
@@ -258,15 +260,15 @@ function OrgAttendancePage() {
         </select>
         <select
           id="admin-att-status"
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as AttendanceStatus | ''); setPage(1); }}
+          value={statusFilter || ''}
+          onChange={(e) => { setStatusFilter(e.target.value ? Number(e.target.value) as AttendanceStatusValue : 0); setPage(1); }}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         >
           <option value="">All Status</option>
-          <option value="Present">Present</option>
-          <option value="Absent">Absent</option>
-          <option value="On-Leave">On Leave</option>
-          <option value="Weekly-Off">Weekly Off</option>
+          <option value={ATTENDANCE_STATUS.Present}>Present</option>
+          <option value={ATTENDANCE_STATUS.Absent}>Absent</option>
+          <option value={ATTENDANCE_STATUS.OnLeave}>On Leave</option>
+          <option value={ATTENDANCE_STATUS.WeeklyOff}>Weekly Off</option>
         </select>
         <div className="ml-auto flex gap-2">
           <button className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite">Export CSV</button>
@@ -412,7 +414,7 @@ function OrgAttendancePage() {
                           <td className="px-4 py-3 text-slate">
                             {(r as unknown as { department?: string }).department ?? '—'}
                           </td>
-                          <td className="px-4 py-3"><StatusBadge status={r.status} late={r.late} /></td>
+                          <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} late={r.late} /></td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkInTime)}</td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
                           <td className="px-4 py-3 text-slate">{hours}</td>
