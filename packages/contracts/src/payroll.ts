@@ -144,6 +144,12 @@ export const PayslipSchema = z.object({
   /** Net pay = gross − lopDeduction − finalTax − otherDeductions. */
   netPayPaise: PaiseSchema,
   finalisedAt: ISODateSchema.nullable(),
+  /** Encashment days paid in this payslip (BL-LE-09). 0 if no encashment. */
+  encashmentDays: z.number().int().min(0).default(0),
+  /** Encashment amount in paise (BL-LE-08). Adds to gross. */
+  encashmentPaise: z.number().int().min(0).default(0),
+  /** FK to the encashment record paid in this payslip. Null for payslips without encashment. */
+  encashmentId: z.string().nullable().default(null),
   /** Set on reversal records — links back to the original payslip. */
   reversalOfPayslipId: z.string().nullable(),
   /** Set on the original payslip when a reversal exists. */

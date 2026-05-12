@@ -147,3 +147,29 @@ export const UpdateLeaveConfigSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'At least one field must be provided' });
 export type UpdateLeaveConfig = z.infer<typeof UpdateLeaveConfigSchema>;
+
+// ── Leave Encashment config keys ─────────────────────────────────────────────
+
+/**
+ * EncashmentConfig — values persisted as four separate Configuration rows:
+ *   ENCASHMENT_WINDOW_START_MONTH  → integer 1-12 (default 12 = December)
+ *   ENCASHMENT_WINDOW_END_MONTH    → integer 1-12 (default 1 = January)
+ *   ENCASHMENT_WINDOW_END_DAY      → integer 1-31 (default 15)
+ *   ENCASHMENT_MAX_PERCENT         → integer 1-100 (default 50)
+ */
+export const EncashmentConfigSchema = z.object({
+  /** Month (1-12) in which the encashment request window opens. Default 12. */
+  windowStartMonth: z.number().int().min(1).max(12),
+  /** Month (1-12) in which the encashment request window closes. Default 1. */
+  windowEndMonth: z.number().int().min(1).max(12),
+  /** Day of windowEndMonth at which the window closes. Default 15. */
+  windowEndDay: z.number().int().min(1).max(31),
+  /** Maximum encashable percentage of remaining balance. Default 50. */
+  maxPercent: z.number().int().min(1).max(100),
+});
+export type EncashmentConfig = z.infer<typeof EncashmentConfigSchema>;
+
+export const EncashmentConfigResponseSchema = z.object({
+  data: EncashmentConfigSchema,
+});
+export type EncashmentConfigResponse = z.infer<typeof EncashmentConfigResponseSchema>;

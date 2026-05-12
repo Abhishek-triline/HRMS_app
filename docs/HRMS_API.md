@@ -585,8 +585,229 @@ These are not callable from the API but are part of the contract because they dr
 | Notifications | 3 |
 | Audit Log | 2 |
 | Configuration | 6 |
-| **Total** | **63** |
+| Leave Encashment | 8 |
+| **Total** | **71** |
 
 ---
 
 > Cross-reference: every endpoint listed above maps back to a use case in the [SRS](./SRS_HRMS_Nexora.md) and a flow in the [Process Flows](./HRMS_Process_Flows.md). Whenever a new BL rule is added, this document and the audit-log coverage table (§ 11.2 of Process Flows) must be reviewed together.
+
+---
+
+## § 10  Leave Encashment
+
+Base path: `/api/v1/leave-encashments`
+
+### Domain model
+
+```
+LeaveEncashment {
+  id                string          PK
+  code              string          LE-YYYY-NNNN, unique
+  employeeId        string          FK → Employee
+  year              int             calendar year being encashed
+  daysRequested     int             employee-submitted, ≥ 1
+  daysApproved      int?            set (and clamped) at AdminFinalise
+  status            enum            Pending | ManagerApproved | AdminFinalised | Paid | Rejected | Cancelled
+  approverId        string?         FK → Employee (Manager or Admin)
+  approvedAt        DateTime?
+  finalisedAt       DateTime?
+  paidAt            DateTime?
+  rejectedAt        DateTime?
+  cancelledAt       DateTime?
+  ratePerDayPaise   int?            locked at AdminFinalise
+  totalAmountPaise  int?            locked at AdminFinalise (recalculated at Paid)
+  managerNote       string?
+  adminNote         string?
+  paidInPayslipId   string?         FK → Payslip (set at Paid)
+  version           int             optimistic concurrency
+  createdAt         DateTime
+  updatedAt         DateTime
+}
+```
+
+### Endpoints
+
+#### POST /leave-encashments
+
+Submit a new encashment request.
+
+- **Auth:** any authenticated employee (role Employee, Manager, Admin, PayrollOfficer)
+- **BL:** BL-LE-01, BL-LE-03, BL-LE-04, BL-LE-13
+
+**Request body**
+```json
+{ "year": 2025, "daysRequested": 5 }
+```
+
+**Response 201**
+```json
+{
+  "data": {
+    "id": "clxxx",
+    "code": "LE-2025-0001",
+    "status": "Pending",
+    "daysRequested": 5,
+    "year": 2025,
+    "employeeId": "emp-1",
+    "approverId": "mgr-1",
+    "createdAt": "2025-12-15T10:00:00.000Z"
+  }
+}
+```
+
+**Error codes**
+
+| HTTP | code | rule |
+|------|------|------|
+| 409 | `ENCASHMENT_OUT_OF_WINDOW` | BL-LE-04 |
+| 409 | `ENCASHMENT_ALREADY_USED` | BL-LE-03 |
+| 409 | `ENCASHMENT_INSUFFICIENT_BALANCE` | BL-LE-02 |
+| 409 | `VALIDATION_FAILED` | BL-LE-13 (Exited employee) |
+| 400 | `ENCASHMENT_INVALID_LEAVE_TYPE` | BL-LE-01 (Annual type missing from DB) |
+
+---
+
+#### GET /leave-encashments
+
+List encashment requests (scoped by caller role).
+
+- **Auth:** any authenticated session
+- **Scoping:** Employee sees own; Manager sees own team; Admin/PayrollOfficer see all
+- **Query params:** `status`, `year`, `employeeId` (Admin only), `page`, `limit`
+
+**Response 200**
+```json
+{
+  "data": [ /* LeaveEncashmentSummary[] */ ],
+  "meta": { "total": 12, "page": 1, "limit": 20 }
+}
+```
+
+---
+
+#### GET /leave-encashments/queue
+
+Approval queue for the authenticated approver.
+
+- **Auth:** Manager, Admin
+- **Returns:** Pending (for Manager) and ManagerApproved (for Admin) encashments awaiting action
+
+**Response 200**
+```json
+{ "data": [ /* LeaveEncashmentSummary[] */ ] }
+```
+
+---
+
+#### GET /leave-encashments/:id
+
+Full detail of a single encashment.
+
+- **Auth:** any — scoped (Employee sees own; Manager sees team; Admin/PayrollOfficer see all)
+
+**Response 200**
+```json
+{ "data": { /* LeaveEncashmentDetail */ } }
+```
+
+**Error codes:** `404 NOT_FOUND`
+
+---
+
+#### POST /leave-encashments/:id/cancel
+
+Cancel an encashment request.
+
+- **Auth:** Employee (own, Pending only); Manager (team, Pending/ManagerApproved); Admin (any pre-Paid)
+- **BL:** BL-LE-06 balance restoration when cancelling AdminFinalised
+
+**Request body**
+```json
+{ "note": "optional reason" }
+```
+
+**Response 200**
+```json
+{ "data": { /* LeaveEncashmentDetail */ } }
+```
+
+**Error codes:** `409 INVALID_TRANSITION`, `403 FORBIDDEN`
+
+---
+
+#### POST /leave-encashments/:id/manager-approve
+
+Manager approves a Pending encashment.
+
+- **Auth:** Manager (own team), Admin (fallback)
+- **BL:** BL-LE-05 — transitions to ManagerApproved, notifies Admin
+
+**Request body**
+```json
+{ "note": "optional" }
+```
+
+**Response 200**
+```json
+{ "data": { /* LeaveEncashmentDetail */ } }
+```
+
+**Error codes:** `409 INVALID_TRANSITION`, `403 FORBIDDEN`
+
+---
+
+#### POST /leave-encashments/:id/admin-finalise
+
+Admin finalises a ManagerApproved encashment.
+
+- **Auth:** Admin only
+- **BL:** BL-LE-02 (50% clamp), BL-LE-06 (balance deduction), BL-LE-07/08 (rate locking), BL-LE-13 (Exited check)
+- **Concurrency:** SELECT FOR UPDATE prevents double-finalise
+
+**Request body**
+```json
+{ "daysApproved": 6, "note": "optional" }
+```
+
+**Response 200**
+```json
+{ "data": { /* LeaveEncashmentDetail with ratePerDayPaise, totalAmountPaise */ } }
+```
+
+**Error codes:** `409 INVALID_TRANSITION`, `409 ENCASHMENT_INSUFFICIENT_BALANCE`, `403 FORBIDDEN`
+
+---
+
+#### POST /leave-encashments/:id/reject
+
+Reject an encashment at any pre-Paid stage.
+
+- **Auth:** Manager (Pending → Rejected on own team); Admin (any pre-Paid)
+- **BL:** No balance change
+
+**Request body**
+```json
+{ "note": "reason required" }
+```
+
+**Response 200**
+```json
+{ "data": { /* LeaveEncashmentDetail */ } }
+```
+
+**Error codes:** `409 INVALID_TRANSITION`, `403 FORBIDDEN`
+
+---
+
+### Idempotency
+
+All POST mutations accept an `Idempotency-Key` header. Duplicate keys within 24 h return the original response with `200 OK`.
+
+### Payroll integration (BL-LE-09)
+
+During payroll run finalisation the engine calls `findUnpaidAdminFinalisedForEmployee` for each employee for year `run.year - 1`. If a qualifying encashment exists, `encashmentPaise` is added to `grossPaise` before tax computation and the encashment is marked `Paid` inside the same transaction.
+
+### Reversal (BL-LE-11)
+
+When a payslip that carried an encashment is reversed, the reversal payslip carries a negative `encashmentPaise`. The encashment record is marked `Reversed` in the audit log. Leave balance is NOT restored on reversal.

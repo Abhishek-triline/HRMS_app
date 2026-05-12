@@ -18,7 +18,8 @@
     "./performance":  { "types": "./dist/performance.d.ts",   "default": "./dist/performance.js" },
     "./notifications":{ "types": "./dist/notifications.d.ts", "default": "./dist/notifications.js" },
     "./audit":        { "types": "./dist/audit.d.ts",         "default": "./dist/audit.js" },
-    "./configuration":{ "types": "./dist/configuration.d.ts", "default": "./dist/configuration.js" }
+    "./configuration":    { "types": "./dist/configuration.d.ts",     "default": "./dist/configuration.js" },
+    "./leave-encashment": { "types": "./dist/leave-encashment.d.ts",  "default": "./dist/leave-encashment.js" }
   },
   "scripts": {
     "build": "tsc",

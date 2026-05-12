@@ -414,6 +414,30 @@ A condensed mapping: every BL rule must have at least one test case.
 | BL-042 (mgr change retains both) | TC-PERF-011/012 |
 | BL-047 (audit immutability) | TC-AUD-001/007/008 |
 | BL-048 (audit coverage) | TC-AUD-002..006/011/012, TC-XCUT-007 |
+| BL-LE-01..14 (leave encashment) | TC-LE-01..14 |
+
+---
+
+## § 10  Leave Encashment Test Cases (TC-LE-01..14)
+
+All cases in `apps/api/src/modules/leave/__tests__/leave-encashment.test.ts` (Vitest unit tests).
+
+| TC ID | BL Rule | Description | Expected result |
+|-------|---------|-------------|-----------------|
+| TC-LE-01 | BL-LE-01, BL-LE-04, BL-LE-05 | Employee submits Annual encashment inside window, has balance, Manager is Active | `201 Pending`; approverId = Manager; audit row written |
+| TC-LE-02 | BL-LE-02 | Admin finalises with `daysApproved=10` but balance is 12 → max 50% = 6 | `daysApproved` clamped to 6 |
+| TC-LE-03 | BL-LE-03 | Employee submits again for same year when `AdminFinalised` encashment already exists | `409 ENCASHMENT_ALREADY_USED` with `conflictId` |
+| TC-LE-04 | BL-LE-04 | Submit request on February 15 (outside Dec-Jan window) | `409 ENCASHMENT_OUT_OF_WINDOW` |
+| TC-LE-05 | BL-LE-05 | Submit when reporting Manager is `Exited` | approverId = Admin (fallback routing) |
+| TC-LE-06 | BL-LE-14 | `escalateStaleEncashments` called with `Pending` row older than 5 working days | Status flips to `Escalated`; Admin notified |
+| TC-LE-07 | BL-LE-06 | `adminFinaliseEncashment` | `LeaveBalance.daysRemaining` decremented; `daysEncashed` incremented inside same tx |
+| TC-LE-08 | BL-LE-06 | Admin cancels an `AdminFinalised` encashment | Balance restored in same transaction |
+| TC-LE-09 | BL-LE-09 | `findUnpaidAdminFinalisedForEmployee` | Returns `AdminFinalised` row for `year - 1`; returns null when none |
+| TC-LE-10 | BL-LE-09, BL-LE-10 | `markEncashmentPaid` | Status → `Paid`; `paidInPayslipId` set; audit row `leave.encashment.pay` written |
+| TC-LE-11 | BL-LE-07 | `adminFinaliseEncashment` when `daPaise` is null | Uses `basicPaise` only; no crash; rate = `basicPaise ÷ 26` |
+| TC-LE-12 | BL-LE-11 | `markEncashmentReversed` | Audit row `leave.encashment.payment.reverse` written; balance NOT updated |
+| TC-LE-13 | BL-LE-13 | `submitEncashmentRequest` for an `Exited` employee | `409 VALIDATION_FAILED` with `ruleId BL-LE-13` |
+| TC-LE-14 | BL-LE-03 | Reject does not touch `LeaveBalance` | Balance unchanged; status → `Rejected` |
 
 ---
 
