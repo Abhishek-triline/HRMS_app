@@ -30,9 +30,9 @@ import {
 // ── Status (§3.3) ───────────────────────────────────────────────────────────
 
 /** 1=Pending, 2=ManagerApproved, 3=AdminFinalised, 4=Paid, 5=Rejected, 6=Cancelled. */
-export const LeaveEncashmentStatusIdSchema = z.number().int().min(1).max(6);
+export const LeaveEncashmentStatusSchema = z.number().int().min(1).max(6);
 
-export const LeaveEncashmentStatusId = {
+export const LeaveEncashmentStatus = {
   Pending: 1,
   ManagerApproved: 2,
   AdminFinalised: 3,
@@ -40,8 +40,8 @@ export const LeaveEncashmentStatusId = {
   Rejected: 5,
   Cancelled: 6,
 } as const;
-export type LeaveEncashmentStatusIdValue =
-  (typeof LeaveEncashmentStatusId)[keyof typeof LeaveEncashmentStatusId];
+export type LeaveEncashmentStatusValue =
+  (typeof LeaveEncashmentStatus)[keyof typeof LeaveEncashmentStatus];
 
 // ── Full detail ────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ export const LeaveEncashmentDetailSchema = z.object({
   daysApproved: z.number().int().min(0).nullable(),
   ratePerDayPaise: z.number().int().min(0).nullable(),
   amountPaise: z.number().int().min(0).nullable(),
-  statusId: LeaveEncashmentStatusIdSchema,
+  status: LeaveEncashmentStatusSchema,
   routedToId: RoutedToIdSchema,
   approverId: IdSchema.nullable(),
   approverName: z.string().nullable(),
@@ -86,7 +86,7 @@ export const LeaveEncashmentSummarySchema = LeaveEncashmentDetailSchema.pick({
   daysRequested: true,
   daysApproved: true,
   amountPaise: true,
-  statusId: true,
+  status: true,
   routedToId: true,
   approverId: true,
   escalatedAt: true,
@@ -112,7 +112,7 @@ export type LeaveEncashmentRequestResponse = z.infer<typeof LeaveEncashmentReque
 
 export const LeaveEncashmentListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
-  statusId: z.coerce.number().int().min(1).max(6).optional(),
+  status: z.coerce.number().int().min(1).max(6).optional(),
   employeeId: IdParamSchema.optional(),
 });
 export type LeaveEncashmentListQuery = z.infer<typeof LeaveEncashmentListQuerySchema>;

@@ -29,7 +29,7 @@
 import { z } from 'zod';
 import {
   EmployeeCodeSchema,
-  EmployeeStatusIdSchema,
+  EmployeeStatusSchema,
   EmploymentTypeIdSchema,
   GenderIdSchema,
   IdSchema,
@@ -82,7 +82,7 @@ export const EmployeeDetailSchema = z.object({
   dateOfBirth: ISODateOnlySchema.nullable().optional(),
   genderId: GenderIdSchema.nullable().optional(),
   roleId: RoleIdSchema,
-  statusId: EmployeeStatusIdSchema,
+  status: EmployeeStatusSchema,
   departmentId: IdSchema.nullable(),
   department: z.string().nullable(),
   designationId: IdSchema.nullable(),
@@ -109,7 +109,7 @@ export const EmployeeListItemSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   roleId: RoleIdSchema,
-  statusId: EmployeeStatusIdSchema,
+  status: EmployeeStatusSchema,
   departmentId: IdSchema.nullable(),
   department: z.string().nullable(),
   designationId: IdSchema.nullable(),
@@ -165,7 +165,7 @@ export type CreateEmployeeResponse = z.infer<typeof CreateEmployeeResponseSchema
 // ── GET /employees ──────────────────────────────────────────────────────────
 
 export const EmployeeListQuerySchema = PaginationQuerySchema.extend({
-  statusId: z.coerce.number().int().min(1).max(5).optional(),
+  status: z.coerce.number().int().min(1).max(5).optional(),
   /**
    * Filter by role id. Single value or comma-separated list (e.g. "2,4").
    */
@@ -251,14 +251,14 @@ export type UpdateSalaryResponse = z.infer<typeof UpdateSalaryResponseSchema>;
  */
 export const ChangeStatusRequestSchema = z.object({
   /** New status_id — must be one of {1=Active, 2=OnNotice, 5=Exited}. */
-  statusId: z.number().int().refine((v) => v === 1 || v === 2 || v === 5, {
+  status: z.number().int().refine((v) => v === 1 || v === 2 || v === 5, {
     message:
-      'statusId must be 1 (Active), 2 (OnNotice), or 5 (Exited). ' +
+      'status must be 1 (Active), 2 (OnNotice), or 5 (Exited). ' +
       'OnLeave (3) is system-controlled and set automatically while an approved leave is in progress (BL-006). ' +
       'Inactive (4) is the pre-first-login state and cannot be set manually.',
   }),
   effectiveDate: ISODateOnlySchema,
-  /** Required when statusId = 5 (Exited). */
+  /** Required when status = 5 (Exited). */
   exitDate: ISODateOnlySchema.optional(),
   /** Optional admin note recorded on the audit entry. */
   note: z.string().max(500).optional(),

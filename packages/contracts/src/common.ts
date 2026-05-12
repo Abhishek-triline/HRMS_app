@@ -31,7 +31,7 @@ export type IdParam = z.infer<typeof IdParamSchema>;
 // The labels below are documentation only — never sent over the wire.
 
 /** §3.1 employee.status_id: 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited. */
-export const EmployeeStatusIdSchema = z.number().int().min(1).max(5);
+export const EmployeeStatusSchema = z.number().int().min(1).max(5);
 
 /** Master roles.id: 1=Employee, 2=Manager, 3=PayrollOfficer, 4=Admin. */
 export const RoleIdSchema = z.number().int().min(1);

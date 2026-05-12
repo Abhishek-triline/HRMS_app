@@ -73,7 +73,7 @@ export const isEventBasedLeave = (typeId: number): boolean =>
 // ── Leave request status (§3.2) ────────────────────────────────────────────
 
 /** 1=Pending, 2=Approved, 3=Rejected, 4=Cancelled, 5=Escalated. */
-export const LeaveStatusIdSchema = z.number().int().min(1).max(5);
+export const LeaveStatusSchema = z.number().int().min(1).max(5);
 
 // ── Leave balances ──────────────────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ export const LeaveRequestSchema = z.object({
   /** Computed by server — full days only (BL-011). */
   days: z.number().int().min(1),
   reason: z.string(),
-  statusId: LeaveStatusIdSchema,
+  status: LeaveStatusSchema,
   routedToId: RoutedToIdSchema,
   /** Employee whose queue currently owns the request — Manager (or Admin on escalation/event-based). */
   approverId: IdSchema.nullable(),
@@ -196,7 +196,7 @@ export const LeaveRequestSummarySchema = LeaveRequestSchema.pick({
   toDate: true,
   days: true,
   reason: true,
-  statusId: true,
+  status: true,
   routedToId: true,
   approverName: true,
   escalatedAt: true,
@@ -239,7 +239,7 @@ export type CreateLeaveResponse = z.infer<typeof CreateLeaveResponseSchema>;
 // ── GET /leave/requests ─────────────────────────────────────────────────────
 
 export const LeaveListQuerySchema = PaginationQuerySchema.extend({
-  statusId: z.coerce.number().int().min(1).max(5).optional(),
+  status: z.coerce.number().int().min(1).max(5).optional(),
   leaveTypeId: z.coerce.number().int().positive().optional(),
   fromDate: ISODateOnlySchema.optional(),
   toDate: ISODateOnlySchema.optional(),
@@ -319,8 +319,8 @@ export const LeaveConflictDetailsSchema = z.object({
   conflictCode: z.string(),
   conflictFrom: ISODateOnlySchema,
   conflictTo: ISODateOnlySchema.nullable(),
-  /** Snapshot of the conflicting record's statusId. */
-  conflictStatusId: z.number().int(),
+  /** Snapshot of the conflicting record's status. */
+  conflictStatus: z.number().int(),
 });
 export type LeaveConflictDetails = z.infer<typeof LeaveConflictDetailsSchema>;
 

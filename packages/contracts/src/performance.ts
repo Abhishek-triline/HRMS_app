@@ -55,15 +55,15 @@ import {
 // ── Cycle status (§3.6) ─────────────────────────────────────────────────────
 
 /** 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed. */
-export const CycleStatusIdSchema = z.number().int().min(1).max(4);
+export const CycleStatusSchema = z.number().int().min(1).max(4);
 
-export const CycleStatusId = {
+export const CycleStatus = {
   Open: 1,
   SelfReview: 2,
   ManagerReview: 3,
   Closed: 4,
 } as const;
-export type CycleStatusIdValue = (typeof CycleStatusId)[keyof typeof CycleStatusId];
+export type CycleStatusValue = (typeof CycleStatus)[keyof typeof CycleStatus];
 
 // ── Goal (§3.6) ─────────────────────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ export const PerformanceCycleSchema = z.object({
   code: z.string(), // C-YYYY-H1 or C-YYYY-H2
   fyStart: ISODateOnlySchema,
   fyEnd: ISODateOnlySchema,
-  statusId: CycleStatusIdSchema,
+  status: CycleStatusSchema,
   selfReviewDeadline: ISODateOnlySchema,
   managerReviewDeadline: ISODateOnlySchema,
   closedAt: ISODateSchema.nullable(),
@@ -118,7 +118,7 @@ export const PerformanceCycleSummarySchema = PerformanceCycleSchema.pick({
   code: true,
   fyStart: true,
   fyEnd: true,
-  statusId: true,
+  status: true,
   selfReviewDeadline: true,
   managerReviewDeadline: true,
   participants: true,
@@ -132,7 +132,7 @@ export const PerformanceReviewSchema = z.object({
   id: IdSchema,
   cycleId: IdSchema,
   cycleCode: z.string(),
-  cycleStatusId: CycleStatusIdSchema,
+  cycleStatus: CycleStatusSchema,
   employeeId: IdSchema,
   employeeName: z.string(),
   employeeCode: EmployeeCodeSchema,
@@ -225,7 +225,7 @@ export type CreateCycleResponse = z.infer<typeof CreateCycleResponseSchema>;
 // ── GET /performance/cycles ─────────────────────────────────────────────────
 
 export const CycleListQuerySchema = PaginationQuerySchema.extend({
-  statusId: z.coerce.number().int().min(1).max(4).optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
   fyStartFrom: ISODateOnlySchema.optional(),
   fyStartTo: ISODateOnlySchema.optional(),
 });

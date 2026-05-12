@@ -57,17 +57,17 @@ import {
 // ── Status & source ─────────────────────────────────────────────────────────
 
 /** §3.4: 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday. */
-export const AttendanceStatusIdSchema = z.number().int().min(1).max(5);
+export const AttendanceStatusSchema = z.number().int().min(1).max(5);
 
-export const AttendanceStatusId = {
+export const AttendanceStatus = {
   Present: 1,
   Absent: 2,
   OnLeave: 3,
   WeeklyOff: 4,
   Holiday: 5,
 } as const;
-export type AttendanceStatusIdValue =
-  (typeof AttendanceStatusId)[keyof typeof AttendanceStatusId];
+export type AttendanceStatusValue =
+  (typeof AttendanceStatus)[keyof typeof AttendanceStatus];
 
 /**
  * §3.4: 1=system (midnight job / check-in), 2=regularisation (approved correction).
@@ -81,7 +81,7 @@ export const AttendanceRecordSchema = z.object({
   id: IdSchema,
   employeeId: IdSchema,
   date: ISODateOnlySchema,
-  statusId: AttendanceStatusIdSchema,
+  status: AttendanceStatusSchema,
   checkInTime: ISODateSchema.nullable(),
   checkOutTime: ISODateSchema.nullable(),
   /** Computed by server: (checkOut − checkIn) in milliseconds, exposed as minutes. */
@@ -102,7 +102,7 @@ export type AttendanceRecord = z.infer<typeof AttendanceRecordSchema>;
 /** Compact form for calendar / monthly views. */
 export const AttendanceCalendarItemSchema = z.object({
   date: ISODateOnlySchema,
-  statusId: AttendanceStatusIdSchema,
+  status: AttendanceStatusSchema,
   checkInTime: ISODateSchema.nullable(),
   checkOutTime: ISODateSchema.nullable(),
   hoursWorkedMinutes: z.number().int().min(0).nullable(),
@@ -159,7 +159,7 @@ export const AttendanceListQuerySchema = PaginationQuerySchema.extend({
   /** Defaults: server picks the current calendar month if neither is supplied. */
   from: ISODateOnlySchema.optional(),
   to: ISODateOnlySchema.optional(),
-  statusId: z.coerce.number().int().min(1).max(5).optional(),
+  status: z.coerce.number().int().min(1).max(5).optional(),
   /** Manager / Admin filter — restrict to a specific employee. */
   employeeId: IdParamSchema.optional(),
   /** Admin-only filter for the org-wide view. */
@@ -199,14 +199,14 @@ export type TodayAttendanceResponse = z.infer<typeof TodayAttendanceResponseSche
 // ── Regularisation status & routing ─────────────────────────────────────────
 
 /** §3.4: 1=Pending, 2=Approved, 3=Rejected. */
-export const RegStatusIdSchema = z.number().int().min(1).max(3);
+export const RegStatusSchema = z.number().int().min(1).max(3);
 
-export const RegStatusId = {
+export const RegStatus = {
   Pending: 1,
   Approved: 2,
   Rejected: 3,
 } as const;
-export type RegStatusIdValue = (typeof RegStatusId)[keyof typeof RegStatusId];
+export type RegStatusValue = (typeof RegStatus)[keyof typeof RegStatus];
 
 // ── Regularisation request — full + summary ─────────────────────────────────
 
@@ -221,7 +221,7 @@ export const RegularisationRequestSchema = z.object({
   proposedCheckIn: ISODateSchema.nullable(),
   proposedCheckOut: ISODateSchema.nullable(),
   reason: z.string(),
-  statusId: RegStatusIdSchema,
+  status: RegStatusSchema,
   routedToId: RoutedToIdSchema,
   /** Captured at submit time so re-routing later doesn't change the audit trail. */
   ageDaysAtSubmit: z.number().int().min(0),
@@ -245,7 +245,7 @@ export const RegularisationSummarySchema = RegularisationRequestSchema.pick({
   employeeName: true,
   employeeCode: true,
   date: true,
-  statusId: true,
+  status: true,
   routedToId: true,
   ageDaysAtSubmit: true,
   approverName: true,
@@ -287,7 +287,7 @@ export type CreateRegularisationResponse = z.infer<typeof CreateRegularisationRe
 // ── GET /regularisations ────────────────────────────────────────────────────
 
 export const RegularisationListQuerySchema = PaginationQuerySchema.extend({
-  statusId: z.coerce.number().int().min(1).max(3).optional(),
+  status: z.coerce.number().int().min(1).max(3).optional(),
   routedToId: z.coerce.number().int().min(1).max(2).optional(),
   employeeId: IdParamSchema.optional(),
   fromDate: ISODateOnlySchema.optional(),

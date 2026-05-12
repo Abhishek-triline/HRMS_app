@@ -20,7 +20,7 @@
 import { z } from 'zod';
 import {
   EmployeeCodeSchema,
-  EmployeeStatusIdSchema,
+  EmployeeStatusSchema,
   IdSchema,
   RoleIdSchema,
 } from './common.js';
@@ -40,7 +40,7 @@ export const AuthUserSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   roleId: RoleIdSchema,
-  statusId: EmployeeStatusIdSchema,
+  status: EmployeeStatusSchema,
   department: z.string().nullable(),
   designation: z.string().nullable(),
   reportingManagerId: IdSchema.nullable(),

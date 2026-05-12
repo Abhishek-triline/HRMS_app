@@ -54,18 +54,18 @@ const PaiseSchema = z.number().int().nonnegative().max(1_00_00_00_00 * 100);
 // ── Run + payslip lifecycle (§3.5) ─────────────────────────────────────────
 
 /** 1=Draft, 2=Review, 3=Finalised, 4=Reversed. */
-export const PayrollRunStatusIdSchema = z.number().int().min(1).max(4);
+export const PayrollRunStatusSchema = z.number().int().min(1).max(4);
 /** 1=Draft, 2=Review, 3=Finalised, 4=Reversed. */
-export const PayslipStatusIdSchema = z.number().int().min(1).max(4);
+export const PayslipStatusSchema = z.number().int().min(1).max(4);
 
-export const PayrollRunStatusId = {
+export const PayrollRunStatus = {
   Draft: 1,
   Review: 2,
   Finalised: 3,
   Reversed: 4,
 } as const;
-export type PayrollRunStatusIdValue =
-  (typeof PayrollRunStatusId)[keyof typeof PayrollRunStatusId];
+export type PayrollRunStatusValue =
+  (typeof PayrollRunStatus)[keyof typeof PayrollRunStatus];
 
 // ── Payroll run — full + summary ────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ export const PayrollRunSchema = z.object({
   code: z.string(), // RUN-YYYY-MM
   month: z.number().int().min(1).max(12),
   year: z.number().int().min(2000).max(2999),
-  statusId: PayrollRunStatusIdSchema,
+  status: PayrollRunStatusSchema,
   workingDays: z.number().int().min(1).max(31),
   /** Effective dates of the period — server computes from month + year + holidays. */
   periodStart: ISODateOnlySchema,
@@ -108,7 +108,7 @@ export const PayrollRunSummarySchema = PayrollRunSchema.pick({
   code: true,
   month: true,
   year: true,
-  statusId: true,
+  status: true,
   initiatedByName: true,
   finalisedAt: true,
   employeeCount: true,
@@ -133,7 +133,7 @@ export const PayslipSchema = z.object({
   department: z.string().nullable(),
   month: z.number().int().min(1).max(12),
   year: z.number().int().min(2000).max(2999),
-  statusId: PayslipStatusIdSchema,
+  status: PayslipStatusSchema,
   /** Pay period boundaries — usually the run's period; may differ on a reversal record. */
   periodStart: ISODateOnlySchema,
   periodEnd: ISODateOnlySchema,
@@ -183,7 +183,7 @@ export const PayslipSummarySchema = PayslipSchema.pick({
   employeeCode: true,
   month: true,
   year: true,
-  statusId: true,
+  status: true,
   workingDays: true,
   lopDays: true,
   grossPaise: true,
@@ -216,7 +216,7 @@ export type CreatePayrollRunResponse = z.infer<typeof CreatePayrollRunResponseSc
 
 export const PayrollRunListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
-  statusId: z.coerce.number().int().min(1).max(4).optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
 });
 export type PayrollRunListQuery = z.infer<typeof PayrollRunListQuerySchema>;
 
@@ -293,7 +293,7 @@ export const PayslipListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),
   employeeId: IdParamSchema.optional(),
-  statusId: z.coerce.number().int().min(1).max(4).optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
   /** Filter to a single payroll run (BUG-PAY-004 fix). */
   runId: IdParamSchema.optional(),
   /** Filter to reversal records only (or originals only). */
@@ -318,7 +318,7 @@ export type PayslipDetailResponse = z.infer<typeof PayslipDetailResponseSchema>;
 
 /**
  * BL-036a — only PO (and Admin) can edit the final tax, only while the
- * parent run is `Review` (statusId=2). Recomputes net = gross − lop − finalTax − other.
+ * parent run is `Review` (status=2). Recomputes net = gross − lop − finalTax − other.
  */
 export const UpdatePayslipTaxRequestSchema = z.object({
   finalTaxPaise: PaiseSchema,
