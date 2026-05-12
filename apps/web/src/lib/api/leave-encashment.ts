@@ -53,9 +53,9 @@ export async function listEncashments(
 // ── Detail ────────────────────────────────────────────────────────────────────
 
 /** GET /api/v1/leave-encashments/:id */
-export async function getEncashment(id: string): Promise<LeaveEncashmentDetail> {
+export async function getEncashment(id: number): Promise<LeaveEncashmentDetail> {
   const res = await apiClient.get<{ data: LeaveEncashmentDetail }>(
-    `${BASE}/${encodeURIComponent(id)}`,
+    `${BASE}/${id}`,
   );
   return res.data;
 }
@@ -77,11 +77,11 @@ export async function getEncashmentQueue(
 
 /** POST /api/v1/leave-encashments/:id/cancel */
 export async function cancelEncashment(
-  id: string,
+  id: number,
   input: CancelEncashmentBody,
 ): Promise<LeaveEncashmentDetail> {
   const res = await apiClient.post<LeaveEncashmentActionResponse>(
-    `${BASE}/${encodeURIComponent(id)}/cancel`,
+    `${BASE}/${id}/cancel`,
     input,
   );
   return res.data;
@@ -91,11 +91,11 @@ export async function cancelEncashment(
 
 /** POST /api/v1/leave-encashments/:id/manager-approve */
 export async function managerApproveEncashment(
-  id: string,
+  id: number,
   input: ManagerApproveEncashmentBody,
 ): Promise<LeaveEncashmentDetail> {
   const res = await apiClient.post<LeaveEncashmentActionResponse>(
-    `${BASE}/${encodeURIComponent(id)}/manager-approve`,
+    `${BASE}/${id}/manager-approve`,
     input,
   );
   return res.data;
@@ -105,11 +105,11 @@ export async function managerApproveEncashment(
 
 /** POST /api/v1/leave-encashments/:id/admin-finalise */
 export async function adminFinaliseEncashment(
-  id: string,
+  id: number,
   input: AdminFinaliseEncashmentBody,
 ): Promise<LeaveEncashmentDetail> {
   const res = await apiClient.post<LeaveEncashmentActionResponse>(
-    `${BASE}/${encodeURIComponent(id)}/admin-finalise`,
+    `${BASE}/${id}/admin-finalise`,
     input,
   );
   return res.data;
@@ -119,11 +119,11 @@ export async function adminFinaliseEncashment(
 
 /** POST /api/v1/leave-encashments/:id/reject — Manager or Admin */
 export async function rejectEncashment(
-  id: string,
+  id: number,
   input: RejectEncashmentBody,
 ): Promise<LeaveEncashmentDetail> {
   const res = await apiClient.post<LeaveEncashmentActionResponse>(
-    `${BASE}/${encodeURIComponent(id)}/reject`,
+    `${BASE}/${id}/reject`,
     input,
   );
   return res.data;

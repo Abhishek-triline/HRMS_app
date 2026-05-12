@@ -53,13 +53,13 @@ export function useLeaveTypes() {
 
 // ── BALANCES ──────────────────────────────────────────────────────────────────
 
-export function useLeaveBalances(employeeId: string) {
+export function useLeaveBalances(employeeId: number) {
   return useQuery({
     queryKey: qk.leave.balances(employeeId),
     queryFn: () => getLeaveBalances(employeeId),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(employeeId),
+    enabled: employeeId > 0,
   });
 }
 
@@ -76,13 +76,13 @@ export function useLeaveList(query: Partial<LeaveListQuery> = {}) {
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-export function useLeave(id: string) {
+export function useLeave(id: number) {
   return useQuery({
     queryKey: qk.leave.detail(id),
     queryFn: () => getLeave(id),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
@@ -102,7 +102,7 @@ export function useCreateLeave() {
 
 // ── APPROVE ───────────────────────────────────────────────────────────────────
 
-export function useApproveLeave(id: string) {
+export function useApproveLeave(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -118,7 +118,7 @@ export function useApproveLeave(id: string) {
 
 // ── REJECT ────────────────────────────────────────────────────────────────────
 
-export function useRejectLeave(id: string) {
+export function useRejectLeave(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -132,7 +132,7 @@ export function useRejectLeave(id: string) {
 
 // ── CANCEL ────────────────────────────────────────────────────────────────────
 
-export function useCancelLeave(id: string) {
+export function useCancelLeave(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -173,22 +173,22 @@ export function useLeaveConfig() {
   });
 }
 
-export function useUpdateLeaveType(type: string) {
+export function useUpdateLeaveType(typeId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: UpdateLeaveTypeRequest) => updateLeaveType(type, input),
+    mutationFn: (input: UpdateLeaveTypeRequest) => updateLeaveType(String(typeId), input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.leave.types() });
     },
   });
 }
 
-export function useUpdateLeaveQuota(type: string) {
+export function useUpdateLeaveQuota(typeId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: UpdateLeaveQuotaRequest) => updateLeaveQuota(type, input),
+    mutationFn: (input: UpdateLeaveQuotaRequest) => updateLeaveQuota(String(typeId), input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.leave.types() });
     },

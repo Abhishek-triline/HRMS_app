@@ -95,9 +95,9 @@ export async function listPayrollRuns(
 // ── GET /payroll/runs/:id ─────────────────────────────────────────────────────
 
 /** Get a single run with its payslip list. */
-export async function getPayrollRun(id: string): Promise<PayrollRunDetailResponse['data']> {
+export async function getPayrollRun(id: number): Promise<PayrollRunDetailResponse['data']> {
   const res = await apiClient.get<PayrollRunDetailResponse>(
-    `${PAYROLL_BASE}/runs/${encodeURIComponent(id)}`,
+    `${PAYROLL_BASE}/runs/${id}`,
   );
   return res.data;
 }
@@ -109,12 +109,12 @@ export async function getPayrollRun(id: string): Promise<PayrollRunDetailRespons
  * BL-034: concurrent guard — 409 RUN_ALREADY_FINALISED if another caller won.
  */
 export async function finaliseRun(
-  id: string,
+  id: number,
   input: FinaliseRunRequest,
   opts?: { idempotencyKey?: string },
 ): Promise<FinaliseRunResponse['data']> {
   const res = await apiClient.post<FinaliseRunResponse>(
-    `${PAYROLL_BASE}/runs/${encodeURIComponent(id)}/finalise`,
+    `${PAYROLL_BASE}/runs/${id}/finalise`,
     input,
     { headers: idempotencyHeaders(opts?.idempotencyKey) },
   );
@@ -128,12 +128,12 @@ export async function finaliseRun(
  * BL-033: only Admin may call this.
  */
 export async function reverseRun(
-  id: string,
+  id: number,
   input: ReverseRunRequest,
   opts?: { idempotencyKey?: string },
 ): Promise<ReverseRunResponse['data']> {
   const res = await apiClient.post<ReverseRunResponse>(
-    `${PAYROLL_BASE}/runs/${encodeURIComponent(id)}/reverse`,
+    `${PAYROLL_BASE}/runs/${id}/reverse`,
     input,
     { headers: idempotencyHeaders(opts?.idempotencyKey) },
   );
@@ -165,9 +165,9 @@ export async function listPayslips(
 // ── GET /payslips/:id ─────────────────────────────────────────────────────────
 
 /** Get a single payslip detail. */
-export async function getPayslip(id: string): Promise<PayslipDetailResponse['data']> {
+export async function getPayslip(id: number): Promise<PayslipDetailResponse['data']> {
   const res = await apiClient.get<PayslipDetailResponse>(
-    `${PAYSLIPS_BASE}/${encodeURIComponent(id)}`,
+    `${PAYSLIPS_BASE}/${id}`,
   );
   return res.data;
 }
@@ -180,12 +180,12 @@ export async function getPayslip(id: string): Promise<PayslipDetailResponse['dat
  * if the run is already finalised.
  */
 export async function updatePayslipTax(
-  id: string,
+  id: number,
   input: UpdatePayslipTaxRequest,
   opts?: { idempotencyKey?: string },
 ): Promise<UpdatePayslipTaxResponse['data']> {
   const res = await apiClient.patch<UpdatePayslipTaxResponse>(
-    `${PAYSLIPS_BASE}/${encodeURIComponent(id)}/tax`,
+    `${PAYSLIPS_BASE}/${id}/tax`,
     input,
     { headers: idempotencyHeaders(opts?.idempotencyKey) },
   );
@@ -198,14 +198,14 @@ export async function updatePayslipTax(
  * Download payslip as PDF blob. Caller is responsible for creating a temporary
  * object URL and triggering the browser download.
  */
-export async function downloadPayslipPdf(id: string): Promise<Blob> {
+export async function downloadPayslipPdf(id: number): Promise<Blob> {
   const API_BASE_URL =
     typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE_URL
       ? process.env.NEXT_PUBLIC_API_BASE_URL
       : 'http://localhost:4000';
 
   const response = await fetch(
-    `${API_BASE_URL}${PAYSLIPS_BASE}/${encodeURIComponent(id)}/pdf`,
+    `${API_BASE_URL}${PAYSLIPS_BASE}/${id}/pdf`,
     {
       method: 'GET',
       credentials: 'include',

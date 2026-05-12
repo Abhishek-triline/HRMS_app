@@ -36,18 +36,18 @@ export function usePayslipsList(query: Partial<PayslipListQuery> = {}) {
   });
 }
 
-export function usePayslip(id: string) {
+export function usePayslip(id: number) {
   return useQuery({
     queryKey: qk.payslips.detail(id),
     queryFn: () => getPayslip(id),
-    enabled: !!id,
+    enabled: id > 0,
     staleTime: 20_000,
   });
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────────
 
-export function useUpdatePayslipTax(id: string) {
+export function useUpdatePayslipTax(id: number) {
   const queryClient = useQueryClient();
   const idempotencyKeyRef = useRef<string>(generateKey());
 
@@ -74,7 +74,7 @@ export function useUpdatePayslipTax(id: string) {
  */
 export function useDownloadPayslipPdf(payslipCode: string) {
   return useMutation({
-    mutationFn: (id: string) => downloadPayslipPdf(id),
+    mutationFn: (id: number) => downloadPayslipPdf(id),
     onSuccess: (blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

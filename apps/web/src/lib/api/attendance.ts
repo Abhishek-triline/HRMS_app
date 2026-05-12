@@ -115,20 +115,20 @@ export async function listRegularisations(
 }
 
 /** GET /api/v1/regularisations/:id */
-export async function getRegularisation(id: string): Promise<RegularisationDetailResponse['data']> {
+export async function getRegularisation(id: number): Promise<RegularisationDetailResponse['data']> {
   const res = await apiClient.get<RegularisationDetailResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}`,
+    `${REG_BASE}/${id}`,
   );
   return res.data;
 }
 
 /** POST /api/v1/regularisations/:id/approve — Manager (≤7d) or Admin (>7d) */
 export async function approveRegularisation(
-  id: string,
+  id: number,
   input: ApproveRegularisationRequest,
 ): Promise<ApproveRegularisationResponse['data']> {
   const res = await apiClient.post<ApproveRegularisationResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}/approve`,
+    `${REG_BASE}/${id}/approve`,
     input,
   );
   return res.data;
@@ -136,11 +136,11 @@ export async function approveRegularisation(
 
 /** POST /api/v1/regularisations/:id/reject — note is REQUIRED */
 export async function rejectRegularisation(
-  id: string,
+  id: number,
   input: RejectRegularisationRequest,
 ): Promise<RejectRegularisationResponse['data']> {
   const res = await apiClient.post<RejectRegularisationResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}/reject`,
+    `${REG_BASE}/${id}/reject`,
     input,
   );
   return res.data;

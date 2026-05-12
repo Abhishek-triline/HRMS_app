@@ -11,7 +11,8 @@
  * (type: 'subhead') and dividers (type: 'divider').
  */
 
-import type { Role } from '@nexora/contracts/common';
+/** Role IDs match master `roles` table: 1=Employee, 2=Manager, 3=PayrollOfficer, 4=Admin. */
+export type RoleKey = 'Admin' | 'Manager' | 'Employee' | 'PayrollOfficer';
 
 // ── Icon paths (Heroicons outline, 24px viewBox) ─────────────────────────────
 
@@ -150,9 +151,22 @@ const payrollNav: NavEntry[] = [
   { type: 'link', label: 'Sign Out',   href: '/api/auth/signout',  iconPath: ICONS.signOut, danger: true },
 ];
 
-export const navByRole: Record<Role, NavEntry[]> = {
+export const navByRole: Record<RoleKey, NavEntry[]> = {
   Admin:         adminNav,
   Manager:       managerNav,
   Employee:      employeeNav,
   PayrollOfficer: payrollNav,
 };
+
+/**
+ * Convert a roleId (INT) to the RoleKey string used for nav lookup.
+ * Falls back to 'Employee' for unknown codes.
+ */
+export function roleIdToKey(roleId: number): RoleKey {
+  switch (roleId) {
+    case 4: return 'Admin';
+    case 2: return 'Manager';
+    case 3: return 'PayrollOfficer';
+    default: return 'Employee';
+  }
+}

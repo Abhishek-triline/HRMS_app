@@ -47,13 +47,13 @@ export function useMyEncashments(year?: number) {
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-export function useEncashment(id: string) {
+export function useEncashment(id: number) {
   return useQuery({
     queryKey: qk.encashment.detail(id),
     queryFn: () => getEncashment(id),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
@@ -90,7 +90,7 @@ export function useSubmitEncashment() {
 
 // ── CANCEL ────────────────────────────────────────────────────────────────────
 
-export function useCancelEncashment(id: string) {
+export function useCancelEncashment(id: number) {
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -109,7 +109,7 @@ export function useCancelEncashment(id: string) {
 
 // ── MANAGER APPROVE ───────────────────────────────────────────────────────────
 
-export function useManagerApproveEncashment(id: string) {
+export function useManagerApproveEncashment(id: number) {
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -128,7 +128,7 @@ export function useManagerApproveEncashment(id: string) {
 
 // ── ADMIN FINALISE ────────────────────────────────────────────────────────────
 
-export function useAdminFinaliseEncashment(id: string) {
+export function useAdminFinaliseEncashment(id: number) {
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -152,7 +152,7 @@ export function useAdminFinaliseEncashment(id: string) {
 
 // ── REJECT ────────────────────────────────────────────────────────────────────
 
-export function useRejectEncashment(id: string) {
+export function useRejectEncashment(id: number) {
   const queryClient = useQueryClient();
   const toast = useToast();
 

@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
-import type { Role } from '@nexora/contracts/common';
+import type { RoleKey } from './roleNavConfig';
 import { SignOutButton } from './SignOutButton';
 import { navByRole } from './roleNavConfig';
 import { useTodayAttendance } from '@/lib/hooks/useAttendance';
 
 // ── Role panel subtitle labels ────────────────────────────────────────────────
 
-const ROLE_PANEL_LABELS: Record<Role, string> = {
+const ROLE_PANEL_LABELS: Record<RoleKey, string> = {
   Admin:          'Admin Panel',
   Manager:        'Manager Panel',
   Employee:       'Employee Panel',
@@ -37,7 +37,7 @@ function Icon({ path, className }: { path: string; className?: string }) {
 // ── Sidebar component ─────────────────────────────────────────────────────────
 
 interface SidebarProps {
-  role: Role;
+  role: RoleKey;
   /** Optional fallback for SSR / tests; runtime uses usePathname() for live navigation. */
   currentPath?: string;
 }
@@ -52,9 +52,10 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
 
   // Live check-in state — label flips between "Check In" / "Check Out".
   // Matches prototype/assets/sidebar.js setupCheckinState behaviour.
+  // panelStateId: 1=Ready, 2=Working, 3=Confirm (§3.4)
   const today = useTodayAttendance();
   const checkinLabel =
-    today.data?.panelState === 'Working' ? 'Check Out' : 'Check In';
+    today.data?.panelStateId === 2 ? 'Check Out' : 'Check In';
 
   return (
     <aside className="nx-sidebar w-60 flex-shrink-0 bg-forest text-white flex flex-col h-full overflow-y-auto">

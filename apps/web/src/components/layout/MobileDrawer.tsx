@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { Role } from '@nexora/contracts/common';
+import type { RoleKey } from './roleNavConfig';
 import { Sidebar } from './Sidebar';
 
 interface MobileDrawerProps {
-  role: Role;
+  role: RoleKey;
   currentPath: string;
 }
 

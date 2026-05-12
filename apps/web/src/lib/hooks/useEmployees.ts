@@ -231,7 +231,7 @@ export function useEmployeesCount(
 // React Rules-of-Hooks safe: fixed-length useQuery chain per status, with
 // enabled flags driven by each prior page's cursor.
 
-function useEmployeesByStatus(status: 'Active' | 'On-Notice' | 'Exited') {
+function useEmployeesByStatus(status: number) {
   const filtersKey = status;
   const p1 = useQuery({
     queryKey: ['employee-names', filtersKey, 1],
@@ -275,13 +275,14 @@ function useEmployeesByStatus(status: 'Active' | 'On-Notice' | 'Exited') {
   return [p1, p2, p3, p4, p5];
 }
 
-/** Map of employee id → full name across all statuses. */
-export function useEmployeeNameMap(): Map<string, string> {
-  const active = useEmployeesByStatus('Active');
-  const onNotice = useEmployeesByStatus('On-Notice');
-  const exited = useEmployeesByStatus('Exited');
+/** Map of employee id (number) → full name across all statuses. */
+export function useEmployeeNameMap(): Map<number, string> {
+  // 1=Active, 2=OnNotice, 5=Exited
+  const active = useEmployeesByStatus(1);
+  const onNotice = useEmployeesByStatus(2);
+  const exited = useEmployeesByStatus(5);
 
-  const map = new Map<string, string>();
+  const map = new Map<number, string>();
   for (const pages of [active, onNotice, exited]) {
     for (const p of pages) {
       const data = p.data?.data ?? [];
@@ -295,37 +296,37 @@ export function useEmployeeNameMap(): Map<string, string> {
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-export function useEmployee(id: string) {
+export function useEmployee(id: number) {
   return useQuery({
     queryKey: qk.employees.detail(id),
     queryFn: () => getEmployee(id),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
 // ── TEAM ──────────────────────────────────────────────────────────────────────
 
-export function useTeam(id: string) {
+export function useTeam(id: number) {
   return useQuery({
     queryKey: qk.employees.team(id),
     queryFn: () => getTeam(id),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
 
-export function useProfile(id: string) {
+export function useProfile(id: number) {
   return useQuery({
     queryKey: qk.employees.profile(id),
     queryFn: () => getProfile(id),
     staleTime: 60_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
@@ -345,7 +346,7 @@ export function useCreateEmployee() {
 
 // ── UPDATE EMPLOYEE ───────────────────────────────────────────────────────────
 
-export function useUpdateEmployee(id: string) {
+export function useUpdateEmployee(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -361,7 +362,7 @@ export function useUpdateEmployee(id: string) {
 
 // ── UPDATE SALARY ─────────────────────────────────────────────────────────────
 
-export function useUpdateSalary(id: string) {
+export function useUpdateSalary(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -374,7 +375,7 @@ export function useUpdateSalary(id: string) {
 
 // ── CHANGE STATUS ─────────────────────────────────────────────────────────────
 
-export function useChangeStatus(id: string) {
+export function useChangeStatus(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -389,7 +390,7 @@ export function useChangeStatus(id: string) {
 
 // ── REASSIGN MANAGER ──────────────────────────────────────────────────────────
 
-export function useReassignManager(id: string) {
+export function useReassignManager(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({

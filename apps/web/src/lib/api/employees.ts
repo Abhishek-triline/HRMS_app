@@ -40,11 +40,11 @@ export async function listEmployees(
   const params = new URLSearchParams();
   if (query.cursor) params.set('cursor', query.cursor);
   if (query.limit != null) params.set('limit', String(query.limit));
-  if (query.status) params.set('status', query.status);
-  if (query.role) params.set('role', query.role);
-  if (query.department) params.set('department', query.department);
-  if (query.employmentType) params.set('employmentType', query.employmentType);
-  if (query.managerId) params.set('managerId', query.managerId);
+  if (query.status != null) params.set('status', String(query.status));
+  if (query.roleId != null) params.set('roleId', String(query.roleId));
+  if (query.departmentId != null) params.set('departmentId', String(query.departmentId));
+  if (query.employmentTypeId != null) params.set('employmentTypeId', String(query.employmentTypeId));
+  if (query.managerId != null) params.set('managerId', String(query.managerId));
   if (query.q) params.set('q', query.q);
   if (query.sort) params.set('sort', query.sort);
 
@@ -54,7 +54,7 @@ export async function listEmployees(
 
 // ── GET DETAIL ────────────────────────────────────────────────────────────────
 
-export async function getEmployee(id: string): Promise<EmployeeDetail> {
+export async function getEmployee(id: number): Promise<EmployeeDetail> {
   const res = await apiClient.get<{ data: EmployeeDetail }>(`${BASE}/${id}`);
   return res.data;
 }
@@ -62,7 +62,7 @@ export async function getEmployee(id: string): Promise<EmployeeDetail> {
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 
 export async function updateEmployee(
-  id: string,
+  id: number,
   input: UpdateEmployeeRequest,
 ): Promise<EmployeeDetail> {
   const res = await apiClient.patch<{ data: EmployeeDetail }>(`${BASE}/${id}`, input);
@@ -72,7 +72,7 @@ export async function updateEmployee(
 // ── UPDATE SALARY ─────────────────────────────────────────────────────────────
 
 export async function updateSalary(
-  id: string,
+  id: number,
   input: UpdateSalaryRequest,
 ): Promise<EmployeeDetail> {
   const res = await apiClient.patch<{ data: EmployeeDetail }>(`${BASE}/${id}/salary`, input);
@@ -82,7 +82,7 @@ export async function updateSalary(
 // ── CHANGE STATUS ─────────────────────────────────────────────────────────────
 
 export async function changeStatus(
-  id: string,
+  id: number,
   input: ChangeStatusRequest,
 ): Promise<EmployeeDetail> {
   const res = await apiClient.post<{ data: EmployeeDetail }>(`${BASE}/${id}/status`, input);
@@ -92,7 +92,7 @@ export async function changeStatus(
 // ── REASSIGN MANAGER ──────────────────────────────────────────────────────────
 
 export async function reassignManager(
-  id: string,
+  id: number,
   input: ReassignManagerRequest,
 ): Promise<EmployeeDetail> {
   const res = await apiClient.post<{ data: EmployeeDetail }>(
@@ -104,14 +104,14 @@ export async function reassignManager(
 
 // ── TEAM ──────────────────────────────────────────────────────────────────────
 
-export async function getTeam(id: string): Promise<TeamResponse['data']> {
+export async function getTeam(id: number): Promise<TeamResponse['data']> {
   const res = await apiClient.get<TeamResponse>(`${BASE}/${id}/team`);
   return res.data;
 }
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
 
-export async function getProfile(id: string): Promise<EmployeeDetail> {
+export async function getProfile(id: number): Promise<EmployeeDetail> {
   const res = await apiClient.get<ProfileResponse>(`${BASE}/${id}/profile`);
   return res.data;
 }
