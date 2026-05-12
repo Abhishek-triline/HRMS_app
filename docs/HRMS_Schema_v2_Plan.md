@@ -247,8 +247,8 @@ This is the long tail. Tracked here so the team can see progress.
 | 1. Schema | 2026-05-12 | 2026-05-12 | (this branch) | ✅ Done — fresh DB created, 36 tables, 0 FK constraints, schema validated, single `init_clean_schema` migration |
 | 2. Seed | 2026-05-12 | 2026-05-12 | (this branch) | ✅ Done — 14 configs, 4 roles, 4 employment_types, 4 genders, 9 audit_modules, 6 leave_types, 7 depts, 6 designations, 16 quotas, 7 holidays, 4 demo accounts (admin/mgr/emp/payroll) with salary + RM history + 16 leave balances |
 | 3. Contracts | 2026-05-12 | 2026-05-12 | (this branch) | ✅ Done — all 11 domain files rewritten: IDs as `IdSchema` (positive Int), all status/role/type fields as INT codes, frozen ID constants exported (LeaveTypeId, LeaveEncashmentStatusId, AttendanceStatusId, RegStatusId, PayrollRunStatusId, CycleStatusId, GoalOutcomeId, NotificationCategoryId), master directory endpoints added (CreateDepartment, CreateDesignation, MasterListResponse). typecheck + build clean. |
-| 4. Backend | — | — | — | ⏳ Next |
-| 5. Frontend | — | — | — | ⏳ Planned |
+| 4. Backend | 2026-05-12 | 2026-05-12 | dfbc6c7 + 4d7c1cf + c3ea9b5 | ✅ Done — Phase 4a (lib foundation: statusInt, audit, notifications, scheduler); Phase 4b–4i bundled into `4d7c1cf` (21 files: middleware, auth, employees, leave, leave-encashment, attendance, regularisations, holidays, payroll, performance, notifications, audit, configuration, all tests); Phase 4 final test fix in `c3ea9b5`. `pnpm --filter @nexora/api typecheck` exits 0; all 54 tests pass; seed runs unchanged. |
+| 5. Frontend | — | — | — | ⏳ Next |
 | 6. .sql export | — | — | — | ⏳ Planned |
 | 7. QA | — | — | — | ⏳ Planned |
 
