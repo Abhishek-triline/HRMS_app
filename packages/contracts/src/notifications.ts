@@ -1,5 +1,9 @@
 /**
- * Notifications contract — Phase 6.
+ * Notifications contract.
+ *
+ * v2: All IDs are INT; category is an INT code.
+ * §3.7 notifications.category_id: 1=Leave, 2=Attendance, 3=Payroll, 4=Performance,
+ * 5=Status, 6=Configuration, 7=Auth, 8=System.
  *
  * Endpoints (docs/HRMS_API.md § 10):
  *   GET   /notifications                Any signed-in user. Own feed.
@@ -7,64 +11,47 @@
  *   GET   /notifications/unread-count   Any signed-in user. Used by the header bell.
  *
  * Business rules enforced server-side:
- *   BL-043  Notifications are system-generated only. Produced by qualifying
- *           events in phases 1–5 (leave / regularisation / payroll /
- *           performance / status / configuration changes). Users CANNOT
- *           author free-form notifications. There is NO public POST.
- *   BL-044  Strict role-scoping:
- *             Admin            → org-wide events (escalations, payroll
- *                                 finalise, missing reviews, status changes,
- *                                 config changes)
- *             Manager          → team-scoped events (subordinate leave /
- *                                 reg requests, manager-review deadlines)
- *             Employee         → personal events (own leave/reg outcomes,
- *                                 payslip ready, late warnings, self-review
- *                                 windows)
- *             PayrollOfficer   → payroll-pipeline events (run finalisation
- *                                 prompts, tax-rate updates, LOP anomalies,
- *                                 reversals, mid-month-joiner detections)
- *           No cross-role exposure — A user only ever receives notifications
- *           that match their role + ownership of the underlying record.
- *   BL-045  Retention: 90 days (configurable). After that the row is
- *           archived/pruned by the daily cron. **Audit-relevant events**
- *           (approvals, payroll runs, reversals, status changes) remain
+ *   BL-043  Notifications are system-generated only. No public POST.
+ *   BL-044  Strict role-scoping (Admin / Manager / Employee / PayrollOfficer).
+ *   BL-045  Retention: 90 days (configurable). Audit-relevant events remain
  *           permanently in `audit_log` regardless of notification retention.
- *   BL-046  v1 ships in-app only — no email, SMS, push, or third-party
- *           delivery channels.
+ *   BL-046  v1 ships in-app only — no email, SMS, push, or third-party.
  *   DN-26   No user-authored / free-form notifications.
  *   DN-27   No external delivery in v1.
  */
 
 import { z } from 'zod';
 import {
+  IdParamSchema,
+  IdSchema,
   ISODateSchema,
   PaginationQuerySchema,
 } from './common.js';
 
-// ── Categories ──────────────────────────────────────────────────────────────
+// ── Categories (§3.7) ──────────────────────────────────────────────────────
 
-/**
- * The eight categories the system emits. Each notification carries exactly
- * one. The frontend filter chips map to these directly.
- */
-export const NotificationCategorySchema = z.enum([
-  'Leave',
-  'Attendance',
-  'Payroll',
-  'Performance',
-  'Status',
-  'Configuration',
-  'Auth',
-  'System',
-]);
-export type NotificationCategory = z.infer<typeof NotificationCategorySchema>;
+/** 1=Leave, 2=Attendance, 3=Payroll, 4=Performance, 5=Status, 6=Configuration, 7=Auth, 8=System. */
+export const NotificationCategoryIdSchema = z.number().int().min(1).max(8);
+
+export const NotificationCategoryId = {
+  Leave: 1,
+  Attendance: 2,
+  Payroll: 3,
+  Performance: 4,
+  Status: 5,
+  Configuration: 6,
+  Auth: 7,
+  System: 8,
+} as const;
+export type NotificationCategoryIdValue =
+  (typeof NotificationCategoryId)[keyof typeof NotificationCategoryId];
 
 // ── Notification record ─────────────────────────────────────────────────────
 
 export const NotificationSchema = z.object({
-  id: z.string(),
-  recipientId: z.string(),
-  category: NotificationCategorySchema,
+  id: IdSchema,
+  recipientId: IdSchema,
+  categoryId: NotificationCategoryIdSchema,
   /** Short, role-aware headline ≤ 120 chars, e.g. "Leave request approved". */
   title: z.string().max(120),
   /** Plain-text body ≤ 600 chars. No HTML — UI renders text only. */
@@ -86,7 +73,7 @@ export const NotificationSchema = z.object({
    * Reference back to the audit-log row that produced this notification, when
    * applicable. Lets the UI link Admin / forensic views from the audit.
    */
-  auditLogId: z.string().nullable(),
+  auditLogId: IdSchema.nullable(),
   createdAt: ISODateSchema,
 });
 export type Notification = z.infer<typeof NotificationSchema>;
@@ -94,9 +81,12 @@ export type Notification = z.infer<typeof NotificationSchema>;
 // ── GET /notifications ──────────────────────────────────────────────────────
 
 export const NotificationListQuerySchema = PaginationQuerySchema.extend({
-  /** Filter by one or more categories. Multi-value: pass `?category=Leave&category=Payroll`. */
-  category: z
-    .union([NotificationCategorySchema, z.array(NotificationCategorySchema)])
+  /** Filter by one or more categories. Multi-value: pass `?categoryId=1&categoryId=3`. */
+  categoryId: z
+    .union([
+      z.coerce.number().int().min(1).max(8),
+      z.array(z.coerce.number().int().min(1).max(8)),
+    ])
     .optional(),
   /** Show only unread items. */
   unread: z.coerce.boolean().optional(),
@@ -119,7 +109,7 @@ export type NotificationListResponse = z.infer<typeof NotificationListResponseSc
  * never affect another user's feed (BL-044).
  */
 export const MarkReadRequestSchema = z.union([
-  z.object({ ids: z.array(z.string()).min(1).max(500) }),
+  z.object({ ids: z.array(IdParamSchema).min(1).max(500) }),
   z.object({ all: z.literal(true) }),
 ]);
 export type MarkReadRequest = z.infer<typeof MarkReadRequestSchema>;

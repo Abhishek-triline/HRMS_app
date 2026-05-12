@@ -1,45 +1,32 @@
 /**
- * Configuration contract — Phase 7.
+ * Configuration contract.
+ *
+ * Configuration values live in the key/value `configurations` table (PK = key
+ * string, value = JSON). The buckets below describe the structured JSON shape
+ * for each key; the table has no enum or status columns of its own.
+ *
+ * v2: Cross-entity FK references (e.g. employmentTypeId) are INT. The
+ * weekday tokens and tax-basis enums below are part of JSON payloads stored
+ * in `configurations.value` — they are NOT DB columns, so they remain string
+ * tokens (the schema v2 plan §3 only re-codes status/type columns on entity
+ * tables, not JSON config values).
  *
  * Endpoints (docs/HRMS_API.md § 12):
  *   GET  /config/attendance   Admin only.
  *   PUT  /config/attendance   Admin only. Atomic upsert + audit.
  *   GET  /config/leave        Admin only.
  *   PUT  /config/leave        Admin only. Atomic upsert + audit.
- *
- * Configuration buckets store structured JSON values under typed keys in the
- * `configuration` table (key/value model from Phase 0). Phase 7 adds explicit
- * read/write contracts for the attendance and leave buckets.
- *
- * Existing endpoints NOT touched here:
- *   GET/PUT /config/tax      — Phase 4 (payroll module) — complete.
- *   GET/PUT /config/holidays — Phase 3 (attendance module) — complete.
  */
 
 import { z } from 'zod';
-
-// ── Leave types (re-used from leave.ts without a circular import) ────────────
-
-/**
- * The six canonical leave types. Must stay in sync with LeaveTypeSchema in
- * leave.ts. We duplicate the enum here to avoid a cross-schema import cycle in
- * the contracts package.
- */
-export const ConfigLeaveTypeSchema = z.enum([
-  'Annual',
-  'Sick',
-  'Casual',
-  'Unpaid',
-  'Maternity',
-  'Paternity',
-]);
-export type ConfigLeaveType = z.infer<typeof ConfigLeaveTypeSchema>;
+import { LeaveTypeId } from './leave.js';
 
 // ── Attendance config ────────────────────────────────────────────────────────
 
 /**
  * Canonical weekday tokens (Mon..Sun). Used by weeklyOffDays.
- * Order is the Indian / ISO-8601 convention: week starts Monday.
+ * Stored inside a JSON array in `configurations.value` — not a DB enum, so
+ * we keep them as string tokens.
  */
 export const WeekdaySchema = z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 export type Weekday = z.infer<typeof WeekdaySchema>;
@@ -95,7 +82,7 @@ export type UpdateAttendanceConfig = z.infer<typeof UpdateAttendanceConfigSchema
 
 /**
  * LeaveConfig — values persisted as four separate Configuration rows:
- *   LEAVE_CARRY_FORWARD_CAPS      → Record<LeaveType, number> JSON object
+ *   LEAVE_CARRY_FORWARD_CAPS      → Record<leaveTypeId, number> JSON object
  *   LEAVE_ESCALATION_PERIOD_DAYS  → integer 1..30
  *   LEAVE_MATERNITY_DAYS          → integer (default 182 = 26 weeks)
  *   LEAVE_PATERNITY_DAYS          → integer (default 10 working days)
@@ -104,23 +91,26 @@ export type UpdateAttendanceConfig = z.infer<typeof UpdateAttendanceConfigSchema
  *   escalationPeriodDays  = 5   (BL-018)
  *   maternityDays         = 182 (BL-015: 26 weeks)
  *   paternityDays         = 10  (BL-016: 10 working days)
- *   carryForwardCaps      = { Annual: 10, Sick: 0, Casual: 5, Unpaid: 0, Maternity: 0, Paternity: 0 }
+ *   carryForwardCaps      = { 1: 10, 2: 0, 3: 5, 4: 0, 5: 0, 6: 0 }
+ *
+ * Keys here are the FROZEN leave_types.id values (1=Annual, 2=Sick, 3=Casual,
+ * 4=Unpaid, 5=Maternity, 6=Paternity — see HRMS_Schema_v2_Plan §2). Sick /
+ * Unpaid / event-based types are constrained to 0 by BL-012 / BL-014.
  */
 export const CarryForwardCapsSchema = z.object({
-  Annual: z.number().int().min(0).max(365),
-  Sick: z.number().int().min(0).max(0), // always 0 — BL-012
-  Casual: z.number().int().min(0).max(365),
-  Unpaid: z.number().int().min(0).max(0), // always 0
-  Maternity: z.number().int().min(0).max(0), // event-based — BL-014
-  Paternity: z.number().int().min(0).max(0), // event-based — BL-014
+  [LeaveTypeId.Annual]:    z.number().int().min(0).max(365),
+  [LeaveTypeId.Sick]:      z.number().int().min(0).max(0), // always 0 — BL-012
+  [LeaveTypeId.Casual]:    z.number().int().min(0).max(365),
+  [LeaveTypeId.Unpaid]:    z.number().int().min(0).max(0), // always 0
+  [LeaveTypeId.Maternity]: z.number().int().min(0).max(0), // event-based — BL-014
+  [LeaveTypeId.Paternity]: z.number().int().min(0).max(0), // event-based — BL-014
 });
 export type CarryForwardCaps = z.infer<typeof CarryForwardCapsSchema>;
 
 export const LeaveConfigSchema = z.object({
   /**
-   * Per-type carry-forward cap. Sick/Unpaid/event-based types must be 0 —
-   * the schema enforces this with max(0) for those slots. Annual and Casual
-   * caps are configurable.
+   * Per-leaveTypeId carry-forward cap. Sick/Unpaid/event-based slots must be
+   * 0 (BL-012 / BL-014). Annual and Casual caps are configurable.
    */
   carryForwardCaps: CarryForwardCapsSchema,
   /** Working days before a Pending leave escalates to Admin (BL-018). Range 1-30. Default 5. */

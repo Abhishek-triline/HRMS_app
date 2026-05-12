@@ -1,5 +1,9 @@
 /**
- * Leave Encashment contract (additive — BL-LE-01..14).
+ * Leave Encashment contract (BL-LE-01..14).
+ *
+ * v2: All IDs and status fields are INT. status_id (§3.3):
+ *   1=Pending, 2=ManagerApproved, 3=AdminFinalised, 4=Paid, 5=Rejected, 6=Cancelled.
+ * routed_to_id (§3.3): 1=Manager, 2=Admin.
  *
  * Endpoints (docs/HRMS_API.md §10):
  *   POST   /leave-encashments                        E (SELF)
@@ -8,57 +12,69 @@
  *   POST   /leave-encashments/:id/cancel             E (pre-ManagerApproved) / A
  *   GET    /leave-encashments/queue                  MGR / A
  *   POST   /leave-encashments/:id/manager-approve    MGR
- *   POST   /leave-encashments/:id/admin-finalise      A
+ *   POST   /leave-encashments/:id/admin-finalise     A
  *   POST   /leave-encashments/:id/reject             MGR / A
  */
 
 import { z } from 'zod';
-import { ISODateSchema, PaginationQuerySchema, VersionSchema } from './common.js';
+import {
+  EmployeeCodeSchema,
+  IdParamSchema,
+  IdSchema,
+  ISODateSchema,
+  PaginationQuerySchema,
+  RoutedToIdSchema,
+  VersionSchema,
+} from './common.js';
 
-// ── Status enum ────────────────────────────────────────────────────────────────
+// ── Status (§3.3) ───────────────────────────────────────────────────────────
 
-export const LeaveEncashmentStatusSchema = z.enum([
-  'Pending',
-  'ManagerApproved',
-  'AdminFinalised',
-  'Paid',
-  'Rejected',
-  'Cancelled',
-]);
-export type LeaveEncashmentStatus = z.infer<typeof LeaveEncashmentStatusSchema>;
+/** 1=Pending, 2=ManagerApproved, 3=AdminFinalised, 4=Paid, 5=Rejected, 6=Cancelled. */
+export const LeaveEncashmentStatusIdSchema = z.number().int().min(1).max(6);
 
-// ── Full detail ────────────────────────────────────────────────────────────────
+export const LeaveEncashmentStatusId = {
+  Pending: 1,
+  ManagerApproved: 2,
+  AdminFinalised: 3,
+  Paid: 4,
+  Rejected: 5,
+  Cancelled: 6,
+} as const;
+export type LeaveEncashmentStatusIdValue =
+  (typeof LeaveEncashmentStatusId)[keyof typeof LeaveEncashmentStatusId];
+
+// ── Full detail ────────────────────────────────────────────────────────────
 
 export const LeaveEncashmentDetailSchema = z.object({
-  id: z.string(),
-  code: z.string(),                    // LE-YYYY-NNNN
-  employeeId: z.string(),
+  id: IdSchema,
+  code: z.string(), // LE-YYYY-NNNN
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
+  employeeCode: EmployeeCodeSchema,
   year: z.number().int().min(2000).max(2999),
   daysRequested: z.number().int().min(1),
   daysApproved: z.number().int().min(0).nullable(),
   ratePerDayPaise: z.number().int().min(0).nullable(),
   amountPaise: z.number().int().min(0).nullable(),
-  status: LeaveEncashmentStatusSchema,
-  routedTo: z.enum(['Manager', 'Admin']),
-  approverId: z.string().nullable(),
+  statusId: LeaveEncashmentStatusIdSchema,
+  routedToId: RoutedToIdSchema,
+  approverId: IdSchema.nullable(),
   approverName: z.string().nullable(),
   decidedAt: ISODateSchema.nullable(),
-  decidedBy: z.string().nullable(),
+  decidedBy: IdSchema.nullable(),
   decisionNote: z.string().nullable(),
   escalatedAt: ISODateSchema.nullable(),
-  paidInPayslipId: z.string().nullable(),
+  paidInPayslipId: IdSchema.nullable(),
   paidAt: ISODateSchema.nullable(),
   cancelledAt: ISODateSchema.nullable(),
-  cancelledBy: z.string().nullable(),
+  cancelledBy: IdSchema.nullable(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,
 });
 export type LeaveEncashmentDetail = z.infer<typeof LeaveEncashmentDetailSchema>;
 
-// ── Summary (queue / history tables) ──────────────────────────────────────────
+// ── Summary (queue / history tables) ──────────────────────────────────────
 
 export const LeaveEncashmentSummarySchema = LeaveEncashmentDetailSchema.pick({
   id: true,
@@ -70,8 +86,8 @@ export const LeaveEncashmentSummarySchema = LeaveEncashmentDetailSchema.pick({
   daysRequested: true,
   daysApproved: true,
   amountPaise: true,
-  status: true,
-  routedTo: true,
+  statusId: true,
+  routedToId: true,
   approverId: true,
   escalatedAt: true,
   createdAt: true,
@@ -79,7 +95,7 @@ export const LeaveEncashmentSummarySchema = LeaveEncashmentDetailSchema.pick({
 });
 export type LeaveEncashmentSummary = z.infer<typeof LeaveEncashmentSummarySchema>;
 
-// ── POST /leave-encashments ────────────────────────────────────────────────────
+// ── POST /leave-encashments ────────────────────────────────────────────────
 
 export const LeaveEncashmentRequestSchema = z.object({
   year: z.number().int().min(2000).max(2999),
@@ -92,12 +108,12 @@ export const LeaveEncashmentRequestResponseSchema = z.object({
 });
 export type LeaveEncashmentRequestResponse = z.infer<typeof LeaveEncashmentRequestResponseSchema>;
 
-// ── GET /leave-encashments (list) ─────────────────────────────────────────────
+// ── GET /leave-encashments (list) ─────────────────────────────────────────
 
 export const LeaveEncashmentListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
-  status: LeaveEncashmentStatusSchema.optional(),
-  employeeId: z.string().optional(),
+  statusId: z.coerce.number().int().min(1).max(6).optional(),
+  employeeId: IdParamSchema.optional(),
 });
 export type LeaveEncashmentListQuery = z.infer<typeof LeaveEncashmentListQuerySchema>;
 
@@ -107,7 +123,7 @@ export const LeaveEncashmentListResponseSchema = z.object({
 });
 export type LeaveEncashmentListResponse = z.infer<typeof LeaveEncashmentListResponseSchema>;
 
-// ── GET /leave-encashments/queue ──────────────────────────────────────────────
+// ── GET /leave-encashments/queue ──────────────────────────────────────────
 
 export const LeaveEncashmentQueueResponseSchema = z.object({
   data: z.array(LeaveEncashmentSummarySchema),
@@ -115,7 +131,7 @@ export const LeaveEncashmentQueueResponseSchema = z.object({
 });
 export type LeaveEncashmentQueueResponse = z.infer<typeof LeaveEncashmentQueueResponseSchema>;
 
-// ── POST /leave-encashments/:id/manager-approve ───────────────────────────────
+// ── POST /leave-encashments/:id/manager-approve ───────────────────────────
 
 export const ManagerApproveEncashmentBodySchema = z.object({
   note: z.string().max(2000).optional(),
@@ -123,7 +139,7 @@ export const ManagerApproveEncashmentBodySchema = z.object({
 });
 export type ManagerApproveEncashmentBody = z.infer<typeof ManagerApproveEncashmentBodySchema>;
 
-// ── POST /leave-encashments/:id/admin-finalise ────────────────────────────────
+// ── POST /leave-encashments/:id/admin-finalise ────────────────────────────
 
 export const AdminFinaliseEncashmentBodySchema = z.object({
   /** Optional override for days to approve. Server clamps to floor(daysRemaining × 0.5). */
@@ -133,7 +149,7 @@ export const AdminFinaliseEncashmentBodySchema = z.object({
 });
 export type AdminFinaliseEncashmentBody = z.infer<typeof AdminFinaliseEncashmentBodySchema>;
 
-// ── POST /leave-encashments/:id/reject ────────────────────────────────────────
+// ── POST /leave-encashments/:id/reject ────────────────────────────────────
 
 export const RejectEncashmentBodySchema = z.object({
   note: z.string().min(1).max(2000),
@@ -141,7 +157,7 @@ export const RejectEncashmentBodySchema = z.object({
 });
 export type RejectEncashmentBody = z.infer<typeof RejectEncashmentBodySchema>;
 
-// ── POST /leave-encashments/:id/cancel ────────────────────────────────────────
+// ── POST /leave-encashments/:id/cancel ────────────────────────────────────
 
 export const CancelEncashmentBodySchema = z.object({
   note: z.string().max(2000).optional(),
@@ -149,7 +165,7 @@ export const CancelEncashmentBodySchema = z.object({
 });
 export type CancelEncashmentBody = z.infer<typeof CancelEncashmentBodySchema>;
 
-// ── Generic action response ───────────────────────────────────────────────────
+// ── Generic action response ───────────────────────────────────────────────
 
 export const LeaveEncashmentActionResponseSchema = z.object({
   data: LeaveEncashmentDetailSchema,

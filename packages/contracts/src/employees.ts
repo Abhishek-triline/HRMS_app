@@ -1,5 +1,9 @@
 /**
- * Employees & Hierarchy contract — Phase 1.
+ * Employees & Hierarchy contract.
+ *
+ * v2: IDs are INT, status/role/employment-type are INT codes. Department and
+ * designation are master-table FKs (departmentId / designationId) accompanied
+ * by their resolved name string for UI display.
  *
  * Endpoints (docs/HRMS_API.md § 5):
  *   POST   /employees                              UC-001  Admin only
@@ -14,7 +18,7 @@
  *
  * Rules:
  *   BL-005  No circular reporting chains
- *   BL-006  Status transitions (Active / On-Notice / Exited manual; On-Leave system-set)
+ *   BL-006  Status transitions (Active / OnNotice / Exited manual; OnLeave system-set)
  *   BL-007  Historical records never deleted
  *   BL-008  EMP code never reused (re-joiner gets a new code)
  *   BL-022  Pending approvals stay with previous manager; Admin if exited
@@ -25,12 +29,14 @@
 import { z } from 'zod';
 import {
   EmployeeCodeSchema,
-  EmployeeStatusSchema,
-  EmploymentTypeSchema,
+  EmployeeStatusIdSchema,
+  EmploymentTypeIdSchema,
+  GenderIdSchema,
+  IdSchema,
   ISODateOnlySchema,
   ISODateSchema,
   PaginationQuerySchema,
-  RoleSchema,
+  RoleIdSchema,
   VersionSchema,
 } from './common.js';
 
@@ -62,22 +68,27 @@ export type SalaryStructure = z.infer<typeof SalaryStructureSchema>;
 /**
  * Detail shape — returned by GET /employees/{id}, PATCH /employees/{id},
  * and the profile endpoint. Includes salary only for Admin / SELF.
+ *
+ * Master FKs carry both `*Id` (canonical, INT) and the resolved name string
+ * for UI display so the frontend doesn't need a second round-trip.
  */
 export const EmployeeDetailSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: EmployeeCodeSchema,
   name: z.string(),
   email: z.string().email(),
   /** Optional personal contact information. */
   phone: z.string().max(20).nullable().optional(),
   dateOfBirth: ISODateOnlySchema.nullable().optional(),
-  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
-  role: RoleSchema,
-  status: EmployeeStatusSchema,
+  genderId: GenderIdSchema.nullable().optional(),
+  roleId: RoleIdSchema,
+  statusId: EmployeeStatusIdSchema,
+  departmentId: IdSchema.nullable(),
   department: z.string().nullable(),
+  designationId: IdSchema.nullable(),
   designation: z.string().nullable(),
-  employmentType: EmploymentTypeSchema,
-  reportingManagerId: z.string().nullable(),
+  employmentTypeId: EmploymentTypeIdSchema,
+  reportingManagerId: IdSchema.nullable(),
   reportingManagerName: z.string().nullable(),
   reportingManagerCode: EmployeeCodeSchema.nullable(),
   joinDate: ISODateOnlySchema,
@@ -93,15 +104,17 @@ export type EmployeeDetail = z.infer<typeof EmployeeDetailSchema>;
 
 /** Summary shape — used in directory lists and team rosters. */
 export const EmployeeListItemSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: EmployeeCodeSchema,
   name: z.string(),
   email: z.string().email(),
-  role: RoleSchema,
-  status: EmployeeStatusSchema,
+  roleId: RoleIdSchema,
+  statusId: EmployeeStatusIdSchema,
+  departmentId: IdSchema.nullable(),
   department: z.string().nullable(),
+  designationId: IdSchema.nullable(),
   designation: z.string().nullable(),
-  employmentType: EmploymentTypeSchema,
+  employmentTypeId: EmploymentTypeIdSchema,
   reportingManagerName: z.string().nullable(),
   joinDate: ISODateOnlySchema,
 });
@@ -126,13 +139,15 @@ export const CreateEmployeeRequestSchema = z.object({
   /** Optional personal information fields. */
   phone: z.string().max(20).nullable().optional(),
   dateOfBirth: ISODateOnlySchema.nullable().optional(),
-  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
-  role: RoleSchema,
-  department: z.string().min(1).max(100),
-  designation: z.string().min(1).max(150),
-  employmentType: EmploymentTypeSchema,
+  genderId: GenderIdSchema.nullable().optional(),
+  roleId: RoleIdSchema,
+  /** FK to master `departments.id`. Pre-populated dropdown. */
+  departmentId: IdSchema,
+  /** FK to master `designations.id`. Pre-populated dropdown. */
+  designationId: IdSchema,
+  employmentTypeId: EmploymentTypeIdSchema,
   /** May be null — Admin or top-of-tree employees report to no-one (BL-017). */
-  reportingManagerId: z.string().nullable(),
+  reportingManagerId: IdSchema.nullable(),
   joinDate: ISODateOnlySchema,
   salaryStructure: SalaryStructureSchema,
 });
@@ -150,16 +165,17 @@ export type CreateEmployeeResponse = z.infer<typeof CreateEmployeeResponseSchema
 // ── GET /employees ──────────────────────────────────────────────────────────
 
 export const EmployeeListQuerySchema = PaginationQuerySchema.extend({
-  status: EmployeeStatusSchema.optional(),
+  statusId: z.coerce.number().int().min(1).max(5).optional(),
   /**
-   * Filter by role. Accepts a single Role value OR a comma-separated list of
-   * Role values (e.g. "Manager,Admin"). The backend splits on commas and uses
-   * `role: { in: [...] }` when multiple values are present.
+   * Filter by role id. Single value or comma-separated list (e.g. "2,4").
    */
-  role: z.union([RoleSchema, z.string().regex(/^[A-Za-z]+(,[A-Za-z]+)*$/)]).optional(),
-  department: z.string().optional(),
-  employmentType: EmploymentTypeSchema.optional(),
-  managerId: z.string().optional(),
+  roleId: z.union([
+    z.coerce.number().int().positive(),
+    z.string().regex(/^\d+(,\d+)*$/),
+  ]).optional(),
+  departmentId: z.coerce.number().int().positive().optional(),
+  employmentTypeId: z.coerce.number().int().positive().optional(),
+  managerId: z.coerce.number().int().positive().optional(),
   q: z.string().optional(),
   /** Default sort — name ascending. */
   sort: z.string().optional(),
@@ -190,19 +206,19 @@ export const UpdateEmployeeRequestSchema = z.object({
   /** Optional personal information — editable on self-edit and Admin edit. */
   phone: z.string().max(20).nullable().optional(),
   dateOfBirth: ISODateOnlySchema.nullable().optional(),
-  gender: z.enum(['Male', 'Female', 'Other', 'PreferNotToSay']).nullable().optional(),
-  role: RoleSchema.optional(),
-  department: z.string().min(1).max(100).optional(),
-  designation: z.string().min(1).max(150).optional(),
-  employmentType: EmploymentTypeSchema.optional(),
+  genderId: GenderIdSchema.nullable().optional(),
+  roleId: RoleIdSchema.optional(),
+  departmentId: IdSchema.optional(),
+  designationId: IdSchema.optional(),
+  employmentTypeId: EmploymentTypeIdSchema.optional(),
   joinDate: ISODateOnlySchema.optional(),
   /**
    * Reassign reporting manager inline with a profile update (Admin only).
-   * Must point to an employee with role Manager or Admin and status Active or
-   * OnNotice (BL-015 / BL-017 / BL-022 routing assumption).
+   * Must point to an employee whose role is Manager (id=2) or Admin (id=4)
+   * and whose status_id is Active (1) or OnNotice (2) (BL-015/017/022).
    * Pass null to unset (top-of-tree). Omit to leave unchanged.
    */
-  reportingManagerId: z.string().nullable().optional(),
+  reportingManagerId: IdSchema.nullable().optional(),
   /** Optimistic concurrency token — required (HRMS_API.md § 1). */
   version: VersionSchema,
 });
@@ -227,21 +243,22 @@ export type UpdateSalaryResponse = z.infer<typeof UpdateSalaryResponseSchema>;
 // ── POST /employees/{id}/status ─────────────────────────────────────────────
 
 /**
- * Manual status transitions only — Admin sets On-Notice or Exited.
- * On-Leave is system-set automatically while approved leave is in progress
- * and reverts to Active when the leave ends (BL-006).
- * Active is allowed only as a revert path from On-Notice.
+ * Manual status transitions only — Admin sets OnNotice (2) or Exited (5).
+ * Active (1) is allowed only as a revert path from OnNotice. OnLeave (3) is
+ * system-set automatically while approved leave is in progress and reverts
+ * to Active when the leave ends (BL-006). Inactive (4) is pre-first-login
+ * only and never set manually.
  */
 export const ChangeStatusRequestSchema = z.object({
-  status: z.enum(['On-Notice', 'Exited', 'Active'], {
-    errorMap: () => ({
-      message:
-        'Status must be On-Notice, Exited, or Active. ' +
-        'On-Leave is system-controlled and set automatically while an approved leave is in progress (BL-006).',
-    }),
+  /** New status_id — must be one of {1=Active, 2=OnNotice, 5=Exited}. */
+  statusId: z.number().int().refine((v) => v === 1 || v === 2 || v === 5, {
+    message:
+      'statusId must be 1 (Active), 2 (OnNotice), or 5 (Exited). ' +
+      'OnLeave (3) is system-controlled and set automatically while an approved leave is in progress (BL-006). ' +
+      'Inactive (4) is the pre-first-login state and cannot be set manually.',
   }),
   effectiveDate: ISODateOnlySchema,
-  /** Required when status = "Exited". */
+  /** Required when statusId = 5 (Exited). */
   exitDate: ISODateOnlySchema.optional(),
   /** Optional admin note recorded on the audit entry. */
   note: z.string().max(500).optional(),
@@ -256,7 +273,7 @@ export type ChangeStatusResponse = z.infer<typeof ChangeStatusResponseSchema>;
 
 export const ReassignManagerRequestSchema = z.object({
   /** Pass null to unset (e.g. promote to top-of-tree). */
-  newManagerId: z.string().nullable(),
+  newManagerId: IdSchema.nullable(),
   effectiveDate: ISODateOnlySchema,
   note: z.string().max(500).optional(),
   version: VersionSchema,
@@ -272,13 +289,16 @@ export type ReassignManagerResponse = z.infer<typeof ReassignManagerResponseSche
  * Returns BOTH the current direct + indirect reports AND the past members
  * (BL-022a). The `pastEndedAt` timestamp is when the employee left this
  * manager's tree (reassignment OR exit).
+ *
+ * §3.8 reporting_manager_history.reason_id: 1=Initial, 2=Reassigned, 3=Exited.
+ * `pastReasonId` here is 2=Reassigned or 3=Exited; null for current members.
  */
 export const TeamMemberSchema = EmployeeListItemSchema.extend({
   /** True for direct reports; false for indirect (deeper subordinates). */
   isDirect: z.boolean(),
   /** Set on past members; null on current ones. */
   pastEndedAt: ISODateSchema.nullable(),
-  pastReason: z.enum(['Reassigned', 'Exited']).nullable(),
+  pastReasonId: z.number().int().min(2).max(3).nullable(),
 });
 export type TeamMember = z.infer<typeof TeamMemberSchema>;
 
@@ -296,3 +316,32 @@ export const ProfileResponseSchema = z.object({
   data: EmployeeDetailSchema,
 });
 export type ProfileResponse = z.infer<typeof ProfileResponseSchema>;
+
+// ── Master directory endpoints (used for dropdowns) ─────────────────────────
+
+/**
+ * Generic master row shape. Used by GET /masters/roles, /masters/departments,
+ * /masters/designations, /masters/employment-types, /masters/genders.
+ */
+export const MasterItemSchema = z.object({
+  id: IdSchema,
+  name: z.string(),
+});
+export type MasterItem = z.infer<typeof MasterItemSchema>;
+
+export const MasterListResponseSchema = z.object({
+  data: z.array(MasterItemSchema),
+});
+export type MasterListResponse = z.infer<typeof MasterListResponseSchema>;
+
+/** POST /masters/departments — Admin only. Creates a new department. */
+export const CreateDepartmentRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+export type CreateDepartmentRequest = z.infer<typeof CreateDepartmentRequestSchema>;
+
+/** POST /masters/designations — Admin only. Creates a new designation. */
+export const CreateDesignationRequestSchema = z.object({
+  name: z.string().min(1).max(150),
+});
+export type CreateDesignationRequest = z.infer<typeof CreateDesignationRequestSchema>;

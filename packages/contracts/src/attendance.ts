@@ -1,5 +1,12 @@
 /**
- * Attendance & Regularisation contract — Phase 3.
+ * Attendance & Regularisation contract.
+ *
+ * v2: IDs are INT; status/source/routing fields are INT codes.
+ *
+ * §3.4 attendance_records.status_id: 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday.
+ * §3.4 attendance_records.source_id: 1=system, 2=regularisation.
+ * §3.4 regularisation_requests.status_id: 1=Pending, 2=Approved, 3=Rejected.
+ * §3.4 regularisation_requests.routed_to_id: 1=Manager, 2=Admin.
  *
  * Endpoints (docs/HRMS_API.md § 7):
  *   POST /attendance/check-in                  E-06   any signed-in user (BL-004)
@@ -28,7 +35,7 @@
  *   BL-025a Standard daily working hours configurable (default 8) — display
  *           only, does NOT drive deductions, overtime, or payroll.
  *   BL-026  Status derivation priority:
- *           On-Leave > Weekly-Off / Holiday > Present > Absent.
+ *           OnLeave > WeeklyOff / Holiday > Present > Absent.
  *   BL-027  Late mark = check-in after configured threshold (default 10:30).
  *   BL-028  3 late marks in a calendar month → 1 full day deducted from
  *           Annual leave. Each subsequent late = another full day.
@@ -37,40 +44,44 @@
 
 import { z } from 'zod';
 import {
+  EmployeeCodeSchema,
+  IdParamSchema,
+  IdSchema,
   ISODateOnlySchema,
   ISODateSchema,
   PaginationQuerySchema,
+  RoutedToIdSchema,
   VersionSchema,
 } from './common.js';
 
 // ── Status & source ─────────────────────────────────────────────────────────
 
-/** Five derived states per BL-026 (priority: top → bottom). */
-export const AttendanceStatusSchema = z.enum([
-  'Present',
-  'Absent',
-  'On-Leave',
-  'Weekly-Off',
-  'Holiday',
-]);
-export type AttendanceStatus = z.infer<typeof AttendanceStatusSchema>;
+/** §3.4: 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday. */
+export const AttendanceStatusIdSchema = z.number().int().min(1).max(5);
+
+export const AttendanceStatusId = {
+  Present: 1,
+  Absent: 2,
+  OnLeave: 3,
+  WeeklyOff: 4,
+  Holiday: 5,
+} as const;
+export type AttendanceStatusIdValue =
+  (typeof AttendanceStatusId)[keyof typeof AttendanceStatusId];
 
 /**
- * Records are stamped at creation by `system` (the midnight job, the check-in,
- * an approved regularisation that overlays a corrected entry). The original
- * row is never mutated; corrections append a new row with `source =
- * regularisation` and `regularisationId` populated (BL-007 / BL-047).
+ * §3.4: 1=system (midnight job / check-in), 2=regularisation (approved correction).
+ * Original rows are never mutated; corrections append a new row with source_id=2.
  */
-export const AttendanceSourceSchema = z.enum(['system', 'regularisation']);
-export type AttendanceSource = z.infer<typeof AttendanceSourceSchema>;
+export const AttendanceSourceIdSchema = z.number().int().min(1).max(2);
 
 // ── Attendance record — full + summary ──────────────────────────────────────
 
 export const AttendanceRecordSchema = z.object({
-  id: z.string(),
-  employeeId: z.string(),
+  id: IdSchema,
+  employeeId: IdSchema,
   date: ISODateOnlySchema,
-  status: AttendanceStatusSchema,
+  statusId: AttendanceStatusIdSchema,
   checkInTime: ISODateSchema.nullable(),
   checkOutTime: ISODateSchema.nullable(),
   /** Computed by server: (checkOut − checkIn) in milliseconds, exposed as minutes. */
@@ -80,9 +91,9 @@ export const AttendanceRecordSchema = z.object({
   lateMonthCount: z.number().int().min(0),
   /** True for unauthorised Absent days that incur LOP at payroll time. */
   lopApplied: z.boolean(),
-  source: AttendanceSourceSchema,
-  /** Set when source = "regularisation" — links back to the approving request. */
-  regularisationId: z.string().nullable(),
+  sourceId: AttendanceSourceIdSchema,
+  /** Set when sourceId = 2 — links back to the approving regularisation request. */
+  regularisationId: IdSchema.nullable(),
   createdAt: ISODateSchema,
   version: VersionSchema,
 });
@@ -91,7 +102,7 @@ export type AttendanceRecord = z.infer<typeof AttendanceRecordSchema>;
 /** Compact form for calendar / monthly views. */
 export const AttendanceCalendarItemSchema = z.object({
   date: ISODateOnlySchema,
-  status: AttendanceStatusSchema,
+  statusId: AttendanceStatusIdSchema,
   checkInTime: ISODateSchema.nullable(),
   checkOutTime: ISODateSchema.nullable(),
   hoursWorkedMinutes: z.number().int().min(0).nullable(),
@@ -148,11 +159,11 @@ export const AttendanceListQuerySchema = PaginationQuerySchema.extend({
   /** Defaults: server picks the current calendar month if neither is supplied. */
   from: ISODateOnlySchema.optional(),
   to: ISODateOnlySchema.optional(),
-  status: AttendanceStatusSchema.optional(),
+  statusId: z.coerce.number().int().min(1).max(5).optional(),
   /** Manager / Admin filter — restrict to a specific employee. */
-  employeeId: z.string().optional(),
+  employeeId: IdParamSchema.optional(),
   /** Admin-only filter for the org-wide view. */
-  department: z.string().optional(),
+  departmentId: IdParamSchema.optional(),
   /** Optional "single day" shortcut. If supplied, `from` and `to` are ignored. */
   date: ISODateOnlySchema.optional(),
 });
@@ -162,9 +173,9 @@ export type AttendanceListQuery = z.infer<typeof AttendanceListQuerySchema>;
 export const AttendanceListResponseSchema = z.object({
   data: z.array(
     AttendanceCalendarItemSchema.extend({
-      employeeId: z.string(),
+      employeeId: IdSchema,
       employeeName: z.string().optional(),
-      employeeCode: z.string().optional(),
+      employeeCode: EmployeeCodeSchema.optional(),
     }),
   ),
   nextCursor: z.string().nullable(),
@@ -175,8 +186,8 @@ export type AttendanceListResponse = z.infer<typeof AttendanceListResponseSchema
 export const TodayAttendanceResponseSchema = z.object({
   data: z.object({
     record: AttendanceRecordSchema.nullable(),
-    /** "Ready" → no check-in yet; "Working" → checked in; "Confirm" → checked out. */
-    panelState: z.enum(['Ready', 'Working', 'Confirm']),
+    /** 1=Ready (no check-in yet), 2=Working (checked in), 3=Confirm (checked out). */
+    panelStateId: z.number().int().min(1).max(3),
     lateThreshold: z.string(), // "HH:MM" from configuration (BL-027)
     standardDailyHours: z.number().int().positive(), // BL-025a (display only)
     /** Late count for the current calendar month (TC-ATT-008/009 / BL-028). */
@@ -187,36 +198,40 @@ export type TodayAttendanceResponse = z.infer<typeof TodayAttendanceResponseSche
 
 // ── Regularisation status & routing ─────────────────────────────────────────
 
-export const RegStatusSchema = z.enum(['Pending', 'Approved', 'Rejected']);
-export type RegStatus = z.infer<typeof RegStatusSchema>;
+/** §3.4: 1=Pending, 2=Approved, 3=Rejected. */
+export const RegStatusIdSchema = z.number().int().min(1).max(3);
 
-export const RegRoutedToSchema = z.enum(['Manager', 'Admin']);
-export type RegRoutedTo = z.infer<typeof RegRoutedToSchema>;
+export const RegStatusId = {
+  Pending: 1,
+  Approved: 2,
+  Rejected: 3,
+} as const;
+export type RegStatusIdValue = (typeof RegStatusId)[keyof typeof RegStatusId];
 
 // ── Regularisation request — full + summary ─────────────────────────────────
 
 export const RegularisationRequestSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: z.string(), // R-YYYY-NNNN
-  employeeId: z.string(),
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
+  employeeCode: EmployeeCodeSchema,
   /** The date being corrected (always in the past). */
   date: ISODateOnlySchema,
   proposedCheckIn: ISODateSchema.nullable(),
   proposedCheckOut: ISODateSchema.nullable(),
   reason: z.string(),
-  status: RegStatusSchema,
-  routedTo: RegRoutedToSchema,
+  statusId: RegStatusIdSchema,
+  routedToId: RoutedToIdSchema,
   /** Captured at submit time so re-routing later doesn't change the audit trail. */
   ageDaysAtSubmit: z.number().int().min(0),
-  approverId: z.string().nullable(),
+  approverId: IdSchema.nullable(),
   approverName: z.string().nullable(),
   decidedAt: ISODateSchema.nullable(),
-  decidedBy: z.string().nullable(),
+  decidedBy: IdSchema.nullable(),
   decisionNote: z.string().nullable(),
   /** Link to the corrected attendance row created on approval (BL-026). */
-  correctedRecordId: z.string().nullable(),
+  correctedRecordId: IdSchema.nullable(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,
@@ -230,8 +245,8 @@ export const RegularisationSummarySchema = RegularisationRequestSchema.pick({
   employeeName: true,
   employeeCode: true,
   date: true,
-  status: true,
-  routedTo: true,
+  statusId: true,
+  routedToId: true,
   ageDaysAtSubmit: true,
   approverName: true,
   createdAt: true,
@@ -272,9 +287,9 @@ export type CreateRegularisationResponse = z.infer<typeof CreateRegularisationRe
 // ── GET /regularisations ────────────────────────────────────────────────────
 
 export const RegularisationListQuerySchema = PaginationQuerySchema.extend({
-  status: RegStatusSchema.optional(),
-  routedTo: RegRoutedToSchema.optional(),
-  employeeId: z.string().optional(),
+  statusId: z.coerce.number().int().min(1).max(3).optional(),
+  routedToId: z.coerce.number().int().min(1).max(2).optional(),
+  employeeId: IdParamSchema.optional(),
   fromDate: ISODateOnlySchema.optional(),
   toDate: ISODateOnlySchema.optional(),
 });
@@ -315,7 +330,7 @@ export type RejectRegularisationResponse = z.infer<typeof RejectRegularisationRe
 // ── Holiday calendar ────────────────────────────────────────────────────────
 
 export const HolidaySchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   date: ISODateOnlySchema,
   name: z.string().min(1).max(120),
 });
