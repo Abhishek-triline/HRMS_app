@@ -234,9 +234,9 @@ This is the long tail. Tracked here so the team can see progress.
 
 | Phase | Started | Completed | Commit | Notes |
 |---|---|---|---|---|
-| 1. Schema | — | — | — | ⏳ Planned |
-| 2. Seed | — | — | — | ⏳ Planned |
-| 3. Contracts | — | — | — | ⏳ Planned |
+| 1. Schema | 2026-05-12 | 2026-05-12 | (this branch) | ✅ Done — fresh DB created, 36 tables, 0 FK constraints, schema validated, single `init_clean_schema` migration |
+| 2. Seed | 2026-05-12 | 2026-05-12 | (this branch) | ✅ Done — 14 configs, 4 roles, 4 employment_types, 4 genders, 9 audit_modules, 6 leave_types, 7 depts, 6 designations, 16 quotas, 7 holidays, 4 demo accounts (admin/mgr/emp/payroll) with salary + RM history + 16 leave balances |
+| 3. Contracts | — | — | — | ⏳ Next |
 | 4. Backend | — | — | — | ⏳ Planned |
 | 5. Frontend | — | — | — | ⏳ Planned |
 | 6. .sql export | — | — | — | ⏳ Planned |
