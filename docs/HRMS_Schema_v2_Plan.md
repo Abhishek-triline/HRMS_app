@@ -10,7 +10,7 @@
 
 1. **Every primary key is `INTEGER AUTO_INCREMENT`.** No cuids, no ULIDs.
 2. **Every status / type / category column is `INT`.** No Prisma enums in the schema.
-3. **Master tables hold lookup data.** Standard shape: `(id INT PK, name UNIQUE, status_id INT DEFAULT 1, created_at, updated_at)`.
+3. **Master tables hold lookup data.** Standard shape: `(id INT PK, name UNIQUE, status INT DEFAULT 1, created_at, updated_at)`.
 4. **Frontend owns INT → label mapping.** Reusable `<StatusBadge>` + per-entity status maps. No backend-side enum→string conversion.
 5. **All DB column names are `snake_case`.** Prisma field names stay camelCase, bridged via `@map("snake_case_name")`.
 6. **No `FOREIGN KEY` constraints.** `relationMode = "prisma"` enforces integrity at the application layer. `@relation` directives stay; the DB engine doesn't enforce them.
@@ -19,7 +19,7 @@
 
 ## 2. Master tables (7 total)
 
-Each has the shape `(id INT PK, name UNIQUE, status_id INT DEFAULT 1, created_at, updated_at)`. `status_id` semantics: `1 = Active`, `2 = Deprecated`.
+Each has the shape `(id INT PK, name UNIQUE, status INT DEFAULT 1, created_at, updated_at)`. `status` semantics: `1 = Active`, `2 = Deprecated`.
 
 | Master | Seed data | Replaces |
 |---|---|---|
@@ -37,17 +37,27 @@ Each has the shape `(id INT PK, name UNIQUE, status_id INT DEFAULT 1, created_at
 
 Plain INT columns; meaning lives in `apps/web/src/lib/status/maps.ts` + `apps/api/src/lib/statusInt.ts`. Values are FROZEN — never re-number, only append.
 
+**Each INT-coded column also carries a MySQL `COMMENT` clause** with the same mapping (applied by migration `20260512210000_int_code_column_comments`). The comment is visible via `SHOW FULL COLUMNS`, `information_schema.COLUMNS.COLUMN_COMMENT`, and DB tools (DataGrip, DBeaver, MySQL Workbench).
+
+> **Checklist when appending a new code:**
+> 1. Update the mapping table in this section
+> 2. Update `apps/web/src/lib/status/maps.ts` (frontend label/colour)
+> 3. Update `apps/api/src/lib/statusInt.ts` (backend constant)
+> 4. Update the zod range validator in `packages/contracts/src/*.ts` (e.g. raise `.max(N)`)
+> 5. Update the seed in `apps/api/prisma/seed.ts` if any rows reference the new code
+> 6. **Update the column `COMMENT`** — write a new migration that re-runs `ALTER TABLE x MODIFY COLUMN y INT ... COMMENT '...'` with the appended mapping
+
 ### 3.1 Employee state
 
 | Column | Code → label |
 |---|---|
-| `employees.status_id` | 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited |
+| `employees.status` | 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited |
 
 ### 3.2 Leave
 
 | Column | Code → label |
 |---|---|
-| `leave_requests.status_id` | 1=Pending, 2=Approved, 3=Rejected, 4=Cancelled, 5=Escalated |
+| `leave_requests.status` | 1=Pending, 2=Approved, 3=Rejected, 4=Cancelled, 5=Escalated |
 | `leave_requests.routed_to_id` | 1=Manager, 2=Admin |
 | `leave_balance_ledger.reason_id` | 1=Initial, 2=Approval, 3=Cancellation, 4=CarryForward, 5=Adjustment, 6=LateMarkPenalty |
 
@@ -55,30 +65,30 @@ Plain INT columns; meaning lives in `apps/web/src/lib/status/maps.ts` + `apps/ap
 
 | Column | Code → label |
 |---|---|
-| `leave_encashments.status_id` | 1=Pending, 2=ManagerApproved, 3=AdminFinalised, 4=Paid, 5=Rejected, 6=Cancelled |
+| `leave_encashments.status` | 1=Pending, 2=ManagerApproved, 3=AdminFinalised, 4=Paid, 5=Rejected, 6=Cancelled |
 | `leave_encashments.routed_to_id` | 1=Manager, 2=Admin |
 
 ### 3.4 Attendance + Regularisation
 
 | Column | Code → label |
 |---|---|
-| `attendance_records.status_id` | 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday |
+| `attendance_records.status` | 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday |
 | `attendance_records.source_id` | 1=system, 2=regularisation |
-| `regularisation_requests.status_id` | 1=Pending, 2=Approved, 3=Rejected |
+| `regularisation_requests.status` | 1=Pending, 2=Approved, 3=Rejected |
 | `regularisation_requests.routed_to_id` | 1=Manager, 2=Admin |
 
 ### 3.5 Payroll
 
 | Column | Code → label |
 |---|---|
-| `payroll_runs.status_id` | 1=Draft, 2=Review, 3=Finalised, 4=Reversed |
-| `payslips.status_id` | (identical mapping to payroll_runs) |
+| `payroll_runs.status` | 1=Draft, 2=Review, 3=Finalised, 4=Reversed |
+| `payslips.status` | (identical mapping to payroll_runs) |
 
 ### 3.6 Performance
 
 | Column | Code → label |
 |---|---|
-| `performance_cycles.status_id` | 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed |
+| `performance_cycles.status` | 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed |
 | `goals.outcome_id` | 1=Pending, 2=Met, 3=Partial, 4=Missed |
 
 ### 3.7 Notifications
@@ -193,7 +203,7 @@ This is the long tail. Tracked here so the team can see progress.
 - [ ] `apps/api/src/modules/configuration/configuration.routes.ts`
 - [ ] `apps/api/src/lib/audit.ts` (helper writes target_type_id, actor_role_id)
 - [ ] `apps/api/src/lib/notifications.ts` (writes category_id)
-- [ ] `apps/api/src/lib/scheduler.ts` (status_id in cron jobs)
+- [ ] `apps/api/src/lib/scheduler.ts` (status in cron jobs)
 - [ ] `apps/api/src/lib/statusInt.ts` (NEW — single source of INT constants)
 - [ ] `apps/api/src/lib/openapi.ts` (response shape examples)
 - [ ] `apps/api/src/middleware/requireRole.ts` (compares roleId)
