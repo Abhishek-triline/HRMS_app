@@ -75,6 +75,8 @@ export function HierarchyPicker({
 
   const { data, isLoading } = useEmployeesList({
     status: 'Active',
+    // Only Managers and Admins are valid reporting managers (BL-015 / BL-017 / BL-022)
+    role: 'Manager,Admin',
     q: debouncedQuery || undefined,
     limit: 10,
   });

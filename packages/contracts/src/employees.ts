@@ -151,7 +151,12 @@ export type CreateEmployeeResponse = z.infer<typeof CreateEmployeeResponseSchema
 
 export const EmployeeListQuerySchema = PaginationQuerySchema.extend({
   status: EmployeeStatusSchema.optional(),
-  role: RoleSchema.optional(),
+  /**
+   * Filter by role. Accepts a single Role value OR a comma-separated list of
+   * Role values (e.g. "Manager,Admin"). The backend splits on commas and uses
+   * `role: { in: [...] }` when multiple values are present.
+   */
+  role: z.union([RoleSchema, z.string().regex(/^[A-Za-z]+(,[A-Za-z]+)*$/)]).optional(),
   department: z.string().optional(),
   employmentType: EmploymentTypeSchema.optional(),
   managerId: z.string().optional(),
@@ -191,6 +196,13 @@ export const UpdateEmployeeRequestSchema = z.object({
   designation: z.string().min(1).max(150).optional(),
   employmentType: EmploymentTypeSchema.optional(),
   joinDate: ISODateOnlySchema.optional(),
+  /**
+   * Reassign reporting manager inline with a profile update (Admin only).
+   * Must point to an employee with role Manager or Admin and status Active or
+   * OnNotice (BL-015 / BL-017 / BL-022 routing assumption).
+   * Pass null to unset (top-of-tree). Omit to leave unchanged.
+   */
+  reportingManagerId: z.string().nullable().optional(),
   /** Optimistic concurrency token — required (HRMS_API.md § 1). */
   version: VersionSchema,
 });
