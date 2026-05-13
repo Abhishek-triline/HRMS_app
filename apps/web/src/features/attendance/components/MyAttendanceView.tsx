@@ -172,7 +172,11 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
   // A single user's calendar month tops out at ~31 rows. limit:100 keeps the
   // call well under the API ceiling and guards against the legacy default-20
   // silent truncation that bit manager/payroll attendance pages.
-  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to, limit: 100 });
+  const { data, isLoading, isError, error } = useAttendanceList(
+    'me',
+    { from, to, limit: 100 },
+    { keepPrevious: true },
+  );
 
   const handleMonthChange = useCallback((y: number, m: number) => {
     setYear(y);
@@ -512,6 +516,16 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const t = new Date();
+                handleMonthChange(t.getFullYear(), t.getMonth() + 1);
+              }}
+              className="text-xs font-semibold text-forest hover:text-emerald px-2 py-1 rounded-lg border border-forest/30 hover:bg-softmint transition-colors"
+            >
+              Today
             </button>
             <button
               type="button"
