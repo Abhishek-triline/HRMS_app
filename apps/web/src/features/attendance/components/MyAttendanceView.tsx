@@ -87,6 +87,9 @@ const STATUS_BAR_STYLES: Record<number, { gradient: string; label: string; label
   [ATTENDANCE_STATUS.Holiday]:   { gradient: 'bg-gradient-to-t from-mint to-mint/50',       label: 'Holiday',    labelClass: 'text-forest font-semibold' },
 };
 
+/** Present-bar gradient when the day fell short of the target hours. */
+const UNDER_TARGET_GRADIENT = 'bg-gradient-to-t from-emerald/40 to-mint/60';
+
 interface BarChartProps {
   bars: ChartBar[];
   targetHours?: number;
@@ -123,15 +126,18 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
         {bars.map((b) => {
           const isPresent = b.status === ATTENDANCE_STATUS.Present;
           const style = STATUS_BAR_STYLES[b.status] ?? STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!;
+          const underTarget = isPresent && b.hours > 0 && b.hours < targetHours;
           const gradient = isPresent && b.late
             ? 'bg-gradient-to-t from-crimson to-crimson/70'
-            : style.gradient;
+            : isPresent && underTarget
+              ? UNDER_TARGET_GRADIENT
+              : style.gradient;
           const pct = maxH > 0 ? (b.hours / maxH) * 100 : 0;
           const barHeight = isPresent
             ? Math.max((pct / 100) * chartH, 4)
             : indicatorPx;
           const tooltipMain = isPresent
-            ? `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : ''}`
+            ? `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
             : style.label;
           const dateLabel = `${b.weekday} ${b.dayNum}`;
           return (
@@ -174,28 +180,23 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
 
 /** Compact status legend shown above the chart. */
 function ChartLegend() {
-  const items: { status: number; key: string }[] = [
-    { status: ATTENDANCE_STATUS.Present,   key: 'Present' },
-    { status: ATTENDANCE_STATUS.Absent,    key: 'Absent' },
-    { status: ATTENDANCE_STATUS.OnLeave,   key: 'Leave' },
-    { status: ATTENDANCE_STATUS.Holiday,   key: 'Holiday' },
-    { status: ATTENDANCE_STATUS.WeeklyOff, key: 'Weekly Off' },
+  const items: { gradient: string; key: string }[] = [
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Present]!.gradient,   key: '≥ 8h target' },
+    { gradient: UNDER_TARGET_GRADIENT,                                    key: '< 8h target' },
+    { gradient: 'bg-gradient-to-t from-crimson to-crimson/70',            key: 'Late check-in' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!.gradient,    key: 'Absent' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.OnLeave]!.gradient,   key: 'Leave' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Holiday]!.gradient,   key: 'Holiday' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.WeeklyOff]!.gradient, key: 'Weekly Off' },
   ];
   return (
     <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate mt-3">
-      {items.map((it) => {
-        const s = STATUS_BAR_STYLES[it.status]!;
-        return (
-          <div key={it.key} className="flex items-center gap-1.5">
-            <span className={`inline-block w-2.5 h-2.5 rounded-sm ${s.gradient}`} aria-hidden="true" />
-            <span>{it.key}</span>
-          </div>
-        );
-      })}
-      <div className="flex items-center gap-1.5">
-        <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-crimson to-crimson/70" aria-hidden="true" />
-        <span>Late check-in</span>
-      </div>
+      {items.map((it) => (
+        <div key={it.key} className="flex items-center gap-1.5">
+          <span className={`inline-block w-2.5 h-2.5 rounded-sm ${it.gradient}`} aria-hidden="true" />
+          <span>{it.key}</span>
+        </div>
+      ))}
     </div>
   );
 }
