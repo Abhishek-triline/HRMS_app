@@ -1,24 +1,32 @@
 # Nexora HRMS v2 — Phase 7 QA Report
 
 **Branch:** `database_schema_changes`
-**Run on:** 2026-05-13
+**Run on:** 2026-05-13 (initial pass + same-day follow-up fixes)
 **Test type:** End-to-end smoke + contract conformance against the live dev API
 **Smoke driver:** manual curl against `http://localhost:4000/api/v1/`
 
 ## 1. Executive Summary
 
-**Ship recommendation: 🟡 YELLOW.**
+**Ship recommendation: 🟢 GREEN (after follow-up).**
 
-Core business flows survive the v2 refactor — every happy-path I exercised
-(login, leave submit/approve, attendance check-in/out, regularisation,
-payroll initiate/finalise, role gating) **worked correctly with the new
-INT-coded data shape**. BL rules I touched all enforced as designed.
+Initial pass surfaced eight defects against the v2 contract. All HIGH and
+MEDIUM-severity defects were fixed in the same QA cycle and re-tested
+clean against the live API. Two LOW defects remain — both cosmetic /
+operational, neither blocks shipping.
 
-However, the QA pass surfaced **eight defects**, of which one was a
-blocker (now fixed in commit `1cf4bae`) and five are HIGH-severity contract
-violations or missing endpoints that the frontend will hit. **A small
-follow-up fix sprint is required before staging cutover** — none of the
-remaining defects are difficult; most are 1–10 line mapper changes.
+### Defect status
+
+| Severity | Initial | Fixed | Open |
+|---|---|---|---|
+| BLOCKER (D0) | 1 | 1 | 0 |
+| HIGH (D1–D4, D8) | 5 | 5 | 0 |
+| MEDIUM (D6) | 1 | 1 (false alarm — no leak) | 0 |
+| LOW (D5, D7) | 2 | 1 | 1 |
+| **Total** | **9** | **8** | **1** |
+
+The remaining LOW defect (D7) is an operational note about the dummy seed
+not resetting row state across QA smoke runs — not a v2 bug, just
+something to document.
 
 | Status | Count |
 |---|---|
@@ -169,16 +177,138 @@ Status of payslip API responses: not directly tested in this QA run but contract
 | Master directory endpoints reachable | ❌ Fail (D1 — not registered) |
 | Audit log filter parameters honoured | ❌ Partial — `targetTypeId+targetId` works; `moduleId` ignored (D8) |
 
-## 6. Recommended next steps
+## 6. Follow-up fix cycle (same day)
 
-1. **Fix D2, D3, D4, D6** — drop the `map*Status → string` helpers in performance and payroll, return INT codes directly per contract. ~1 hour of work.
-2. **Fix D1** — add `apps/api/src/modules/employees/masters.routes.ts`. ~30 minutes.
-3. **Fix D8** — audit log filter must actually pass `moduleId` (and other params) into the Prisma `where`. Audit all filter params for drift. ~15 minutes.
-4. **Fix D5** — include `leaveType: true` in the approve response query. ~5 minutes.
-5. **Re-run this QA report** after fixes — re-test the failing modules + spot-check the passing ones.
-6. **(Stretch)** Address D6 fully by reviewing all payroll responses for INT shape compliance.
-7. **(Stretch)** Document D7 as a known limitation of the dummy seed, or have the seed restore the open cycle on re-run.
+All HIGH-severity defects were addressed in a follow-up commit on the
+same branch. Each fix was verified by re-running the failing test case
+against the live API after restarting the dev server.
 
-Total estimated effort to clear the ship-blocker defects: **~2 hours**.
+### D1 — masters endpoints
 
-After fixes, ship recommendation flips to GREEN provided the re-run shows clean.
+Created `apps/api/src/modules/employees/masters.routes.ts` exposing:
+  - `GET /masters/roles` — all signed-in users
+  - `GET /masters/employment-types` — all signed-in users
+  - `GET /masters/genders` — all signed-in users
+  - `GET /masters/departments` — all signed-in users
+  - `GET /masters/designations` — all signed-in users
+  - `POST /masters/departments` — Admin only; idempotent on duplicate name
+  - `POST /masters/designations` — Admin only; idempotent on duplicate name
+
+All listers filter to `status = 1` (Active) and order by name. Mounted at
+`/api/v1/masters` in `router.ts`.
+
+**Verified:**
+- `GET /masters/departments` returns 7 active rows with `{id, name}` shape ✓
+- `GET /masters/roles` returns 4 frozen roles ✓
+- `POST /masters/departments {"name": "QA Test Dept"}` as admin → 201 with id=8 ✓
+- Same POST as employee → 403 FORBIDDEN ✓
+- Audit row written for the create with `module: 'employees'`, `action: 'masters.department.created'` ✓
+
+### D2 — performance cycle status returned as INT
+
+Dropped `mapCycleStatus(int → string)` and `mapCycleStatusToDB(string → int)`
+from `performance.service.ts`; the 3 callsites (`shapeCycle`, `shapeReviewDetail`,
+and the cycle-close audit) now pass `row.status` through directly. The
+unused import in `performance.routes.ts` was also removed.
+
+**Verified:** `GET /performance/cycles` now returns `"status": 4` (INT) — was `"status": "Closed"`.
+
+### D3 — goal outcome returned as INT
+
+Dropped `mapGoalOutcome(int → string)` and `mapGoalOutcomeToDB(string → int)`.
+The 3 callsites now emit `outcomeId: g.outcomeId` (renamed field per the
+contract). Manager-rating mutation handler already accepted `outcomeId: number`
+inputs — no change there.
+
+**Verified:** `GET /performance/reviews/7` now returns goals with `"outcomeId": 2` (INT) — was `"outcome": "Met"`.
+
+### D4 — audit log response shape
+
+`audit.routes.ts` mapper now emits both fields per contract:
+```diff
+- module: row.module.name,
++ moduleId: row.moduleId,
++ moduleName: row.module.name,
+```
+
+**Verified:** audit responses now have both `"moduleId": 2` and `"moduleName": "employees"`.
+
+### D5 — leave approve response
+
+The `mapLeaveRequest` helper read `req.leaveType.id ?? 0` — a fallback to 0
+when the relation include was missing. Fixed by changing the local row
+shape to read `req.leaveTypeId` directly from the column (it's always
+present on the row) and reading `req.leaveType.name` only for the name.
+
+**Verified:** Submitting a Casual leave (typeId=3) and approving it now returns `leaveTypeId: 3` in BOTH the create AND approve responses.
+
+### D6 — payroll status-string leak (FALSE ALARM)
+
+Investigation found `mapRunStatusToString` is **only** called inside
+`streamPayslipPDF()` (line 1326), where a human-readable string is
+appropriate for the PDF template. **No API response paths use it.** All
+the API `status:` fields in payroll.routes.ts emit the raw INT.
+
+No fix needed. Closing as not-a-bug.
+
+### D8 — audit moduleId filter ignored
+
+The `audit.routes.ts` handler's local type declared `module?: string`,
+`actorRole?: string`, `targetType?: string` — old wire field names. But
+the validator (`AuditLogListQuerySchema`) coerces incoming params using
+the v2 names (`moduleId`, `actorRoleId`, `targetTypeId`). Result: the
+handler always read `undefined` and the filter was a no-op.
+
+Rewrote the local query type to match the contract and replaced the
+name-to-id lookup blocks with direct INT assignments to the Prisma
+`where` clause. Removed ~50 lines of dead lookup code.
+
+**Verified:**
+- `GET /audit-logs?moduleId=3` → 9 rows, all `moduleId=3` (`moduleName: "leave"`) ✓
+- `GET /audit-logs?moduleId=4` → 5 rows, all `moduleId=4` (`moduleName: "payroll"`) ✓
+
+## 7. Files changed in the fix cycle
+
+| File | Change |
+|---|---|
+| `apps/api/src/modules/employees/masters.routes.ts` | **NEW** — 7 endpoints + audit on creates |
+| `apps/api/src/router.ts` | Mount `mastersRouter` at `/masters` |
+| `apps/api/src/modules/performance/performance.service.ts` | Deleted 4 string mapper functions; 5 callsites switched to direct INT field access; cycle-close audit `after` uses `CycleStatus.Closed` (INT) |
+| `apps/api/src/modules/performance/performance.routes.ts` | Removed `mapCycleStatus` import; `status: c.status` directly |
+| `apps/api/src/modules/audit/audit.routes.ts` | Filter logic rewritten to consume contract field names; response shape adds `moduleId` alongside `moduleName` |
+| `apps/api/src/modules/leave/leave.routes.ts` | `mapLeaveRequest` reads `leaveTypeId` from row column instead of relation |
+
+Net diff: roughly **+220 lines / -90 lines** including the new masters
+route file (~210 lines), with a net deletion in performance/audit from
+removing dead helpers.
+
+## 8. Open / deferred
+
+### D7 — LOW
+
+The dummy seed's open cycle (id=2, `C-2026-H1`) was closed by a previous
+smoke run and the seed doesn't restore row state on re-run. Not a v2
+bug; mitigation is to either reset that specific row in the seed's
+idempotent block or document it as a known limitation. Out of scope for
+this fix cycle.
+
+## 9. Final verification (after follow-up fixes)
+
+| Check | Result |
+|---|---|
+| `pnpm --filter @nexora/api typecheck` | ✅ exit 0 |
+| `pnpm --filter @nexora/api test` | ✅ 54/54 pass (unchanged) |
+| `pnpm --filter @nexora/web typecheck` | ✅ exit 0 (unchanged) |
+| Auth flow re-test | ✅ Pass |
+| D1 retest (masters) | ✅ Pass |
+| D2 retest (cycle.status INT) | ✅ Pass |
+| D3 retest (goal.outcomeId INT) | ✅ Pass |
+| D4 retest (audit moduleId+moduleName) | ✅ Pass |
+| D5 retest (leave approve leaveTypeId) | ✅ Pass |
+| D8 retest (audit moduleId filter) | ✅ Pass |
+| Role gates (4 negative cases) | ✅ Pass (unchanged) |
+
+**Final ship recommendation: 🟢 GREEN.**
+
+The v2 refactor is now ready for staging cutover. The single open LOW-sev
+item (D7) is operational, not a blocker.
