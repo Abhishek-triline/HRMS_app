@@ -10,7 +10,6 @@
  */
 
 import { clsx } from 'clsx';
-import type { PayslipSummary } from '@nexora/contracts/payroll';
 
 interface ChecklistItem {
   label: string;
@@ -19,7 +18,10 @@ interface ChecklistItem {
 }
 
 interface RunChecklistProps {
-  payslips: PayslipSummary[];
+  /** Total payslip count for this run (run.employeeCount). */
+  payslipCount: number;
+  /** Count of payslips with LOP days > 0 (run.lopCount). */
+  lopCount: number;
   workingDays: number;
 }
 
@@ -47,19 +49,15 @@ function InfoIcon() {
   );
 }
 
-export function RunChecklist({ payslips, workingDays }: RunChecklistProps) {
-  const lopCount = payslips.filter((p) => p.lopDays > 0).length;
-  // daysWorked isn't on PayslipSummary, so we can't check proration directly;
-  // use lopDays as a proxy heuristic (employees with 0 LOP and low gross might
-  // be pro-rated joiners — but we flag only what we can compute from the summary).
+export function RunChecklist({ payslipCount, lopCount, workingDays }: RunChecklistProps) {
   const taxNotReviewed = 0; // Would compare finalTaxPaise === referenceTaxPaise, but
   // referenceTaxPaise isn't in PayslipSummary. Flag is informational in v1.
 
   const items: ChecklistItem[] = [
     {
       label: 'Salary structures loaded',
-      detail: `${payslips.length} payslips generated`,
-      status: payslips.length > 0 ? 'ok' : 'warn',
+      detail: `${payslipCount} payslips generated`,
+      status: payslipCount > 0 ? 'ok' : 'warn',
     },
     {
       label: 'LOP calculated',

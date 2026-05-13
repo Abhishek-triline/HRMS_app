@@ -40,6 +40,7 @@ export const qk = {
     today: () => ['attendance', 'today'] as const,
     list: (scope: 'me' | 'team' | 'all', q?: Partial<AttendanceListQuery>) =>
       ['attendance', scope, q ?? {}] as const,
+    stats: (q?: Record<string, unknown>) => ['attendance', 'stats', q ?? {}] as const,
     // Legacy aliases — kept for existing references
     summary: (employeeId: string, month: string) =>
       ['attendance', 'summary', employeeId, month] as const,

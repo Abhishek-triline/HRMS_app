@@ -45,6 +45,20 @@ export function useMyEncashments(year?: number) {
   });
 }
 
+/**
+ * Full-query variant of useMyEncashments. The role-scoped server filters the
+ * dataset (employee sees their own, manager sees their team, admin sees all);
+ * this hook lets callers pass status / cursor / limit explicitly.
+ */
+export function useEncashmentList(query: Partial<LeaveEncashmentListQuery> = {}) {
+  return useQuery({
+    queryKey: qk.encashment.list(query as Record<string, unknown>),
+    queryFn: () => listEncashments(query),
+    staleTime: 15_000,
+    retry: 1,
+  });
+}
+
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
 export function useEncashment(id: number) {

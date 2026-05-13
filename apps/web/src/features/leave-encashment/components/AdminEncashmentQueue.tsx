@@ -12,16 +12,17 @@
  * live amount preview note, optional note. Calls /admin-finalise.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import {
-  useEncashmentQueue,
-  useMyEncashments,
+  useEncashmentList,
   useAdminFinaliseEncashment,
   useRejectEncashment,
 } from '@/lib/hooks/useLeaveEncashment';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
 import { LEAVE_ENCASHMENT_STATUS } from '@/lib/status/maps';
 import type { LeaveEncashmentSummary } from '@nexora/contracts/leave-encashment';
@@ -361,55 +362,81 @@ function QueueSkeleton() {
 
 type Tab = 'manager-approved' | 'pending' | 'all';
 
+const TAB_KEYS: readonly Tab[] = ['manager-approved', 'pending', 'all'] as const;
+
 const TABS: { key: Tab; label: string }[] = [
   { key: 'manager-approved', label: 'Manager Approved (Action needed)' },
   { key: 'pending', label: 'Pending (Awaiting manager)' },
   { key: 'all', label: 'All this year' },
 ];
 
+function parseTab(raw: string | null): Tab {
+  return TAB_KEYS.includes(raw as Tab) ? (raw as Tab) : 'manager-approved';
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function AdminEncashmentQueue() {
-  const [activeTab, setActiveTab] = useState<Tab>('manager-approved');
-  const queueQuery = useEncashmentQueue();
-  const allQuery = useMyEncashments(); // Admin's useMyEncashments shows all (scoped server-side)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = parseTab(searchParams.get('tab'));
+
+  const currentYear = new Date().getFullYear();
+
+  // Server-side cursor pagination — cursor map resets on tab change.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: activeTab,
+  });
+
+  // Per-tab query. The list endpoint is role-scoped server-side so admin sees
+  // the full org; managers/employees fall back to their narrower scope.
+  const query = useEncashmentList(
+    activeTab === 'manager-approved'
+      ? { status: LEAVE_ENCASHMENT_STATUS.ManagerApproved, limit: pager.pageSize, cursor: pager.cursor }
+      : activeTab === 'pending'
+        ? { status: LEAVE_ENCASHMENT_STATUS.Pending, limit: pager.pageSize, cursor: pager.cursor }
+        : { year: currentYear, limit: pager.pageSize, cursor: pager.cursor },
+  );
+
+  useEffect(() => {
+    if (query.data) pager.cacheNextCursor(query.data.nextCursor);
+  }, [query.data, pager]);
+
+  // Action-needed chip — small bounded fetch (limit 100, "+" if more exist).
+  const managerApprovedCountQuery = useEncashmentList({
+    status: LEAVE_ENCASHMENT_STATUS.ManagerApproved,
+    limit: 100,
+  });
+  const managerApprovedCountRows = managerApprovedCountQuery.data?.data.length ?? 0;
+  const managerApprovedHasMore = managerApprovedCountQuery.data?.nextCursor != null;
 
   const [finaliseTarget, setFinaliseTarget] = useState<LeaveEncashmentSummary | null>(null);
   const [rejectTarget, setRejectTarget] = useState<LeaveEncashmentSummary | null>(null);
 
-  const queueItems = queueQuery.data?.data ?? [];
-  const managerApprovedItems = queueItems.filter((e) => e.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved);
-  const pendingItems = queueItems.filter((e) => e.status === LEAVE_ENCASHMENT_STATUS.Pending);
-  const allItems = allQuery.data?.data ?? [];
+  const rows = query.data?.data ?? [];
 
-  const currentYear = new Date().getFullYear();
-
-  const isLoading =
-    activeTab === 'all' ? allQuery.isLoading : queueQuery.isLoading;
-
-  const isError =
-    activeTab === 'all' ? allQuery.isError : queueQuery.isError;
+  function setTab(t: Tab) {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('tab', t);
+    router.replace(`?${next.toString()}`, { scroll: false });
+  }
 
   function refetchActive() {
-    if (activeTab === 'all') {
-      allQuery.refetch();
-    } else {
-      queueQuery.refetch();
-    }
-    // Also bust the other query
-    queueQuery.refetch();
+    query.refetch();
+    managerApprovedCountQuery.refetch();
   }
 
   return (
     <>
       {/* Action notice */}
-      {managerApprovedItems.length > 0 && (
+      {managerApprovedCountRows > 0 && (
         <div className="bg-greenbg border border-richgreen/30 rounded-xl px-4 py-3 flex gap-3 mb-5">
           <svg className="w-5 h-5 text-richgreen shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
           <p className="text-sm text-richgreen font-medium">
-            <strong>{managerApprovedItems.length}</strong> request{managerApprovedItems.length !== 1 ? 's' : ''} awaiting your finalisation.
+            <strong>{managerApprovedCountRows}{managerApprovedHasMore ? '+' : ''}</strong> request{managerApprovedCountRows !== 1 ? 's' : ''} awaiting your finalisation.
             Finalise before Jan 1 00:01 IST to ensure balance deduction before carry-forward runs.
           </p>
         </div>
@@ -422,7 +449,7 @@ export function AdminEncashmentQueue() {
             key={tab.key}
             role="tab"
             aria-selected={activeTab === tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => setTab(tab.key)}
             className={clsx(
               'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
               activeTab === tab.key
@@ -431,9 +458,9 @@ export function AdminEncashmentQueue() {
             )}
           >
             {tab.label}
-            {tab.key === 'manager-approved' && managerApprovedItems.length > 0 && !queueQuery.isLoading && (
+            {tab.key === 'manager-approved' && managerApprovedCountRows > 0 && !managerApprovedCountQuery.isLoading && (
               <span className="ml-2 bg-richgreen text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                {managerApprovedItems.length}
+                {managerApprovedCountRows}{managerApprovedHasMore ? '+' : ''}
               </span>
             )}
           </button>
@@ -442,9 +469,9 @@ export function AdminEncashmentQueue() {
 
       {/* Table card */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 rounded-tl-none">
-        {isLoading ? (
+        {query.isLoading ? (
           <QueueSkeleton />
-        ) : isError ? (
+        ) : query.isError ? (
           <div className="px-6 py-8 flex items-center justify-between gap-4">
             <span className="text-sm text-crimson" role="alert">
               Could not load queue. Please refresh.
@@ -457,26 +484,28 @@ export function AdminEncashmentQueue() {
               Retry
             </button>
           </div>
-        ) : activeTab === 'manager-approved' ? (
-          <QueueTable
-            items={managerApprovedItems}
-            showActions={true}
-            onFinalise={setFinaliseTarget}
-            onReject={setRejectTarget}
-          />
-        ) : activeTab === 'pending' ? (
-          <QueueTable
-            items={pendingItems}
-            showActions={false}
-          />
         ) : (
           <>
-            <div className="px-6 pt-5 pb-4 border-b border-sage/20">
-              <p className="text-xs text-slate">All encashment requests — Year {currentYear}</p>
-            </div>
+            {activeTab === 'all' && (
+              <div className="px-6 pt-5 pb-4 border-b border-sage/20">
+                <p className="text-xs text-slate">All encashment requests — Year {currentYear}</p>
+              </div>
+            )}
             <QueueTable
-              items={allItems}
-              showActions={false}
+              items={rows}
+              showActions={activeTab === 'manager-approved'}
+              onFinalise={activeTab === 'manager-approved' ? setFinaliseTarget : undefined}
+              onReject={activeTab === 'manager-approved' ? setRejectTarget : undefined}
+            />
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={rows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
             />
           </>
         )}

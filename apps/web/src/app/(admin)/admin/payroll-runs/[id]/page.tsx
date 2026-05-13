@@ -16,10 +16,13 @@
  * EditableTaxEntry is rendered in a slide-in panel (state: selectedPayslip).
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { usePayrollRun } from '@/lib/hooks/usePayroll';
+import { usePayslipsList } from '@/lib/hooks/usePayslips';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { RunSummaryStatStrip, RunSummaryDetail } from '@/components/payroll/RunSummaryCard';
 import { PayslipTable } from '@/components/payroll/PayslipTable';
 import { RunChecklist } from '@/components/payroll/RunChecklist';
@@ -46,6 +49,14 @@ export default function PayrollRunDetailPage() {
   const [reverseOpen, setReverseOpen] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipSummary | null>(null);
 
+  // Paginated payslip table — fetched independently of the run summary.
+  const pager = useCursorPagination({ pageSize: 20, filtersKey: String(id) });
+  const payslipsQuery = usePayslipsList({ runId: id, limit: pager.pageSize, cursor: pager.cursor });
+
+  useEffect(() => {
+    if (payslipsQuery.data) pager.cacheNextCursor(payslipsQuery.data.nextCursor);
+  }, [payslipsQuery.data, pager]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -63,18 +74,12 @@ export default function PayrollRunDetailPage() {
     );
   }
 
-  const { run, payslips } = data;
+  const { run } = data;
   const isReview = run.status === PayrollRunStatus.Review;
   const isFinalised = run.status === PayrollRunStatus.Finalised;
   const isDraft = run.status === PayrollRunStatus.Draft;
 
-  // Count pro-rated payslips (mid-month joiners) from the payslip list.
-  // PayslipSummary exposes lopDays; a positive lopDays with a full workingDays count
-  // indicates a partial-month employee. This is a reasonable proxy since the API
-  // does not return an explicit isMidMonthJoiner flag on PayslipSummary.
-  const proRatedCount = payslips.filter(
-    (p) => p.lopDays > 0 && p.workingDays === run.workingDays,
-  ).length;
+  const pagePayslips = payslipsQuery.data?.data ?? [];
 
   return (
     <>
@@ -108,15 +113,25 @@ export default function PayrollRunDetailPage() {
             <div className="px-6 py-4 border-b border-sage/20 flex items-center justify-between">
               <h3 className="font-heading text-base font-semibold text-charcoal">Employee Payslips</h3>
               <span className="text-xs text-slate">
-                {payslips.length} payslip{payslips.length !== 1 ? 's' : ''}
+                {run.employeeCount} payslip{run.employeeCount !== 1 ? 's' : ''}
               </span>
             </div>
             <PayslipTable
               mode="run-detail"
-              payslips={payslips}
+              payslips={pagePayslips}
               basePath="/admin/payslips"
               canEditTax={isReview}
               onEditTax={setSelectedPayslip}
+            />
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={pagePayslips.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
             />
           </div>
         </div>
@@ -124,7 +139,7 @@ export default function PayrollRunDetailPage() {
         {/* Right: run summary + checklist + actions */}
         <div className="w-full lg:w-72 shrink-0 space-y-4">
           {/* Run Summary sidebar card */}
-          <RunSummaryDetail run={run} proRatedCount={proRatedCount} />
+          <RunSummaryDetail run={run} proRatedCount={run.proRatedCount} />
 
           {/* Actions Card */}
           <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-5">
@@ -164,7 +179,7 @@ export default function PayrollRunDetailPage() {
             )}
           </div>
 
-          <RunChecklist payslips={payslips} workingDays={run.workingDays} />
+          <RunChecklist payslipCount={run.employeeCount} lopCount={run.lopCount} workingDays={run.workingDays} />
 
           {/* Reversal reason */}
           {run.reversalReason && (

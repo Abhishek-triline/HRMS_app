@@ -176,11 +176,43 @@ export const AttendanceListResponseSchema = z.object({
       employeeId: IdSchema,
       employeeName: z.string().optional(),
       employeeCode: EmployeeCodeSchema.optional(),
+      /** Department name for grid views; null when employee has no department. */
+      department: z.string().nullable().optional(),
     }),
   ),
   nextCursor: z.string().nullable(),
 });
 export type AttendanceListResponse = z.infer<typeof AttendanceListResponseSchema>;
+
+/**
+ * GET /attendance/stats — aggregate counts for a date (or range) with optional
+ * department filter. Used by the org-wide and team attendance dashboards so
+ * the KPI strip doesn't have to count rows from a paginated table.
+ */
+export const AttendanceStatsQuerySchema = z.object({
+  date: ISODateOnlySchema.optional(),
+  from: ISODateOnlySchema.optional(),
+  to: ISODateOnlySchema.optional(),
+  departmentId: IdParamSchema.optional(),
+});
+export type AttendanceStatsQuery = z.infer<typeof AttendanceStatsQuerySchema>;
+
+export const AttendanceStatsResponseSchema = z.object({
+  data: z.object({
+    /** Total attendance rows matching the filter (e.g. active employees on the day). */
+    total: z.number().int().min(0),
+    present: z.number().int().min(0),
+    absent: z.number().int().min(0),
+    onLeave: z.number().int().min(0),
+    weeklyOff: z.number().int().min(0),
+    holiday: z.number().int().min(0),
+    /** Count of rows with the late flag set. */
+    late: z.number().int().min(0),
+    /** Count of rows with status=Absent and no check-in time. */
+    yetToCheckIn: z.number().int().min(0),
+  }),
+});
+export type AttendanceStatsResponse = z.infer<typeof AttendanceStatsResponseSchema>;
 
 /** Today's status for the check-in panel — used by GET /attendance/me?date=today. */
 export const TodayAttendanceResponseSchema = z.object({

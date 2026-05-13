@@ -4,28 +4,48 @@
  * A-06 — Leave Queue (Admin)
  * Visual reference: prototype/admin/leave-queue.html
  *
- * Card-list layout matching the prototype: severity border-l-4 stripe, avatar,
- * inline approve/reject actions. No table.
+ * Tabs are URL-driven via ?tab=<key>. Tabs:
+ *   all-pending | escalated | maternity | approved | rejected
  *
- * Tabs: All Pending (with count) | Escalated (crimsonbg count) | Maternity (umberbg) |
- *       Approved Today (greenbg) | Rejected Today (crimsonbg)
- * Filters: search (name/code), leave type, department, date
- * Paginator at bottom with Prev/1/2/Next
+ * Pagination strategy:
+ *   - All tabs except Maternity use server-side cursor pagination (limit 20).
+ *   - Maternity is a rare-event tab — fetched in a single bulk request
+ *     (limit 100) and client-filtered to Maternity || Paternity types, since
+ *     the API doesn't accept a multi-value leaveTypeId filter.
+ *
+ * Filters:
+ *   - Leave type (server-side, ignored on Maternity tab — already constrained).
+ *   - Date (client-side, narrows the visible page to rows covering that date).
+ *   - Search (client-side post-filter on the current page — the server
+ *     doesn't support a search filter yet; v1.1 backlog).
+ *
+ * Note: the prototype shows a department dropdown but LeaveRequestSummary
+ * doesn't carry department, so the control was a no-op. Dropped until the
+ * contract exposes it.
+ *
+ * Tab count badges are best-effort: they show the count up to the API max
+ * (100), suffixed with "+" if more exist. A bare limit=1 query (the old
+ * implementation) would always read back "1" — that was misleading.
  */
 
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import {
   LeaveQueueCard,
   LeaveQueueCardSkeleton,
 } from '@/features/leave-queue/components/LeaveQueueCard';
 import { useLeaveList } from '@/lib/hooks/useLeave';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { LEAVE_STATUS, LEAVE_TYPE_ID, ROUTED_TO } from '@/lib/status/maps';
 import type { LeaveListQuery } from '@nexora/contracts/leave';
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 type TabKey = 'all-pending' | 'escalated' | 'maternity' | 'approved' | 'rejected';
+
+const TAB_KEYS: readonly TabKey[] = ['all-pending', 'escalated', 'maternity', 'approved', 'rejected'] as const;
 
 interface TabDef {
   key: TabKey;
@@ -35,85 +55,111 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'all-pending', label: 'All Pending', countBadgeClass: 'bg-forest text-white' },
-  { key: 'escalated', label: 'Escalated', countBadgeClass: 'bg-crimsonbg text-crimson' },
-  { key: 'maternity', label: 'Maternity', countBadgeClass: 'bg-umberbg text-umber' },
-  { key: 'approved', label: 'Approved (Today)', countBadgeClass: 'bg-greenbg text-richgreen' },
-  { key: 'rejected', label: 'Rejected (Today)', countBadgeClass: 'bg-crimsonbg text-crimson' },
+  { key: 'escalated',   label: 'Escalated',   countBadgeClass: 'bg-crimsonbg text-crimson' },
+  { key: 'maternity',   label: 'Maternity',   countBadgeClass: 'bg-umberbg text-umber' },
+  { key: 'approved',    label: 'Approved (Today)', countBadgeClass: 'bg-greenbg text-richgreen' },
+  { key: 'rejected',    label: 'Rejected (Today)', countBadgeClass: 'bg-crimsonbg text-crimson' },
 ];
 
-// ── Build query params from active tab + filters ──────────────────────────────
+function parseTab(raw: string | null): TabKey {
+  return TAB_KEYS.includes(raw as TabKey) ? (raw as TabKey) : 'all-pending';
+}
 
-function buildQuery(
-  activeTab: TabKey,
-  typeFilter: string,
-  deptFilter: string,
-  searchQuery: string,
-): Partial<LeaveListQuery> {
+// ── Per-tab server-side query (excluding pagination) ──────────────────────────
+
+function tabFilters(tab: TabKey, typeFilter: string): Partial<LeaveListQuery> {
   const base: Partial<LeaveListQuery> = { routedToId: ROUTED_TO.Admin };
-
-  if (activeTab === 'escalated') {
-    base.status = LEAVE_STATUS.Escalated;
-  } else if (activeTab === 'all-pending') {
-    base.status = LEAVE_STATUS.Pending;
-  } else if (activeTab === 'maternity') {
-    // maternity/paternity route direct to admin — fetch pending + event-based types
-    base.status = LEAVE_STATUS.Pending;
-  } else if (activeTab === 'approved') {
-    base.status = LEAVE_STATUS.Approved;
-  } else if (activeTab === 'rejected') {
-    base.status = LEAVE_STATUS.Rejected;
+  switch (tab) {
+    case 'all-pending': base.status = LEAVE_STATUS.Pending;   break;
+    case 'escalated':   base.status = LEAVE_STATUS.Escalated; break;
+    case 'maternity':   base.status = LEAVE_STATUS.Pending;   break;
+    case 'approved':    base.status = LEAVE_STATUS.Approved;  break;
+    case 'rejected':    base.status = LEAVE_STATUS.Rejected;  break;
   }
-
-  if (typeFilter) base.leaveTypeId = Number(typeFilter);
-  if (deptFilter) (base as Record<string, unknown>).department = deptFilter;
-  if (searchQuery) (base as Record<string, unknown>).search = searchQuery;
-
+  // Maternity tab: leaveType is constrained client-side, ignore the dropdown.
+  if (typeFilter && tab !== 'maternity') base.leaveTypeId = Number(typeFilter);
   return base;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminLeaveQueuePage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('all-pending');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = parseTab(searchParams.get('tab'));
 
-  const query = useLeaveList(buildQuery(activeTab, typeFilter, deptFilter, searchQuery));
+  // Other filters stay client-side (URL would balloon, and they're cheap).
+  // If/when we move to URL-driven filters we'd do the same trick as `tab`.
+  const typeFilter = searchParams.get('type') ?? '';
+  const searchQuery = searchParams.get('q') ?? '';
+  const dateFilter = searchParams.get('date') ?? '';
 
-  // Per-tab counts — small parallel queries so all 5 badges show real numbers.
-  const allPendingCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Pending, limit: 1});
-  const escalatedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Escalated, limit: 1});
-  const todayApprovedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Approved, limit: 1});
-  const todayRejectedCount = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Rejected, limit: 1});
+  function setParam(key: string, value: string) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value) next.set(key, value);
+    else next.delete(key);
+    router.replace(`?${next.toString()}`, { scroll: false });
+  }
 
-  const tabCounts: Record<TabKey, number | null> = {
-    'all-pending': allPendingCount.data?.data?.length ?? null,
-    'escalated':   escalatedCount.data?.data?.length ?? null,
-    'maternity':   (allPendingCount.data?.data ?? []).filter((r) => r.leaveTypeId === LEAVE_TYPE_ID.Maternity || r.leaveTypeId === LEAVE_TYPE_ID.Paternity).length,
-    'approved':    todayApprovedCount.data?.data?.length ?? null,
-    'rejected':    todayRejectedCount.data?.data?.length ?? null,
+  const isMaternity = activeTab === 'maternity';
+
+  // Server-side cursor pagination — resets when tab/type changes.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: `${activeTab}|${typeFilter}`,
+  });
+
+  // Maternity fetches the bounded set at once; everything else paginates.
+  const query = useLeaveList({
+    ...tabFilters(activeTab, typeFilter),
+    ...(isMaternity ? { limit: 100 } : { limit: pager.pageSize, cursor: pager.cursor }),
+  });
+
+  useEffect(() => {
+    if (!isMaternity && query.data) pager.cacheNextCursor(query.data.nextCursor);
+  }, [isMaternity, query.data, pager]);
+
+  // Tab count chips — single small fetch per tab at limit=100 (API max).
+  // Honest "100+" when nextCursor != null.
+  const allPendingCount  = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Pending,   limit: 100 });
+  const escalatedCount   = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Escalated, limit: 100 });
+  const approvedCount    = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Approved,  limit: 100 });
+  const rejectedCount    = useLeaveList({ routedToId: ROUTED_TO.Admin, status: LEAVE_STATUS.Rejected,  limit: 100 });
+
+  function countLabel(rows: number, hasMore: boolean): string {
+    return hasMore ? `${rows}+` : String(rows);
+  }
+
+  const tabCountLabel: Record<TabKey, string | null> = {
+    'all-pending': allPendingCount.data ? countLabel(allPendingCount.data.data.length, allPendingCount.data.nextCursor !== null) : null,
+    'escalated':   escalatedCount.data  ? countLabel(escalatedCount.data.data.length,  escalatedCount.data.nextCursor  !== null) : null,
+    'maternity':   allPendingCount.data ? String((allPendingCount.data.data ?? []).filter((r) => r.leaveTypeId === LEAVE_TYPE_ID.Maternity || r.leaveTypeId === LEAVE_TYPE_ID.Paternity).length) : null,
+    'approved':    approvedCount.data   ? countLabel(approvedCount.data.data.length,   approvedCount.data.nextCursor   !== null) : null,
+    'rejected':    rejectedCount.data   ? countLabel(rejectedCount.data.data.length,   rejectedCount.data.nextCursor   !== null) : null,
   };
 
+  // Visible rows on the current page after client-side filters.
+  const pageRows = query.data?.data ?? [];
   const displayedRequests = (() => {
-    if (!query.data?.data) return [];
-    let list = query.data.data;
-    if (activeTab === 'maternity') {
+    let list = pageRows;
+    if (isMaternity) {
       list = list.filter((r) => r.leaveTypeId === LEAVE_TYPE_ID.Maternity || r.leaveTypeId === LEAVE_TYPE_ID.Paternity);
     }
     if (dateFilter) {
       list = list.filter((r) => r.fromDate <= dateFilter && r.toDate >= dateFilter);
     }
+    if (searchQuery) {
+      const needle = searchQuery.toLowerCase();
+      list = list.filter(
+        (r) =>
+          (r.employeeName ?? '').toLowerCase().includes(needle) ||
+          (r.employeeCode ?? '').toLowerCase().includes(needle),
+      );
+    }
     return list;
   })();
 
-  const showActions =
-    activeTab === 'all-pending' ||
-    activeTab === 'escalated' ||
-    activeTab === 'maternity';
-
-  const total = displayedRequests.length;
+  const showActions = activeTab === 'all-pending' || activeTab === 'escalated' || activeTab === 'maternity';
 
   return (
     <>
@@ -126,13 +172,13 @@ export default function AdminLeaveQueuePage() {
       >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
-          const count = tabCounts[tab.key];
+          const countLbl = tabCountLabel[tab.key];
           return (
             <button
               key={tab.key}
               role="tab"
               aria-selected={isActive}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => setParam('tab', tab.key)}
               className={clsx(
                 'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
                 isActive
@@ -141,9 +187,9 @@ export default function AdminLeaveQueuePage() {
               )}
             >
               {tab.label}
-              {count !== null && (
+              {countLbl !== null && (
                 <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded ${tab.countBadgeClass}`}>
-                  {count}
+                  {countLbl}
                 </span>
               )}
             </button>
@@ -173,50 +219,36 @@ export default function AdminLeaveQueuePage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or EMP code..."
-              aria-label="Search by employee name or code"
+              onChange={(e) => setParam('q', e.target.value)}
+              placeholder="Search current page by name or EMP code..."
+              aria-label="Search by employee name or code (current page)"
               className="w-full border border-sage/50 rounded-lg pl-9 pr-4 py-2 text-sm placeholder-sage focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
             />
           </div>
 
-          {/* Leave type filter */}
+          {/* Leave type filter (server-side) */}
           <select
             aria-label="Filter by leave type"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+            onChange={(e) => setParam('type', e.target.value)}
+            disabled={isMaternity}
+            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white disabled:bg-offwhite disabled:cursor-not-allowed"
           >
             <option value="">All Leave Types</option>
-            <option value="Annual">Annual</option>
-            <option value="Sick">Sick</option>
-            <option value="Casual">Casual</option>
-            <option value="Maternity">Maternity</option>
-            <option value="Paternity">Paternity</option>
-            <option value="Unpaid">Unpaid</option>
+            <option value={String(LEAVE_TYPE_ID.Annual)}>Annual</option>
+            <option value={String(LEAVE_TYPE_ID.Sick)}>Sick</option>
+            <option value={String(LEAVE_TYPE_ID.Casual)}>Casual</option>
+            <option value={String(LEAVE_TYPE_ID.Maternity)}>Maternity</option>
+            <option value={String(LEAVE_TYPE_ID.Paternity)}>Paternity</option>
+            <option value={String(LEAVE_TYPE_ID.Unpaid)}>Unpaid</option>
           </select>
 
-          {/* Department filter */}
-          <select
-            aria-label="Filter by department"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-            className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
-          >
-            <option value="">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Design">Design</option>
-            <option value="Finance">Finance</option>
-            <option value="Operations">Operations</option>
-            <option value="HR">HR</option>
-          </select>
-
-          {/* Date filter — match prototype */}
+          {/* Date filter — client-side on current page */}
           <input
             type="date"
-            aria-label="Filter by date (request covers this date)"
+            aria-label="Filter current page by date (request covers this date)"
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => setParam('date', e.target.value)}
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
           />
         </div>
@@ -260,15 +292,19 @@ export default function AdminLeaveQueuePage() {
         )}
       </div>
 
-      {/* Pagination */}
-      {total > 0 && (
-        <div id="lq-pagination" className="mt-6 flex justify-between items-center text-xs text-slate">
-          <span id="lq-count">Showing {total} of {total} requests</span>
-          <div className="flex gap-1.5">
-            <button className="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Prev</button>
-            <button className="bg-forest text-white px-3 py-1.5 rounded">1</button>
-            <button className="border border-sage/50 px-3 py-1.5 rounded text-slate hover:bg-white">Next</button>
-          </div>
+      {/* Paginator — hidden for Maternity (bounded fetch). */}
+      {!isMaternity && (
+        <div className="mt-4">
+          <CursorPaginator
+            currentPage={pager.currentPage}
+            pageSize={pager.pageSize}
+            currentPageCount={pageRows.length}
+            hasMore={pager.hasMore}
+            highestReachablePage={pager.highestReachablePage}
+            onPageChange={pager.goToPage}
+            onPrev={pager.goPrev}
+            onNext={pager.goNext}
+          />
         </div>
       )}
     </>

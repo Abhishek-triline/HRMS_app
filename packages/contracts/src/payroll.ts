@@ -95,6 +95,10 @@ export const PayrollRunSchema = z.object({
   totalLopPaise: PaiseSchema,
   totalTaxPaise: PaiseSchema,
   totalNetPaise: PaiseSchema,
+  /** Count of payslips with lopDays > 0 (BL-024). */
+  lopCount: z.number().int().min(0),
+  /** Count of mid-month joiners (workingDays < run.workingDays). */
+  proRatedCount: z.number().int().min(0),
   /** Set on reversal records. Null on originals. */
   reversalOfRunId: IdSchema.nullable(),
   createdAt: ISODateSchema,
@@ -228,10 +232,15 @@ export type PayrollRunListResponse = z.infer<typeof PayrollRunListResponseSchema
 
 // ── GET /payroll/runs/{id} ──────────────────────────────────────────────────
 
+/**
+ * Run detail returns only the run summary now. Payslips are fetched via the
+ * paginated GET /payslips?runId=X endpoint so large runs don't ship 1000+
+ * line items in one response. Aggregate totals + lopCount / proRatedCount
+ * already live on the run.
+ */
 export const PayrollRunDetailResponseSchema = z.object({
   data: z.object({
     run: PayrollRunSchema,
-    payslips: z.array(PayslipSummarySchema),
   }),
 });
 export type PayrollRunDetailResponse = z.infer<typeof PayrollRunDetailResponseSchema>;

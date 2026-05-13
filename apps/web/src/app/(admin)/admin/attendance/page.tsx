@@ -17,13 +17,15 @@
  * (prototype/admin/my-attendance.html — A-10).
  */
 
-import { useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/Spinner';
-import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
+import { useAttendanceList, useAttendanceStats } from '@/lib/hooks/useAttendance';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { useDepartments } from '@/lib/hooks/useMasters';
 import { MyAttendanceView } from '@/features/attendance/components/MyAttendanceView';
 import type { AttendanceStatusValue } from '@nexora/contracts/attendance';
-import { AttendanceStatus } from '@nexora/contracts/attendance';
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -39,8 +41,7 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const DEPARTMENTS = ['All Departments', 'Engineering', 'Design', 'Finance', 'Operations', 'HR'];
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 
@@ -83,66 +84,6 @@ function KpiTile({ label, value, subtitle, valueClass = 'text-charcoal' }: KpiTi
   );
 }
 
-// ── Paginator ─────────────────────────────────────────────────────────────────
-
-interface PaginatorProps {
-  page: number;
-  totalPages: number;
-  totalItems: number;
-  showing: number;
-  onChange: (p: number) => void;
-}
-
-function Paginator({ page, totalPages, totalItems, showing, onChange }: PaginatorProps) {
-  if (totalPages <= 1) {
-    return (
-      <div className="flex justify-between items-center px-5 py-3 border-t border-sage/20 text-xs text-slate">
-        <span>Showing {showing} of {totalItems} records</span>
-      </div>
-    );
-  }
-
-  const pages: number[] = [];
-  for (let i = 1; i <= Math.min(totalPages, 5); i++) pages.push(i);
-
-  return (
-    <div className="flex justify-between items-center px-5 py-3 border-t border-sage/20 text-xs text-slate">
-      <span>Showing {showing} of {totalItems} records</span>
-      <nav aria-label="Pagination" className="flex gap-1.5">
-        <button
-          onClick={() => onChange(Math.max(1, page - 1))}
-          disabled={page === 1}
-          className="border border-sage/50 px-3 py-1.5 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Previous page"
-        >
-          Prev
-        </button>
-        {pages.map((p) => (
-          <button
-            key={p}
-            onClick={() => onChange(p)}
-            aria-current={p === page ? 'page' : undefined}
-            className={`px-3 py-1.5 rounded ${p === page ? 'bg-forest text-white' : 'border border-sage/50 hover:bg-white'}`}
-          >
-            {p}
-          </button>
-        ))}
-        {totalPages > 5 && page < totalPages && (
-          <span className="px-2 py-1.5 text-slate">…</span>
-        )}
-        <button
-          onClick={() => onChange(Math.min(totalPages, page + 1))}
-          disabled={page === totalPages}
-          className="border border-sage/50 px-3 py-1.5 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Next page"
-        >
-          Next
-        </button>
-      </nav>
-    </div>
-  );
-}
-
 // ── Scope-router ───────────────────────────────────────────────────────────────
 
 /**
@@ -169,62 +110,66 @@ export default function AdminAttendancePage() {
 // ── Org-wide Page ──────────────────────────────────────────────────────────────
 
 function OrgAttendancePage() {
-  const today = new Date();
-
   // Date picker: default to today.
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [statusFilter, setStatusFilter] = useState<AttendanceStatusValue | 0>(0);
-  const [deptFilter, setDeptFilter] = useState('');
+  const [departmentId, setDepartmentId] = useState<number | 0>(0);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
 
-  // Server-side single-day filter — uses the API's `?date=` shortcut so the
-  // 20-row default pagination doesn't truncate large org-wide days. Also
-  // bumps the limit so a single-day org snapshot up to ~100 employees fits
-  // in one page.
-  const { data, isLoading, isError, error } = useAttendanceList('all', {
-    date: selectedDate,
-    limit: 100,
-    ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
-    ...(deptFilter && deptFilter !== 'All Departments' ? { department: deptFilter } : {}),
+  const { data: departments = [] } = useDepartments();
+
+  // Server-side cursor pagination over the table. Filter changes reset to page 1.
+  const pager = useCursorPagination({
+    pageSize: PAGE_SIZE,
+    filtersKey: `${selectedDate}|${statusFilter}|${departmentId}`,
   });
 
-  // The API returns only the selected day; no client-side date filter needed.
-  const dayRows = useMemo(() => data?.data ?? [], [data]);
+  const { data, isLoading, isError, error } = useAttendanceList('all', {
+    date: selectedDate,
+    limit: pager.pageSize,
+    cursor: pager.cursor,
+    ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
+    ...(departmentId ? { departmentId } : {}),
+  });
 
-  // Apply text search
-  const filteredRows = useMemo(() => {
-    if (!search.trim()) return dayRows;
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
+
+  // Aggregate KPI counts come from a separate stats endpoint so they're
+  // accurate over the whole filtered set, not just the visible page.
+  const statsQuery = useAttendanceStats({
+    date: selectedDate,
+    ...(departmentId ? { departmentId } : {}),
+  });
+  const stats = statsQuery.data;
+
+  const pageRows = useMemo(() => data?.data ?? [], [data]);
+
+  // Client-side search narrows the visible page only — server doesn't yet
+  // support a name/code search filter. Acceptable since search is best-effort
+  // within the current page.
+  const visibleRows = useMemo(() => {
+    if (!search.trim()) return pageRows;
     const q = search.toLowerCase();
-    return dayRows.filter(
+    return pageRows.filter(
       (r) =>
         (r.employeeName ?? '').toLowerCase().includes(q) ||
         (r.employeeCode ?? '').toLowerCase().includes(q),
     );
-  // dayRows is stable because it's computed from data + selectedDate
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayRows, search]);
+  }, [pageRows, search]);
 
-  // KPI counts from the day's slice
-  const kpiPresent = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.Present).length;
-  const kpiLeave = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.OnLeave).length;
-  const kpiAbsent = filteredRows.filter((r) => r.status === ATTENDANCE_STATUS.Absent).length;
-  const kpiLate = filteredRows.filter((r) => r.late).length;
-  // "Yet to check-in" = absent + no check-in (simple approximation)
-  const kpiYetToCheckIn = filteredRows.filter(
-    (r) => r.status === ATTENDANCE_STATUS.Absent && !r.checkInTime,
-  ).length;
+  const total = stats?.total ?? 0;
+  const kpiPresent = stats?.present ?? 0;
+  const kpiLeave = stats?.onLeave ?? 0;
+  const kpiAbsent = stats?.absent ?? 0;
+  const kpiLate = stats?.late ?? 0;
+  const kpiYetToCheckIn = stats?.yetToCheckIn ?? 0;
+  const presentPct = total > 0 ? Math.round((kpiPresent / total) * 100) : 0;
 
-  const totalActive = filteredRows.length;
-  const presentPct = totalActive > 0 ? Math.round((kpiPresent / totalActive) * 100) : 0;
-
-  // Late threshold breaches this month (>= 3 late marks) — approximate from data
-  const lateThresholdBreachCount = 3; // placeholder; would need per-employee month counts
-
-  // Pagination
-  const totalItems = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Late threshold breaches this month (>= 3 late marks) — needs a separate
+  // monthly aggregate endpoint (v1.1 backlog). For now we just label the alert.
+  const lateThresholdBreachCount = kpiLate;
 
   const fmtDateDisplay = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-');
@@ -242,21 +187,24 @@ function OrgAttendancePage() {
           type="date"
           value={selectedDate}
           max={todayISO()}
-          onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
+          onChange={(e) => setSelectedDate(e.target.value)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         />
         <select
           id="admin-att-dept"
-          value={deptFilter}
-          onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
+          value={departmentId || ''}
+          onChange={(e) => setDepartmentId(e.target.value ? Number(e.target.value) : 0)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         >
-          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+          <option value="">All Departments</option>
+          {departments.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
         </select>
         <select
           id="admin-att-status"
           value={statusFilter || ''}
-          onChange={(e) => { setStatusFilter(e.target.value ? Number(e.target.value) as AttendanceStatusValue : 0); setPage(1); }}
+          onChange={(e) => setStatusFilter(e.target.value ? Number(e.target.value) as AttendanceStatusValue : 0)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         >
           <option value="">All Status</option>
@@ -292,13 +240,13 @@ function OrgAttendancePage() {
         <KpiTile
           label="On Leave"
           value={kpiLeave}
-          subtitle={totalActive > 0 ? `${Math.round((kpiLeave / totalActive) * 100)}%` : '—'}
+          subtitle={total > 0 ? `${Math.round((kpiLeave / total) * 100)}%` : '—'}
           valueClass="text-umber"
         />
         <KpiTile
           label="Absent"
           value={kpiAbsent}
-          subtitle={totalActive > 0 ? `${Math.round((kpiAbsent / totalActive) * 100)}% · No check-in` : '—'}
+          subtitle={total > 0 ? `${Math.round((kpiAbsent / total) * 100)}% · No check-in` : '—'}
           valueClass="text-crimson"
         />
         <KpiTile
@@ -347,7 +295,17 @@ function OrgAttendancePage() {
           <h3 className="text-sm font-semibold text-charcoal">
             Attendance — {fmtDateDisplay(selectedDate)}
           </h3>
-          <span className="text-xs text-slate">{totalItems} records</span>
+          <span className="text-xs text-slate">{total} record{total !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="px-5 py-3 border-b border-sage/20">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search current page by name or EMP code…"
+            aria-label="Search by employee name or code (current page)"
+            className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+          />
         </div>
 
         {isLoading ? (
@@ -374,14 +332,14 @@ function OrgAttendancePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10 text-sm">
-                  {pageRows.length === 0 ? (
+                  {visibleRows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center text-sm text-slate py-10">
                         No records found for this date and filter.
                       </td>
                     </tr>
                   ) : (
-                    pageRows.map((r) => {
+                    visibleRows.map((r) => {
                       const initials = (r.employeeName ?? '?')
                         .split(' ')
                         .slice(0, 2)
@@ -423,12 +381,16 @@ function OrgAttendancePage() {
                 </tbody>
               </table>
             </div>
-            <Paginator
-              page={page}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              showing={pageRows.length}
-              onChange={setPage}
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={pageRows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+              label={({ from, to }) => `Showing ${from}–${to} of ${total} records`}
             />
           </>
         )}

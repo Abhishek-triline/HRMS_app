@@ -5,23 +5,42 @@
  * Visual reference: prototype/manager/my-team.html
  *
  * Two tabs: "Current Team" + "Past Team Members" (BL-022a).
- * Calls useTeam(me.id) — current + past arrays from API.
- * Past tab carries pastEndedAt timestamp + pastReason badge.
- * Click-through to read-only profile (history stays visible BL-022a).
+ *
+ * URL state:
+ *   ?tab=current|past   default: current
+ *   ?page=<n>           1-based page within the active tab
+ *
+ * Data: `useTeam(meId)` is a bundled endpoint returning {current, past}
+ * arrays. Client paginates the active tab — managers' subtrees are bounded
+ * (org-internal direct + indirect reports), so a single fetch is acceptable.
+ * If a manager's team grows past a few hundred we'll revisit the API.
  */
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import { useMe } from '@/lib/hooks/useAuth';
 import { useTeam } from '@/lib/hooks/useEmployees';
 import { EmployeeStatusBadge } from '@/components/employees/EmployeeStatusBadge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import type { TeamMember } from '@nexora/contracts/employees';
 import { EMPLOYEE_STATUS, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 
 type Tab = 'current' | 'past';
+
+const TAB_KEYS: readonly Tab[] = ['current', 'past'] as const;
+const PAGE_SIZE = 12; // 4 rows × 3 cols on lg
+
+function parseTab(raw: string | null): Tab {
+  return TAB_KEYS.includes(raw as Tab) ? (raw as Tab) : 'current';
+}
+
+function parsePage(raw: string | null): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -128,7 +147,10 @@ function PastMemberCard({ member }: { member: TeamMember }) {
 }
 
 export default function MyTeamPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('current');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = parseTab(searchParams.get('tab'));
+  const currentPage = parsePage(searchParams.get('page'));
 
   const { data: meData } = useMe();
   const myId = meData?.data?.user?.id ?? 0;
@@ -140,6 +162,27 @@ export default function MyTeamPage() {
   const activeCount = current.filter((m) => m.status === EMPLOYEE_STATUS.Active).length;
   const onLeaveCount = current.filter((m) => m.status === EMPLOYEE_STATUS.OnLeave).length;
   const onNoticeCount = current.filter((m) => m.status === EMPLOYEE_STATUS.OnNotice).length;
+
+  const sourceList = activeTab === 'current' ? current : past;
+  const totalPages = Math.max(1, Math.ceil(sourceList.length / PAGE_SIZE));
+  const clampedPage = Math.min(currentPage, totalPages);
+  const start = (clampedPage - 1) * PAGE_SIZE;
+  const pageItems = sourceList.slice(start, start + PAGE_SIZE);
+  const hasMore = clampedPage < totalPages;
+
+  function setTab(t: Tab) {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('tab', t);
+    next.delete('page'); // reset to page 1 on tab change
+    router.replace(`?${next.toString()}`, { scroll: false });
+  }
+
+  function goToPage(p: number) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (p <= 1) next.delete('page');
+    else next.set('page', String(p));
+    router.replace(`?${next.toString()}`, { scroll: false });
+  }
 
   if (isLoading) {
     return (
@@ -197,7 +240,7 @@ export default function MyTeamPage() {
       <div className="flex items-center gap-1 mb-5 border-b border-sage/30">
         <button
           type="button"
-          onClick={() => setActiveTab('current')}
+          onClick={() => setTab('current')}
           className={clsx(
             'px-4 py-2.5 text-sm font-semibold transition-colors -mb-px',
             activeTab === 'current'
@@ -221,7 +264,7 @@ export default function MyTeamPage() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('past')}
+          onClick={() => setTab('past')}
           className={clsx(
             'px-4 py-2.5 text-sm font-medium transition-colors -mb-px',
             activeTab === 'past'
@@ -250,11 +293,24 @@ export default function MyTeamPage() {
               <p className="text-xs text-sage mt-1">Contact Admin to assign employees to your team.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-              {current.map((member) => (
-                <CurrentMemberCard key={member.id} member={member} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-4">
+                {pageItems.map((member) => (
+                  <CurrentMemberCard key={member.id} member={member} />
+                ))}
+              </div>
+              <CursorPaginator
+                currentPage={clampedPage}
+                pageSize={PAGE_SIZE}
+                currentPageCount={pageItems.length}
+                hasMore={hasMore}
+                highestReachablePage={totalPages}
+                onPageChange={goToPage}
+                onPrev={() => goToPage(clampedPage - 1)}
+                onNext={() => goToPage(clampedPage + 1)}
+                label={({ from, to }) => `Showing ${from}–${to} of ${current.length} members`}
+              />
+            </>
           )}
 
           {/* Hierarchy note */}
@@ -285,11 +341,24 @@ export default function MyTeamPage() {
               <p className="text-sm text-slate">No past team members on record.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-              {past.map((member) => (
-                <PastMemberCard key={member.id} member={member} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-4">
+                {pageItems.map((member) => (
+                  <PastMemberCard key={member.id} member={member} />
+                ))}
+              </div>
+              <CursorPaginator
+                currentPage={clampedPage}
+                pageSize={PAGE_SIZE}
+                currentPageCount={pageItems.length}
+                hasMore={hasMore}
+                highestReachablePage={totalPages}
+                onPageChange={goToPage}
+                onPrev={() => goToPage(clampedPage - 1)}
+                onNext={() => goToPage(clampedPage + 1)}
+                label={({ from, to }) => `Showing ${from}–${to} of ${past.length} past members`}
+              />
+            </>
           )}
 
           {/* Audit note */}

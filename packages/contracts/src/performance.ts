@@ -123,6 +123,15 @@ export const PerformanceCycleSummarySchema = PerformanceCycleSchema.pick({
   managerReviewDeadline: true,
   participants: true,
   closedAt: true,
+}).extend({
+  /** Count of reviews with selfRating set (BL-039). */
+  selfSubmitted: z.number().int().min(0),
+  /** Count of reviews with managerRating set (BL-040). */
+  managerSubmitted: z.number().int().min(0),
+  /** Count of reviews with finalRating locked (cycle Closed implies all). */
+  finalised: z.number().int().min(0),
+  /** Mean of finalRating over rated reviews; null when none rated. */
+  avgFinalRating: z.number().min(1).max(5).nullable(),
 });
 export type PerformanceCycleSummary = z.infer<typeof PerformanceCycleSummarySchema>;
 

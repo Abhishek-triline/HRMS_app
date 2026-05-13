@@ -14,6 +14,8 @@ import type {
   TodayAttendanceResponse,
   AttendanceListQuery,
   AttendanceListResponse,
+  AttendanceStatsQuery,
+  AttendanceStatsResponse,
   CreateRegularisationRequest,
   CreateRegularisationResponse,
   RegularisationListQuery,
@@ -88,6 +90,23 @@ export async function listAttendance(
   }
   const qs = params.toString();
   return apiClient.get<AttendanceListResponse>(`${path}${qs ? `?${qs}` : ''}`);
+}
+
+/** GET /api/v1/attendance/stats — Admin aggregate counts for a date/range. */
+export async function getAttendanceStats(
+  query: Partial<AttendanceStatsQuery> = {},
+): Promise<AttendanceStatsResponse['data']> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  const res = await apiClient.get<AttendanceStatsResponse>(
+    `${ATT_BASE}/stats${qs ? `?${qs}` : ''}`,
+  );
+  return res.data;
 }
 
 // ── Regularisations ───────────────────────────────────────────────────────────
