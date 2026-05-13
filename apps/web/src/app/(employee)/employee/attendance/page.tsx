@@ -132,7 +132,9 @@ export default function MyAttendancePage() {
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to });
+  // limit=100 so a full calendar month (~22-31 rows) is never truncated
+  // by the default limit=20 pagination.
+  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to, limit: 100 });
 
   const handleMonthChange = useCallback((y: number, m: number) => {
     setYear(y);

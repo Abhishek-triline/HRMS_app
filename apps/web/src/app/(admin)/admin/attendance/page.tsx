@@ -171,31 +171,26 @@ export default function AdminAttendancePage() {
 function OrgAttendancePage() {
   const today = new Date();
 
-  // Date picker: default to today, query month data then filter client-side
+  // Date picker: default to today.
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [statusFilter, setStatusFilter] = useState<AttendanceStatusValue | 0>(0);
   const [deptFilter, setDeptFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  // Derive month range from selected date
-  const [sy, sm] = selectedDate.split('-').map(Number);
-  const from = `${sy}-${String(sm).padStart(2, '0')}-01`;
-  const lastDay = new Date(sy, sm, 0).getDate();
-  const to = `${sy}-${String(sm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-
+  // Server-side single-day filter — uses the API's `?date=` shortcut so the
+  // 20-row default pagination doesn't truncate large org-wide days. Also
+  // bumps the limit so a single-day org snapshot up to ~100 employees fits
+  // in one page.
   const { data, isLoading, isError, error } = useAttendanceList('all', {
-    from,
-    to,
+    date: selectedDate,
+    limit: 100,
     ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
     ...(deptFilter && deptFilter !== 'All Departments' ? { department: deptFilter } : {}),
   });
 
-  // Client-side filter to the chosen day
-  const dayRows = useMemo(() => {
-    const rows = data?.data ?? [];
-    return rows.filter((r) => r.date === selectedDate);
-  }, [data, selectedDate]);
+  // The API returns only the selected day; no client-side date filter needed.
+  const dayRows = useMemo(() => data?.data ?? [], [data]);
 
   // Apply text search
   const filteredRows = useMemo(() => {

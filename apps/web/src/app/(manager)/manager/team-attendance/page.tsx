@@ -31,6 +31,9 @@ export default function TeamAttendancePage() {
   const { data, isLoading, isError, error } = useAttendanceList('team', {
     from,
     to,
+    // Month-of-team can easily exceed the default limit=20 (a 5-person team
+    // × 22 working days = 110 rows). Bumped to fit a normal team-month.
+    limit: 100,
     ...(employeeIdStr ? { employeeId: Number(employeeIdStr) } : {}),
   });
 
