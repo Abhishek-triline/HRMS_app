@@ -170,11 +170,66 @@
       .nx-s2{animation-delay:.6s;} .nx-s3{animation-delay:1.2s;} .nx-s4{animation-delay:1.8s;}
       .nx-s5{animation-delay:2.4s;} .nx-s6{animation-delay:1s;}    .nx-s7{animation-delay:2s;}
 
-      /* Time-of-day gradient variants */
-      [data-nx-hero][data-tod="morning"] { background: linear-gradient(180deg, #C97155 0%, #C8804D 22%, #5BAA85 55%, #2D7A5F 85%, #1C3D2E 100%); }
-      [data-nx-hero][data-tod="day"]     { background: linear-gradient(180deg, #3F8AA8 0%, #4A9C88 35%, #2D7A5F 70%, #1C3D2E 100%); }
+      /* Time-of-day gradient variants.
+         Morning commits to a sunrise palette (deep magenta → coral → gold);
+         day commits to a clear-sky palette (deep cerulean → cyan → teal).
+         Both finish in the forest base so the scene anchors. Cinematic feel
+         comes from the base gradient itself plus a strong sun halo. */
+      [data-nx-hero][data-tod="morning"] {
+        background:
+          /* Bright sun halo (upper-right) */
+          radial-gradient(ellipse 60% 45% at 78% 22%, rgba(255,210,150,0.65), transparent 65%),
+          /* Sunrise gradient — purple sky → magenta → coral → gold → forest */
+          linear-gradient(180deg, #3D2C56 0%, #8A3B6B 22%, #D45F4E 42%, #F08850 58%, #F5B570 72%, #2D7A5F 92%, #1C3D2E 100%);
+      }
+      [data-nx-hero][data-tod="day"] {
+        background:
+          /* Bright sun halo */
+          radial-gradient(ellipse 55% 42% at 80% 20%, rgba(255,235,170,0.65), transparent 62%),
+          /* Clear-sky gradient — deep cerulean → cyan → teal → forest */
+          linear-gradient(180deg, #1E5F8E 0%, #3A88BC 25%, #6FB5D6 48%, #6FBE9E 70%, #2D7A5F 90%, #1C3D2E 100%);
+      }
       [data-nx-hero][data-tod="evening"] { background: linear-gradient(180deg, #5B3D6F 0%, #B85B6F 45%, #F4A56B 80%, #B85B6F 100%); }
       [data-nx-hero][data-tod="night"]   { background: linear-gradient(180deg, #0A1F2E 0%, #112A38 40%, #1C3D2E 100%); }
+
+      /* Sun glow — strong warm drop-shadow so the sun reads as a light
+         source rather than a flat disc. Larger and warmer than before. */
+      [data-nx-hero][data-tod="morning"] .nx-sun { filter: drop-shadow(0 0 38px rgba(255, 190, 130, 0.75)); }
+      [data-nx-hero][data-tod="day"]     .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 225, 145, 0.75)); }
+
+      /* Atmospheric horizon haze — soft band along the bottom for depth.
+         Tuned warm for morning, cool for day. */
+      [data-nx-hero][data-tod="morning"]::before,
+      [data-nx-hero][data-tod="day"]::before {
+        content: '';
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 32%;
+        pointer-events: none;
+        z-index: 0;
+      }
+      [data-nx-hero][data-tod="morning"]::before {
+        background: linear-gradient(180deg, transparent 0%, rgba(255,170,110,0.16) 50%, transparent 100%);
+      }
+      [data-nx-hero][data-tod="day"]::before {
+        background: linear-gradient(180deg, transparent 0%, rgba(180,225,240,0.18) 50%, transparent 100%);
+      }
+
+      /* Sun-rays — soft conical glow radiating from the sun, only on
+         morning + day. Sits behind the sun SVG visually thanks to z-index. */
+      [data-nx-hero][data-tod="morning"]::after,
+      [data-nx-hero][data-tod="day"]::after {
+        content: '';
+        position: absolute;
+        top: -10%;
+        right: -5%;
+        width: 55%;
+        height: 75%;
+        background: conic-gradient(from 200deg at 75% 25%, transparent 0deg, rgba(255,220,160,0.10) 12deg, transparent 24deg, rgba(255,220,160,0.10) 40deg, transparent 56deg, rgba(255,220,160,0.10) 78deg, transparent 100deg);
+        pointer-events: none;
+        z-index: 0;
+        mix-blend-mode: screen;
+      }
       /* Sun / moon colour per tod (recoloured shared markup) */
       [data-nx-hero][data-tod="morning"] .nx-celestial { color:#F4A56B; }
       [data-nx-hero][data-tod="day"]     .nx-celestial { color:#FFD56B; }
