@@ -122,7 +122,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
         action={
           <Link
             href="/payroll/payroll-runs/new"
-            className="bg-mint text-forest hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 min-h-[44px]"
+            className="bg-amber-300 text-forest hover:bg-amber-200 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 min-h-[44px] shadow-lg shadow-amber-500/40"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
