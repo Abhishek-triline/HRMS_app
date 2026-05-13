@@ -245,9 +245,15 @@ export default function LeaveDetailPage() {
   }
 
   const beforeStart = isBeforeStart(request.fromDate);
+  // Self-cancel rules (BL-019):
+  //   - Pending leaves: always cancellable.
+  //   - Approved leaves: cancellable only while today < fromDate.
+  // After the start date the server returns 403 for an owner-initiated
+  // cancel — manager/admin then handles it (BL-020). Old UI showed the
+  // button anyway, which was confusing and produced a guaranteed 403.
   const canCancel =
-    (request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Approved) &&
-    (beforeStart || request.status === LEAVE_STATUS.Approved);
+    request.status === LEAVE_STATUS.Pending ||
+    (request.status === LEAVE_STATUS.Approved && beforeStart);
 
   // createdAt is a full ISO timestamp — formatDateTime handles it correctly.
   // formatDate is reserved for date-only YYYY-MM-DD strings (fromDate / toDate).
@@ -566,14 +572,17 @@ export default function LeaveDetailPage() {
         </div>
       </div>
 
-      {/* Cancel section */}
+      {/* Cancel section — only shown when self-cancel is actually allowed.
+          Approved leaves are cancellable by the employee only while
+          today < fromDate. Pending leaves are cancellable any time the
+          request is still open. */}
       {canCancel && (
         <div className="bg-white rounded-xl shadow-sm border border-crimson/20 p-6">
           <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancel This Request</h3>
           <p className="text-sm text-slate mb-4">
-            {beforeStart
+            {request.status === LEAVE_STATUS.Approved
               ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} leave balance (BL-019).`
-              : 'This leave has already started. Only the remaining unused days will be restored on cancellation (BL-020).'}
+              : 'You can withdraw a pending request at any time before approval.'}
           </p>
           <Button
             variant="destructive"
@@ -582,11 +591,9 @@ export default function LeaveDetailPage() {
           >
             Cancel Request
           </Button>
-          {beforeStart && (
-            <p className="text-xs text-slate mt-3">
-              After the leave starts, only your Manager or Admin can cancel it (partial-day restoration needs review).
-            </p>
-          )}
+          <p className="text-xs text-slate mt-3">
+            After the leave starts, only your Manager or Admin can cancel it (BL-020).
+          </p>
         </div>
       )}
 

@@ -176,7 +176,13 @@ export default function PayrollLeaveDetailPage() {
   }
 
   const beforeStart = isBeforeStart(request.fromDate);
-  const canCancel = (request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Approved) && (beforeStart || request.status === LEAVE_STATUS.Approved);
+  // Self-cancel rules (BL-019):
+  //   - Pending leaves: always cancellable.
+  //   - Approved leaves: cancellable only while today < fromDate.
+  // After the start date the server returns 403 for an owner-initiated cancel.
+  const canCancel =
+    request.status === LEAVE_STATUS.Pending ||
+    (request.status === LEAVE_STATUS.Approved && beforeStart);
   const cfg = buildStatusConfig(request);
 
   const escalationDeadline = (() => {
@@ -437,23 +443,21 @@ export default function PayrollLeaveDetailPage() {
         </div>
       </div>
 
-      {/* Cancel section */}
+      {/* Cancel section — only shown when self-cancel is actually allowed. */}
       {canCancel && (
         <div className="bg-white rounded-xl shadow-sm border border-crimson/20 p-6">
           <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancel This Request</h3>
           <p className="text-sm text-slate mb-4">
-            {beforeStart
+            {request.status === LEAVE_STATUS.Approved
               ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} leave balance (BL-019).`
-              : 'This leave has already started. Only the remaining unused days will be restored on cancellation (BL-020).'}
+              : 'You can withdraw a pending request at any time before approval.'}
           </p>
           <Button variant="destructive" size="md" onClick={() => setCancelOpen(true)}>
             Cancel Request
           </Button>
-          {beforeStart && (
-            <p className="text-xs text-slate mt-3">
-              After the leave starts, only your Manager or Admin can cancel it (partial-day restoration needs review).
-            </p>
-          )}
+          <p className="text-xs text-slate mt-3">
+            After the leave starts, only your Manager or Admin can cancel it (BL-020).
+          </p>
         </div>
       )}
 
