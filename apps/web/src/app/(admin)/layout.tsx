@@ -9,12 +9,7 @@ import { getMe } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 import { RoleLayout } from '@/components/layout/RoleLayout';
 import { ROLE_ID } from '@/lib/status/maps';
-
-const ROLE_DASHBOARD: Record<number, string> = {
-  [ROLE_ID.Manager]:       '/manager/dashboard',
-  [ROLE_ID.Employee]:      '/employee/dashboard',
-  [ROLE_ID.PayrollOfficer]:'/payroll/dashboard',
-};
+import { pathForOtherRole } from '@/lib/route/redirect-for-role';
 
 export default async function AdminGroupLayout({
   children,
@@ -32,14 +27,15 @@ export default async function AdminGroupLayout({
     redirect('/login');
   }
 
-  if (me.data.roleId !== ROLE_ID.Admin) {
-    const dest = ROLE_DASHBOARD[me.data.roleId];
-    if (dest) redirect(dest);
-    redirect('/login');
-  }
-
-  // Get current path from x-pathname header (set by middleware) or fallback
+  // Get current path from x-pathname header (set by middleware) or fallback.
+  // Resolved before the role check so we can preserve deep-links when a
+  // wrong-role user lands here (e.g. an Employee clicking an /admin/...
+  // link in a notification).
   const pathname = headers().get('x-pathname') ?? '/admin/dashboard';
+
+  if (me.data.roleId !== ROLE_ID.Admin) {
+    redirect(pathForOtherRole(pathname, me.data.roleId));
+  }
 
   return (
     <RoleLayout

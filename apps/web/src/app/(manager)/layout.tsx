@@ -8,12 +8,7 @@ import { getMe } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 import { RoleLayout } from '@/components/layout/RoleLayout';
 import { ROLE_ID } from '@/lib/status/maps';
-
-const ROLE_DASHBOARD: Record<number, string> = {
-  [ROLE_ID.Admin]:          '/admin/dashboard',
-  [ROLE_ID.Employee]:       '/employee/dashboard',
-  [ROLE_ID.PayrollOfficer]: '/payroll/dashboard',
-};
+import { pathForOtherRole } from '@/lib/route/redirect-for-role';
 
 export default async function ManagerGroupLayout({
   children,
@@ -31,13 +26,12 @@ export default async function ManagerGroupLayout({
     redirect('/login');
   }
 
-  if (me.data.roleId !== ROLE_ID.Manager) {
-    const dest = ROLE_DASHBOARD[me.data.roleId];
-    if (dest) redirect(dest);
-    redirect('/login');
-  }
-
+  // Read pathname first so wrong-role redirects can preserve deep-links.
   const pathname = headers().get('x-pathname') ?? '/manager/dashboard';
+
+  if (me.data.roleId !== ROLE_ID.Manager) {
+    redirect(pathForOtherRole(pathname, me.data.roleId));
+  }
 
   return (
     <RoleLayout
