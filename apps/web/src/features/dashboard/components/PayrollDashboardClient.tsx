@@ -115,47 +115,11 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
   return (
     <div>
       {/* ── 1. Hero ─────────────────────────────────────────────────────────── */}
-      <div
-        data-nx-hero
-        data-tod="day"
-        className="relative rounded-2xl overflow-hidden mb-6 shadow-lg shadow-forest/10"
-        aria-label="Payroll dashboard hero"
-      >
-        {/* Dot grid */}
-        <svg
-          className="nx-dotgrid absolute inset-0 w-full h-full opacity-[0.10] pointer-events-none"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <pattern id="payDotsProd" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.4" fill="#FFFFFF" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#payDotsProd)" />
-        </svg>
-        <div className="nx-b1 absolute -top-16 -left-12 w-[18rem] h-[18rem] rounded-full bg-emerald/40 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="nx-b2 absolute -bottom-20 -right-16 w-[20rem] h-[20rem] rounded-full bg-mint/25 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="nx-sun absolute -top-6 -right-6 pointer-events-none" aria-hidden="true">
-          <svg width="160" height="160" viewBox="0 0 220 220" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="nx-celestial">
-            <circle cx="110" cy="110" r="40" fill="currentColor" fillOpacity="0.30" />
-            <circle cx="110" cy="110" r="55" strokeOpacity="0.4" />
-            <circle cx="110" cy="110" r="74" strokeOpacity="0.18" />
-            <g strokeOpacity="0.35">
-              <line x1="110" y1="20" x2="110" y2="40" /><line x1="110" y1="180" x2="110" y2="200" />
-              <line x1="20" y1="110" x2="40" y2="110" /><line x1="180" y1="110" x2="200" y2="110" />
-              <line x1="46" y1="46" x2="60" y2="60" /><line x1="160" y1="160" x2="174" y2="174" />
-              <line x1="160" y1="60" x2="174" y2="46" /><line x1="46" y1="174" x2="60" y2="160" />
-            </g>
-          </svg>
-        </div>
-        <div className="relative px-6 py-6 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="font-heading text-2xl font-bold text-white">
-              {currentMonthLabel} Payroll
-            </h2>
-            <p className="text-sm text-mint/80 mt-0.5">{subtitle}</p>
-          </div>
+      <TimeOfDayHero
+        firstName={firstName}
+        subtitle={subtitle}
+        customTitle={`${currentMonthLabel} Payroll`}
+        action={
           <Link
             href="/payroll/payroll-runs/new"
             className="bg-mint text-forest hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 min-h-[44px]"
@@ -165,8 +129,8 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
             </svg>
             Initiate run
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── 2. KPI strip ────────────────────────────────────────────────────── */}
       <div

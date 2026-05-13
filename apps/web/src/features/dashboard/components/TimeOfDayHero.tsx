@@ -16,7 +16,7 @@
  * hide/show the ornaments and recolour the layered fills per scene.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 export type TimeOfDay = 'morning' | 'day' | 'evening' | 'night';
 
@@ -39,9 +39,21 @@ export interface TimeOfDayHeroProps {
   firstName: string;
   subtitle?: string;
   badge?: string;
+  /**
+   * Override for the auto-generated "Good morning, X" greeting. When set,
+   * `firstName` is still required for the aria-label but the heading
+   * renders whatever ReactNode you pass (e.g. "May Payroll").
+   */
+  customTitle?: ReactNode;
+  /**
+   * Override for the badge slot in the top-right corner. Use for CTAs
+   * (e.g. an "Initiate run" link). When both `action` and `badge` are set,
+   * `action` wins.
+   */
+  action?: ReactNode;
 }
 
-export function TimeOfDayHero({ firstName, subtitle, badge }: TimeOfDayHeroProps) {
+export function TimeOfDayHero({ firstName, subtitle, badge, customTitle, action }: TimeOfDayHeroProps) {
   const [tod, setTod] = useState<TimeOfDay>('day');
 
   useEffect(() => {
@@ -170,16 +182,18 @@ export function TimeOfDayHero({ firstName, subtitle, badge }: TimeOfDayHeroProps
       {/* Foreground content */}
       <div className="relative px-6 py-6 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="font-heading text-2xl font-bold text-white">{greeting}</h2>
+          <h2 className="font-heading text-2xl font-bold text-white">
+            {customTitle ?? greeting}
+          </h2>
           {subtitle && (
             <p className="text-sm text-mint/80 mt-0.5">{subtitle}</p>
           )}
         </div>
-        {badge && (
+        {action ?? (badge && (
           <span className="bg-white/15 backdrop-blur-sm border border-white/30 text-white text-xs uppercase tracking-widest font-semibold px-3 py-1.5 rounded-full">
             {badge}
           </span>
-        )}
+        ))}
       </div>
     </div>
   );
