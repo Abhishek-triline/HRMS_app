@@ -10,7 +10,7 @@
  * - Cancel button on cancellable rows; fires useCancelLeave, toasts restoredDays
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,8 @@ import { LeaveBalanceGrid } from '@/components/leave/LeaveBalanceGrid';
 import { LeaveRequestRow, LeaveRequestCard } from '@/components/leave/LeaveRequestRow';
 import { CancelLeaveModal } from '@/components/leave/CancelLeaveModal';
 import { useLeaveBalances, useLeaveList, useCancelLeave, useLeave } from '@/lib/hooks/useLeave';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { useMe } from '@/lib/hooks/useAuth';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
@@ -99,7 +101,16 @@ export default function MyLeavePage() {
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
-  const listQuery = useLeaveList(activeStatus !== undefined ? { status: activeStatus } : {});
+  // Server-side cursor pagination; resets to page 1 on tab change.
+  const pager = useCursorPagination({ pageSize: 10, filtersKey: activeTab });
+  const listQuery = useLeaveList({
+    ...(activeStatus !== undefined ? { status: activeStatus } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
+  });
+  useEffect(() => {
+    if (listQuery.data) pager.cacheNextCursor(listQuery.data.nextCursor);
+  }, [listQuery.data, pager]);
 
   const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
@@ -249,6 +260,17 @@ export default function MyLeavePage() {
                   />
                 ))}
               </div>
+
+              <CursorPaginator
+                currentPage={pager.currentPage}
+                pageSize={pager.pageSize}
+                currentPageCount={listQuery.data.data.length}
+                hasMore={pager.hasMore}
+                highestReachablePage={pager.highestReachablePage}
+                onPageChange={pager.goToPage}
+                onPrev={pager.goPrev}
+                onNext={pager.goNext}
+              />
             </>
           )}
         </div>
