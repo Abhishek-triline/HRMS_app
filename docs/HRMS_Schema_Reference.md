@@ -466,6 +466,7 @@ Audit log, leave balance ledger, reporting manager history, login attempts, pass
 | `check_in_time` | DATETIME(3) NULL | YES | — | Set on `POST /attendance/check-in`. NULL for non-Present days. |
 | `check_out_time` | DATETIME(3) NULL | YES | — | Set on `POST /attendance/check-out`. NULL while still checked-in. |
 | `hours_worked_minutes` | INT NULL | YES | — | Server-computed from `(check_out_time - check_in_time)` in minutes. NULL while the worker is still checked in or hasn't checked in. |
+| `target_hours` | INT | NOT NULL | 8 | Daily-hours target snapshotted from `configurations.ATTENDANCE_STANDARD_DAILY_HOURS` at row creation. Frozen for historical correctness — when admin changes the global config, past rows keep the target that applied on the day they were recorded. A regularisation row (`source_id = 2`) inherits its `target_hours` from the corresponding system row of the same date so a corrected day is still measured against the policy that applied then. Read by the My Attendance "below target" chart classification so historical bars stay correctly coloured after a policy change. |
 | `late` | BOOL | NOT NULL | false | True iff `check_in_time > configured threshold` (default 10:30 IST, BL-027). |
 | `late_month_count` | INT | NOT NULL | 0 | Cumulative late count in the calendar month at the moment this row was last touched. Stored (not derived on-read) so the BL-028 penalty deduction can be triggered atomically at check-in time. |
 | `lop_applied` | BOOL | NOT NULL | false | True iff this row's Absent status triggers Loss-of-Pay at the next payroll run. Drives payroll's LOP calculation. |
@@ -869,7 +870,7 @@ Quick map of which BL rule touches which table(s). The full text of each rule is
 | BL-022 / BL-022a (manager exit routing) | `leave_requests.approver_id` + `employees.previous_reporting_manager_id` |
 | BL-023 (one attendance row per day) | `attendance_records` (UNIQUE constraint) |
 | BL-024 (check-out mandatory) | `attendance_records.check_out_time` |
-| BL-025 / BL-025a (computed hours, configurable standard) | `attendance_records.hours_worked_minutes`, `configurations.STANDARD_DAILY_HOURS` |
+| BL-025 / BL-025a (computed hours, configurable standard) | `attendance_records.hours_worked_minutes`, `attendance_records.target_hours` (per-row snapshot for historical correctness), `configurations.ATTENDANCE_STANDARD_DAILY_HOURS` (current value) |
 | BL-026 (status derivation priority) | `attendance_records.status` (initial setting at midnight) |
 | BL-027 (late threshold) | `attendance_records.late`, `configurations.LATE_THRESHOLD` |
 | BL-028 (3-late penalty) | `attendance_late_ledger.count` |

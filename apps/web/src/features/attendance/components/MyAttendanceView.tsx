@@ -72,6 +72,13 @@ interface ChartBar {
   dayNum: string;
   /** Hours worked (0 when not Present). */
   hours: number;
+  /**
+   * Daily-hours target that applied on this date (snapshotted server-side
+   * at row creation). The "below target" classification compares hours
+   * against this per-bar value so the visual stays correct after the
+   * global config changes.
+   */
+  targetHours: number;
   /** ATTENDANCE_STATUS code. */
   status: number;
   /** Late mark — only meaningful for Present. */
@@ -92,15 +99,19 @@ const UNDER_TARGET_GRADIENT = 'bg-gradient-to-t from-emerald/40 to-mint/60';
 
 interface BarChartProps {
   bars: ChartBar[];
-  targetHours?: number;
 }
 
-function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
+function HoursBarChart({ bars }: BarChartProps) {
   if (bars.length === 0) return null;
 
-  const maxH = Math.max(...bars.map((b) => b.hours), targetHours + 1);
+  // Target dashed line follows the latest bar's target. When the policy
+  // changes mid-window, the per-bar comparison stays honest; the global
+  // line is just an approximate orientation cue.
+  const lineTarget = bars[bars.length - 1]!.targetHours;
+  const targetsVary = bars.some((b) => b.targetHours !== lineTarget);
+  const maxH = Math.max(...bars.map((b) => b.hours), ...bars.map((b) => b.targetHours), lineTarget + 1);
   const chartH = 110;
-  const targetPct = ((maxH - targetHours) / maxH) * 100;
+  const targetPct = ((maxH - lineTarget) / maxH) * 100;
   // Non-Present bars don't have hours to scale; render a fixed indicator
   // height so they're still visible and hover-able.
   const indicatorPx = 14;
@@ -114,7 +125,7 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
         aria-hidden="true"
       >
         <span className="absolute -top-2.5 right-0 text-[9px] text-forest/70 bg-white px-1 font-semibold">
-          {targetHours}h target
+          {lineTarget}h target{targetsVary ? '*' : ''}
         </span>
       </div>
 
@@ -126,7 +137,7 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
         {bars.map((b) => {
           const isPresent = b.status === ATTENDANCE_STATUS.Present;
           const style = STATUS_BAR_STYLES[b.status] ?? STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!;
-          const underTarget = isPresent && b.hours > 0 && b.hours < targetHours;
+          const underTarget = isPresent && b.hours > 0 && b.hours < b.targetHours;
           const gradient = isPresent && b.late
             ? 'bg-gradient-to-t from-crimson to-crimson/70'
             : isPresent && underTarget
@@ -137,7 +148,7 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
             ? Math.max((pct / 100) * chartH, 4)
             : indicatorPx;
           const tooltipMain = isPresent
-            ? `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
+            ? `${b.hours.toFixed(1)} hrs / ${b.targetHours}h target${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
             : style.label;
           const dateLabel = `${b.weekday} ${b.dayNum}`;
           return (
@@ -181,8 +192,8 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
 /** Compact status legend shown above the chart. */
 function ChartLegend() {
   const items: { gradient: string; key: string }[] = [
-    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Present]!.gradient,   key: '≥ 8h target' },
-    { gradient: UNDER_TARGET_GRADIENT,                                    key: '< 8h target' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Present]!.gradient,   key: 'On / over target' },
+    { gradient: UNDER_TARGET_GRADIENT,                                    key: 'Below target' },
     { gradient: 'bg-gradient-to-t from-crimson to-crimson/70',            key: 'Late check-in' },
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!.gradient,    key: 'Absent' },
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.OnLeave]!.gradient,   key: 'Leave' },
@@ -253,13 +264,14 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
     setMonth(m);
   }, []);
 
-  const rows: CalendarDay[] = (data?.data ?? []).map((r) => ({
+  const rows = (data?.data ?? []).map((r) => ({
     date: r.date,
     status: r.status,
     checkInTime: r.checkInTime,
     checkOutTime: r.checkOutTime,
     hoursWorkedMinutes: r.hoursWorkedMinutes,
     late: r.late,
+    targetHours: r.targetHours,
   }));
 
   // ── Computed stats ──────────────────────────────────────────────────────────
@@ -277,7 +289,12 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
 
   const totalMinutes = presentRows.reduce((sum, r) => sum + (r.hoursWorkedMinutes ?? 0), 0);
   const avgHours = presentCount > 0 ? totalMinutes / presentCount / 60 : 0;
-  const avgDelta = avgHours - 8;
+  // Average target across the present days the user actually clocked.
+  // Falls back to 8 when there are no present rows yet.
+  const avgTargetHours = presentCount > 0
+    ? presentRows.reduce((s, r) => s + r.targetHours, 0) / presentCount
+    : 8;
+  const avgDelta = avgHours - avgTargetHours;
 
   const leaveDatesLabel = leaveRows
     .slice(0, 3)
@@ -301,6 +318,7 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
         weekday: WEEKDAY_LABELS[d.getDay()] ?? '',
         dayNum: String(d.getDate()),
         hours: (r.hoursWorkedMinutes ?? 0) / 60,
+        targetHours: r.targetHours,
         status: r.status,
         late: r.late,
       };
@@ -554,7 +572,14 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
             <div>
               <h2 className="font-heading text-base font-semibold text-charcoal">Hours Worked</h2>
               <p className="text-xs text-slate mt-0.5">
-                {weekRangeLabel ? `${weekRangeLabel} · Target 8h/day` : `Target 8h/day`}
+                {(() => {
+                  if (chartBars.length === 0) return 'No data for this week';
+                  const targets = Array.from(new Set(chartBars.map((b) => b.targetHours)));
+                  const targetText = targets.length === 1
+                    ? `Target ${targets[0]}h/day`
+                    : `Target ${Math.min(...targets)}–${Math.max(...targets)}h/day`;
+                  return weekRangeLabel ? `${weekRangeLabel} · ${targetText}` : targetText;
+                })()}
               </p>
             </div>
             <div className="flex items-center gap-5">
@@ -595,7 +620,7 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
               </div>
             </div>
           </div>
-          <HoursBarChart bars={chartBars} targetHours={8} />
+          <HoursBarChart bars={chartBars} />
           <ChartLegend />
         </div>
       )}

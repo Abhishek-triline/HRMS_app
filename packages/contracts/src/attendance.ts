@@ -86,6 +86,8 @@ export const AttendanceRecordSchema = z.object({
   checkOutTime: ISODateSchema.nullable(),
   /** Computed by server: (checkOut − checkIn) in milliseconds, exposed as minutes. */
   hoursWorkedMinutes: z.number().int().min(0).nullable(),
+  /** Daily-hours target snapshotted at row creation time. Frozen for historical correctness. */
+  targetHours: z.number().int().positive(),
   late: z.boolean(),
   /** Cumulative late count for the calendar month at the point this row was last written. */
   lateMonthCount: z.number().int().min(0),
@@ -107,6 +109,13 @@ export const AttendanceCalendarItemSchema = z.object({
   checkOutTime: ISODateSchema.nullable(),
   hoursWorkedMinutes: z.number().int().min(0).nullable(),
   late: z.boolean(),
+  /**
+   * Daily-hours target that applied on this date, snapshotted at row
+   * creation time. The "below target" chart classification compares
+   * hoursWorkedMinutes against this — not against the current global
+   * config — so historical days keep the policy that applied then.
+   */
+  targetHours: z.number().int().positive(),
 });
 export type AttendanceCalendarItem = z.infer<typeof AttendanceCalendarItemSchema>;
 
