@@ -44,7 +44,7 @@ export function RoleLayout({
   const notifHref = notificationsPath(role);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="fixed inset-0 flex overflow-hidden">
       {/* Skip-to-main link — WCAG 2.4.1 */}
       <a
         href="#main-content"
