@@ -515,16 +515,6 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
             </button>
             <button
               type="button"
-              onClick={() => {
-                const t = new Date();
-                handleMonthChange(t.getFullYear(), t.getMonth() + 1);
-              }}
-              className="text-xs font-semibold text-forest hover:text-emerald px-2 py-1 rounded-lg border border-forest/30 hover:bg-softmint transition-colors"
-            >
-              Today
-            </button>
-            <button
-              type="button"
               aria-label="Next month"
               onClick={() => {
                 if (month === 12) handleMonthChange(year + 1, 1);
