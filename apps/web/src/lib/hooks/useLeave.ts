@@ -76,13 +76,18 @@ export function useLeaveList(query: Partial<LeaveListQuery> = {}) {
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-export function useLeave(id: number) {
+export function useLeave(idOrCode: number | string) {
+  // Enabled when we have either a positive number or a non-empty string —
+  // this hook is now called both by list-link drill-downs (id) and by
+  // notification deep-links (code like "L-2026-0018").
+  const enabled =
+    typeof idOrCode === 'number' ? idOrCode > 0 : Boolean(idOrCode);
   return useQuery({
-    queryKey: qk.leave.detail(id),
-    queryFn: () => getLeave(id),
+    queryKey: qk.leave.detail(idOrCode),
+    queryFn: () => getLeave(idOrCode),
     staleTime: 30_000,
     retry: 1,
-    enabled: id > 0,
+    enabled,
   });
 }
 

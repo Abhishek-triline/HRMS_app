@@ -193,8 +193,12 @@ export default function LeaveDetailPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const { data: request, isLoading, error } = useLeave(Number(id));
-  const cancelMutation = useCancelLeave(Number(id));
+  // `id` may be a numeric primary key OR a leave code like "L-2026-0018"
+  // (the latter comes from notification deep-links). useLeave accepts both;
+  // the cancel mutation needs the real numeric id, which we read back off
+  // the loaded request once it's resolved.
+  const { data: request, isLoading, error } = useLeave(id);
+  const cancelMutation = useCancelLeave(request?.id ?? 0);
   const [cancelOpen, setCancelOpen] = useState(false);
 
   async function handleCancel(note: string) {

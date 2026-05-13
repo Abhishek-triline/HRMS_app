@@ -76,10 +76,15 @@ export async function listLeave(query: Partial<LeaveListQuery> = {}): Promise<Le
 
 // ── Requests — detail ─────────────────────────────────────────────────────────
 
-/** GET /api/v1/leave/requests/:id */
-export async function getLeave(id: number): Promise<LeaveRequest> {
+/**
+ * GET /api/v1/leave/requests/:idOrCode
+ * Accepts either the numeric id ("42") or the human-readable code
+ * ("L-2026-0018"). Notifications link by code so the URL is meaningful
+ * when shared; list pages link by id. The server resolves either form.
+ */
+export async function getLeave(idOrCode: number | string): Promise<LeaveRequest> {
   const res = await apiClient.get<{ data: LeaveRequest }>(
-    `${BASE}/requests/${id}`,
+    `${BASE}/requests/${idOrCode}`,
   );
   return res.data;
 }

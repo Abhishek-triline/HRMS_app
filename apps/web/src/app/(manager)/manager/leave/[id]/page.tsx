@@ -141,8 +141,9 @@ export default function ManagerLeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { data: request, isLoading, error } = useLeave(Number(id));
-  const cancelMutation = useCancelLeave(Number(id));
+  // Accept either numeric id or leave code (notifications link by code).
+  const { data: request, isLoading, error } = useLeave(id);
+  const cancelMutation = useCancelLeave(request?.id ?? 0);
   const [cancelOpen, setCancelOpen] = useState(false);
 
   async function handleCancel(note: string) {
