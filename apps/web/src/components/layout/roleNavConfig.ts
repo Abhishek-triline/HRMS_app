@@ -93,6 +93,7 @@ const adminNav: NavEntry[] = [
   { type: 'link', label: 'Employees',            href: '/admin/employees',               iconPath: ICONS.employees },
   { type: 'link', label: 'Leave',                href: '/admin/leave-queue',             iconPath: ICONS.leave },
   { type: 'link', label: 'Encashment Queue',     href: '/admin/leave-encashment-queue',  iconPath: ICONS.encashment },
+  { type: 'link', label: 'Regularisation Queue', href: '/admin/regularisation-queue',    iconPath: ICONS.regularisation },
   { type: 'link', label: 'Attendance',           href: '/admin/attendance',              iconPath: ICONS.attendance },
   { type: 'link', label: 'Payroll Runs',         href: '/admin/payroll-runs',            iconPath: ICONS.payroll },
   { type: 'link', label: 'Reports',              href: '/admin/reports',                 iconPath: ICONS.reports },
