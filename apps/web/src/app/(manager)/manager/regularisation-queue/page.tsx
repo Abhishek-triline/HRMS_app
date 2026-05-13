@@ -13,12 +13,14 @@
  *   5. Actions cell: stacked Approve + Reject buttons + audit italic subtext
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { REG_STATUS, ROUTED_TO } from '@/lib/status/maps';
 import type { RegStatusValue } from '@nexora/contracts/attendance';
 
@@ -68,13 +70,23 @@ export default function ManagerRegularisationQueuePage() {
     toDate: '',
   });
 
+  // Server-side cursor pagination; resets on filter change.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+  });
   const query = {
     ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
   };
 
   const { data, isLoading, isError, error, refetch } = useRegularisations(query);
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
 
   const rows = data?.data ?? [];
 
@@ -362,6 +374,16 @@ export default function ManagerRegularisationQueuePage() {
                 )}
               </tbody>
             </table>
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={rows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+            />
           </div>
         )}
       </div>

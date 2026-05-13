@@ -11,13 +11,15 @@
  * Filters: status select, leave type select
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import {
   LeaveQueueCard,
   LeaveQueueCardSkeleton,
 } from '@/features/leave-queue/components/LeaveQueueCard';
 import { useLeaveList } from '@/lib/hooks/useLeave';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { LEAVE_STATUS, LEAVE_TYPE_ID } from '@/lib/status/maps';
 
 type FilterTab = 'pending' | 'escalated' | 'all';
@@ -32,10 +34,20 @@ export default function ManagerLeaveQueuePage() {
   const [filterTab, setFilterTab] = useState<FilterTab>('pending');
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
 
+  // Server-side cursor pagination; resets to page 1 on tab/filter change.
+  const pager = useCursorPagination({
+    pageSize: 10,
+    filtersKey: `${filterTab}|${typeFilter}`,
+  });
   const query = useLeaveList({
     ...(filterTab === 'pending' ? { status: LEAVE_STATUS.Pending } : filterTab === 'escalated' ? { status: LEAVE_STATUS.Escalated } : {}),
     ...(typeFilter ? { leaveTypeId: typeFilter } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
   });
+  useEffect(() => {
+    if (query.data) pager.cacheNextCursor(query.data.nextCursor);
+  }, [query.data, pager]);
 
   const requests = query.data?.data ?? [];
 
@@ -178,17 +190,31 @@ export default function ManagerLeaveQueuePage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {requests.map((req) => (
-              <LeaveQueueCard
-                key={req.id}
-                request={req}
-                detailHrefBase="/manager/leave-queue"
-                showActions={isActionable}
-                onDecision={() => query.refetch()}
+          <>
+            <div className="space-y-3">
+              {requests.map((req) => (
+                <LeaveQueueCard
+                  key={req.id}
+                  request={req}
+                  detailHrefBase="/manager/leave-queue"
+                  showActions={isActionable}
+                  onDecision={() => query.refetch()}
+                />
+              ))}
+            </div>
+            <div className="mt-4 -mx-5 -mb-5">
+              <CursorPaginator
+                currentPage={pager.currentPage}
+                pageSize={pager.pageSize}
+                currentPageCount={requests.length}
+                hasMore={pager.hasMore}
+                highestReachablePage={pager.highestReachablePage}
+                onPageChange={pager.goToPage}
+                onPrev={pager.goPrev}
+                onNext={pager.goNext}
               />
-            ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </>
