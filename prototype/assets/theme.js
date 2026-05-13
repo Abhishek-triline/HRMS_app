@@ -178,9 +178,11 @@
       [data-nx-hero][data-tod="morning"] {
         background:
           /* Bright sun halo (upper-right) */
-          radial-gradient(ellipse 60% 45% at 78% 22%, rgba(255,210,150,0.65), transparent 65%),
-          /* Sunrise gradient — purple sky → magenta → coral → gold → forest */
-          linear-gradient(180deg, #3D2C56 0%, #8A3B6B 22%, #D45F4E 42%, #F08850 58%, #F5B570 72%, #2D7A5F 92%, #1C3D2E 100%);
+          radial-gradient(ellipse 60% 45% at 78% 22%, rgba(255,215,155,0.65), transparent 65%),
+          /* Sunrise gradient — purple → magenta → light coral → peach → cream.
+             No forest base; finishes warm so the scene reads "early sky" all
+             the way down. */
+          linear-gradient(180deg, #3D2C56 0%, #8A3B6B 22%, #E27866 42%, #F5A175 60%, #FBCB95 78%, #FDDEB5 100%);
       }
       [data-nx-hero][data-tod="day"] {
         background:
