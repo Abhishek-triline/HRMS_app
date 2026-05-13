@@ -17,7 +17,7 @@
  * "/admin/regularisation"). Defaults to "/regularisation" for safety.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
@@ -63,8 +63,32 @@ const MONTH_NAMES = [
 
 // ── Hours Worked SVG Bar Chart ─────────────────────────────────────────────────
 
+interface ChartBar {
+  /** YYYY-MM-DD — used as a stable key */
+  date: string;
+  /** "Mon", "Tue", … */
+  weekday: string;
+  /** Day-of-month, e.g. "12" */
+  dayNum: string;
+  /** Hours worked (0 when not Present). */
+  hours: number;
+  /** ATTENDANCE_STATUS code. */
+  status: number;
+  /** Late mark — only meaningful for Present. */
+  late: boolean;
+}
+
+/** Per-status visual treatment for chart bars. */
+const STATUS_BAR_STYLES: Record<number, { gradient: string; label: string; labelClass: string }> = {
+  [ATTENDANCE_STATUS.Present]:   { gradient: 'bg-gradient-to-t from-forest to-emerald',     label: 'Present',    labelClass: 'text-slate' },
+  [ATTENDANCE_STATUS.Absent]:    { gradient: 'bg-gradient-to-t from-crimson/80 to-crimson/40', label: 'Absent',  labelClass: 'text-crimson font-semibold' },
+  [ATTENDANCE_STATUS.OnLeave]:   { gradient: 'bg-gradient-to-t from-amber-500 to-amber-300', label: 'On Leave',   labelClass: 'text-amber-700 font-semibold' },
+  [ATTENDANCE_STATUS.WeeklyOff]: { gradient: 'bg-gradient-to-t from-slate/60 to-slate/30',   label: 'Weekly Off', labelClass: 'text-slate' },
+  [ATTENDANCE_STATUS.Holiday]:   { gradient: 'bg-gradient-to-t from-mint to-mint/50',       label: 'Holiday',    labelClass: 'text-forest font-semibold' },
+};
+
 interface BarChartProps {
-  bars: { label: string; hours: number; late: boolean }[];
+  bars: ChartBar[];
   targetHours?: number;
 }
 
@@ -72,8 +96,11 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
   if (bars.length === 0) return null;
 
   const maxH = Math.max(...bars.map((b) => b.hours), targetHours + 1);
-  const chartH = 90;
+  const chartH = 110;
   const targetPct = ((maxH - targetHours) / maxH) * 100;
+  // Non-Present bars don't have hours to scale; render a fixed indicator
+  // height so they're still visible and hover-able.
+  const indicatorPx = 14;
 
   return (
     <div className="relative">
@@ -90,19 +117,30 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
 
       {/* Bars */}
       <div
-        className="flex items-end justify-between gap-1.5"
-        style={{ height: `${chartH + 18}px`, paddingTop: '4px' }}
+        className="flex items-end justify-between gap-2"
+        style={{ height: `${chartH + 30}px`, paddingTop: '4px' }}
       >
         {bars.map((b) => {
+          const isPresent = b.status === ATTENDANCE_STATUS.Present;
+          const style = STATUS_BAR_STYLES[b.status] ?? STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!;
+          const gradient = isPresent && b.late
+            ? 'bg-gradient-to-t from-crimson to-crimson/70'
+            : style.gradient;
           const pct = maxH > 0 ? (b.hours / maxH) * 100 : 0;
-          const tooltipText = `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : ''}`;
+          const barHeight = isPresent
+            ? Math.max((pct / 100) * chartH, 4)
+            : indicatorPx;
+          const tooltipMain = isPresent
+            ? `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : ''}`
+            : style.label;
+          const dateLabel = `${b.weekday} ${b.dayNum}`;
           return (
             <div
-              key={b.label}
+              key={b.date}
               className="group relative flex-1 flex flex-col items-center gap-1"
               tabIndex={0}
               role="img"
-              aria-label={`${b.label}: ${tooltipText}`}
+              aria-label={`${dateLabel}: ${tooltipMain}`}
             >
               {/* Tooltip — visible on hover (mouse) or keyboard focus */}
               <div
@@ -110,22 +148,53 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
                 className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md bg-charcoal text-white text-[10px] font-semibold whitespace-nowrap shadow-md opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100 z-10"
               >
                 <div className="text-center">
-                  <div className="text-mint/90 text-[9px] font-medium uppercase tracking-wide">{b.label}</div>
-                  <div className="font-bold">{tooltipText}</div>
+                  <div className="text-mint/90 text-[9px] font-medium uppercase tracking-wide">{dateLabel}</div>
+                  <div className="font-bold">{tooltipMain}</div>
                 </div>
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-charcoal" />
               </div>
 
               <div
-                className={`w-full rounded-t-sm transition-opacity duration-150 group-hover:opacity-80 group-focus-within:opacity-80 ${b.late ? 'bg-gradient-to-t from-crimson to-crimson/70' : 'bg-gradient-to-t from-forest to-emerald'}`}
-                style={{ height: `${Math.max((pct / 100) * chartH, 2)}px` }}
+                className={`w-full rounded-t-sm transition-opacity duration-150 group-hover:opacity-80 group-focus-within:opacity-80 ${gradient}`}
+                style={{ height: `${barHeight}px` }}
               />
-              <span className={`text-[9px] ${b.late ? 'text-crimson font-semibold' : 'text-slate'}`}>
-                {b.label}
+              <span className={`text-[9px] uppercase tracking-wide ${isPresent && b.late ? 'text-crimson font-semibold' : style.labelClass}`}>
+                {b.weekday}
+              </span>
+              <span className="text-[10px] text-charcoal font-semibold leading-none">
+                {b.dayNum}
               </span>
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/** Compact status legend shown above the chart. */
+function ChartLegend() {
+  const items: { status: number; key: string }[] = [
+    { status: ATTENDANCE_STATUS.Present,   key: 'Present' },
+    { status: ATTENDANCE_STATUS.Absent,    key: 'Absent' },
+    { status: ATTENDANCE_STATUS.OnLeave,   key: 'Leave' },
+    { status: ATTENDANCE_STATUS.Holiday,   key: 'Holiday' },
+    { status: ATTENDANCE_STATUS.WeeklyOff, key: 'Weekly Off' },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate mt-3">
+      {items.map((it) => {
+        const s = STATUS_BAR_STYLES[it.status]!;
+        return (
+          <div key={it.key} className="flex items-center gap-1.5">
+            <span className={`inline-block w-2.5 h-2.5 rounded-sm ${s.gradient}`} aria-hidden="true" />
+            <span>{it.key}</span>
+          </div>
+        );
+      })}
+      <div className="flex items-center gap-1.5">
+        <span className="inline-block w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-crimson to-crimson/70" aria-hidden="true" />
+        <span>Late check-in</span>
       </div>
     </div>
   );
@@ -217,18 +286,46 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
     })
     .join(' · ');
 
-  // Last 14 working days with hours for chart
-  const chartBars = rows
-    .filter((r) => r.status === ATTENDANCE_STATUS.Present && r.hoursWorkedMinutes !== null)
-    .slice(-14)
+  // Every day of the month becomes a bar — including leave / holiday /
+  // weekly-off / absent so the user can see the rhythm of the whole month.
+  // Sorted by date so weekly slicing is deterministic.
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allBars: ChartBar[] = rows
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
     .map((r) => {
       const d = new Date(r.date);
-      const label = `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
-      return { label, hours: (r.hoursWorkedMinutes ?? 0) / 60, late: r.late };
+      return {
+        date: r.date,
+        weekday: WEEKDAY_LABELS[d.getDay()] ?? '',
+        dayNum: String(d.getDate()),
+        hours: (r.hoursWorkedMinutes ?? 0) / 60,
+        status: r.status,
+        late: r.late,
+      };
     });
 
-  const chartTotal = chartBars.reduce((s, b) => s + b.hours, 0);
-  const chartAvg = chartBars.length > 0 ? chartTotal / chartBars.length : 0;
+  // 7-day slices starting from day 1. Reset to the latest slice when the
+  // month changes.
+  const WEEK_SIZE = 7;
+  const weekCount = Math.max(1, Math.ceil(allBars.length / WEEK_SIZE));
+  const [weekIndex, setWeekIndex] = useState(0);
+  useEffect(() => {
+    setWeekIndex(Math.max(0, weekCount - 1));
+    // Recompute when month or year change (allBars changes too but its
+    // identity isn't stable; weekCount is a fine proxy).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
+  const clampedWeek = Math.min(weekIndex, weekCount - 1);
+  const weekStart = clampedWeek * WEEK_SIZE;
+  const chartBars = allBars.slice(weekStart, weekStart + WEEK_SIZE);
+
+  const presentInWeek = chartBars.filter((b) => b.status === ATTENDANCE_STATUS.Present);
+  const chartTotal = presentInWeek.reduce((s, b) => s + b.hours, 0);
+  const chartAvg = presentInWeek.length > 0 ? chartTotal / presentInWeek.length : 0;
+  const weekRangeLabel = chartBars.length > 0
+    ? `${chartBars[0]!.dayNum} – ${chartBars[chartBars.length - 1]!.dayNum} ${MONTH_NAMES[month - 1]}`
+    : '';
 
   const monthName = MONTH_NAMES[month - 1];
   const attendancePct =
@@ -450,27 +547,55 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
       </div>
 
       {/* ── Hours Worked Bar Chart ────────────────────────────────────────────── */}
-      {chartBars.length > 0 && (
+      {allBars.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-sage/30 p-6 mb-6">
-          <div className="flex items-end justify-between mb-5">
+          <div className="flex items-end justify-between mb-5 gap-3 flex-wrap">
             <div>
               <h2 className="font-heading text-base font-semibold text-charcoal">Hours Worked</h2>
               <p className="text-xs text-slate mt-0.5">
-                Last {chartBars.length} working days · Target 8h/day
+                {weekRangeLabel ? `${weekRangeLabel} · Target 8h/day` : `Target 8h/day`}
               </p>
             </div>
             <div className="flex items-center gap-5">
               <div className="text-right">
                 <div className="font-heading text-xl font-bold text-forest">{chartAvg.toFixed(1)}h</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Average</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Avg (present)</div>
               </div>
               <div className="text-right">
                 <div className="font-heading text-xl font-bold text-charcoal">{Math.round(chartTotal)}h</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Total</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Week total</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous week"
+                  onClick={() => setWeekIndex((i) => Math.max(0, i - 1))}
+                  disabled={clampedWeek === 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-[11px] font-semibold text-slate tabular-nums">
+                  Week {clampedWeek + 1} / {weekCount}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next week"
+                  onClick={() => setWeekIndex((i) => Math.min(weekCount - 1, i + 1))}
+                  disabled={clampedWeek >= weekCount - 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
           <HoursBarChart bars={chartBars} targetHours={8} />
+          <ChartLegend />
         </div>
       )}
 
