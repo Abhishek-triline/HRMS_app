@@ -143,10 +143,13 @@ function StatusBadge({ status }: { status: AttendanceStatusValue }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
+const LOG_PAGE_SIZE = 10;
+
 export default function MyAttendancePage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
+  const [logPage, setLogPage] = useState(1);
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month, 0).getDate();
@@ -159,6 +162,7 @@ export default function MyAttendancePage() {
   const handleMonthChange = useCallback((y: number, m: number) => {
     setYear(y);
     setMonth(m);
+    setLogPage(1); // reset to first page when month changes
   }, []);
 
   const rows: CalendarDay[] = (data?.data ?? []).map((r) => ({
@@ -468,67 +472,129 @@ export default function MyAttendancePage() {
       </div>
 
       {/* Detailed Log Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-sage/30">
-        <div className="px-6 py-4 border-b border-sage/20">
-          <h2 className="font-heading text-base font-semibold text-charcoal">
-            Detailed Log — {monthName} {year}
-          </h2>
-        </div>
+      {(() => {
+        // Sort newest first then paginate (client-side — the full month is
+        // already loaded by useAttendanceList above, no extra fetch).
+        const sorted = [...rows].sort((a, b) => b.date.localeCompare(a.date));
+        const totalRows = sorted.length;
+        const totalPages = Math.max(1, Math.ceil(totalRows / LOG_PAGE_SIZE));
+        const safePage = Math.min(logPage, totalPages);
+        const startIdx = (safePage - 1) * LOG_PAGE_SIZE;
+        const pageRows = sorted.slice(startIdx, startIdx + LOG_PAGE_SIZE);
+        const shownFrom = totalRows === 0 ? 0 : startIdx + 1;
+        const shownTo = startIdx + pageRows.length;
 
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Spinner size="lg" aria-label="Loading detailed log…" />
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-sage/30">
+            <div className="px-6 py-4 border-b border-sage/20 flex items-center justify-between">
+              <h2 className="font-heading text-base font-semibold text-charcoal">
+                Detailed Log — {monthName} {year}
+              </h2>
+              {totalRows > 0 && (
+                <span className="text-xs text-slate">{totalRows} records</span>
+              )}
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Spinner size="lg" aria-label="Loading detailed log…" />
+              </div>
+            ) : isError ? null : totalRows === 0 ? (
+              <div className="text-center text-sm text-slate py-10">
+                No attendance records for this month.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-offwhite border-b border-sage/20">
+                        <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Date</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Day</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Check-In</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Check-Out</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Hours</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Late</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-sage/20">
+                      {pageRows.map((r) => (
+                        <tr
+                          key={r.date}
+                          className={`hover:bg-offwhite transition-colors ${r.late ? 'bg-crimsonbg/30' : ''}`}
+                        >
+                          <td className="px-6 py-3 font-medium text-charcoal">{fmtDate(r.date)}</td>
+                          <td className="px-4 py-3 text-slate">{dayName(r.date)}</td>
+                          <td className={`px-4 py-3 ${r.late ? 'text-crimson font-semibold' : 'text-slate'}`}>
+                            {fmtTime(r.checkInTime)}
+                          </td>
+                          <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
+                          <td className="px-4 py-3 text-slate">
+                            {r.hoursWorkedMinutes !== null && r.hoursWorkedMinutes !== undefined
+                              ? minutesToHM(r.hoursWorkedMinutes)
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} /></td>
+                          <td className="px-4 py-3">
+                            {r.late ? (
+                              <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded" aria-label="Late">Late</span>
+                            ) : (
+                              <span className="text-slate text-xs">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Paginator */}
+                <div className="flex items-center justify-between px-6 py-3 border-t border-sage/20 text-xs text-slate">
+                  <span>
+                    Showing {shownFrom}–{shownTo} of {totalRows}
+                  </span>
+                  {totalPages > 1 && (
+                    <nav aria-label="Detailed log pagination" className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setLogPage(Math.max(1, safePage - 1))}
+                        disabled={safePage === 1}
+                        className="border border-sage/50 px-3 py-1.5 rounded hover:bg-offwhite disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Prev
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setLogPage(p)}
+                          aria-current={p === safePage ? 'page' : undefined}
+                          className={`px-3 py-1.5 rounded ${
+                            p === safePage
+                              ? 'bg-forest text-white'
+                              : 'border border-sage/50 hover:bg-offwhite'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setLogPage(Math.min(totalPages, safePage + 1))}
+                        disabled={safePage === totalPages}
+                        className="border border-sage/50 px-3 py-1.5 rounded hover:bg-offwhite disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </nav>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-        ) : isError ? null : rows.length === 0 ? (
-          <div className="text-center text-sm text-slate py-10">
-            No attendance records for this month.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-offwhite border-b border-sage/20">
-                  <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Date</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Day</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Check-In</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Check-Out</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Hours</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Late</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sage/20">
-                {rows.map((r) => (
-                  <tr
-                    key={r.date}
-                    className={`hover:bg-offwhite transition-colors ${r.late ? 'bg-crimsonbg/30' : ''}`}
-                  >
-                    <td className="px-6 py-3 font-medium text-charcoal">{fmtDate(r.date)}</td>
-                    <td className="px-4 py-3 text-slate">{dayName(r.date)}</td>
-                    <td className={`px-4 py-3 ${r.late ? 'text-crimson font-semibold' : 'text-slate'}`}>
-                      {fmtTime(r.checkInTime)}
-                    </td>
-                    <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
-                    <td className="px-4 py-3 text-slate">
-                      {r.hoursWorkedMinutes !== null && r.hoursWorkedMinutes !== undefined
-                        ? minutesToHM(r.hoursWorkedMinutes)
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} /></td>
-                    <td className="px-4 py-3">
-                      {r.late ? (
-                        <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded" aria-label="Late">Late</span>
-                      ) : (
-                        <span className="text-slate text-xs">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        );
+      })()}
 
     </div>
   );
