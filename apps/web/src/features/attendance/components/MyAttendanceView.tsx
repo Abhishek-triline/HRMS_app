@@ -35,7 +35,7 @@ function minutesToHM(mins: number): string {
 }
 
 function fmtTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   const d = new Date(iso);
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
@@ -580,18 +580,16 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
                     <td className="px-4 py-3 text-slate">
                       {r.hoursWorkedMinutes !== null && r.hoursWorkedMinutes !== undefined
                         ? minutesToHM(r.hoursWorkedMinutes)
-                        : '—'}
+                        : ''}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={r.status} />
                     </td>
                     <td className="px-4 py-3">
-                      {r.late ? (
+                      {r.late && (
                         <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded" aria-label="Late mark">
                           Late
                         </span>
-                      ) : (
-                        <span className="text-slate text-xs" aria-label="Not late">—</span>
                       )}
                     </td>
                   </tr>
