@@ -107,7 +107,7 @@ export default function POPayrollRunDetailPage() {
             <PayslipTable
               mode="run-detail"
               payslips={pagePayslips}
-              basePath="/payroll/payslips"
+              basePath={`/payroll/payroll-runs/${id}/payslips`}
               canEditTax={isReview}
               onEditTax={setSelectedPayslip}
               startIndex={(pager.currentPage - 1) * pager.pageSize}

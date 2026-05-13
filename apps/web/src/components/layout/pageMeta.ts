@@ -100,8 +100,19 @@ export const PAGE_META: Record<string, PageMeta> = {
 /**
  * Dynamic-route prefixes — when an exact match misses, the longest-prefix
  * entry here wins. These match dynamic segments like `/admin/employees/[id]`.
+ *
+ * Use `pattern` for routes with interior dynamic segments. `*` matches a
+ * single path segment (no slashes); patterns are turned into RegExp and
+ * compared by the *length of the longest matching literal prefix* before
+ * the first wildcard, so deeper nested routes still win over their parents.
  */
-export const PAGE_META_PREFIX: Array<{ prefix: string; meta: PageMeta }> = [
+export interface PrefixMatchEntry {
+  prefix?: string;
+  pattern?: string;
+  meta: PageMeta;
+}
+
+export const PAGE_META_PREFIX: PrefixMatchEntry[] = [
   { prefix: '/admin/leave-encashment/',   meta: { title: 'Encashment Request' } },
   { prefix: '/admin/employees/',          meta: { title: 'Employee Details' } },
   { prefix: '/admin/leave-queue/',        meta: { title: 'Leave Request Detail' } },
@@ -126,17 +137,45 @@ export const PAGE_META_PREFIX: Array<{ prefix: string; meta: PageMeta }> = [
   { prefix: '/payroll/leave-encashment/', meta: { title: 'Encashment Request' } },
   { prefix: '/payroll/leave/',            meta: { title: 'Leave Request' } },
   { prefix: '/payroll/payslips/',         meta: { title: 'Payslip' } },
+  // Nested payslip-under-run drill-downs. `*` matches a single path segment
+  // (the run id). These rank higher than the bare /…/payroll-runs/ entries
+  // above because their literal-prefix-before-wildcard is longer ("payslips").
+  { pattern: '/admin/payroll-runs/*/payslips/',   meta: { title: 'Payslip' } },
+  { pattern: '/payroll/payroll-runs/*/payslips/', meta: { title: 'Payslip' } },
 ];
+
+/**
+ * Convert a pattern string with `*` wildcards into a RegExp where each `*`
+ * matches one path segment (no slashes). The literal portion before the
+ * first wildcard determines ranking, so deeper nested patterns beat their
+ * parent prefixes.
+ */
+function patternToRegExp(pattern: string): RegExp {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]+');
+  return new RegExp(`^${escaped}`);
+}
 
 export function resolvePageMeta(pathname: string): PageMeta | undefined {
   if (PAGE_META[pathname]) return PAGE_META[pathname];
-  // Longest-prefix match
+  // Longest-prefix match (mixes literal prefixes + `*`-pattern entries).
+  // Ranking is by the length of the literal segment before any wildcard,
+  // so /admin/payroll-runs/*/payslips/ wins over /admin/payroll-runs/.
   let best: PageMeta | undefined;
   let bestLen = 0;
-  for (const { prefix, meta } of PAGE_META_PREFIX) {
-    if (pathname.startsWith(prefix) && prefix.length > bestLen) {
-      best = meta;
-      bestLen = prefix.length;
+  for (const entry of PAGE_META_PREFIX) {
+    if (entry.prefix !== undefined) {
+      if (pathname.startsWith(entry.prefix) && entry.prefix.length > bestLen) {
+        best = entry.meta;
+        bestLen = entry.prefix.length;
+      }
+    } else if (entry.pattern !== undefined) {
+      if (patternToRegExp(entry.pattern).test(pathname)) {
+        const ranking = entry.pattern.length;
+        if (ranking > bestLen) {
+          best = entry.meta;
+          bestLen = ranking;
+        }
+      }
     }
   }
   return best;

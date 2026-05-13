@@ -119,7 +119,7 @@ export default function PayrollRunDetailPage() {
             <PayslipTable
               mode="run-detail"
               payslips={pagePayslips}
-              basePath="/admin/payslips"
+              basePath={`/admin/payroll-runs/${id}/payslips`}
               canEditTax={isReview}
               onEditTax={setSelectedPayslip}
               startIndex={(pager.currentPage - 1) * pager.pageSize}
