@@ -16,6 +16,7 @@ export default function POPayrollRunPayslipDetailPage() {
     <PayslipDetailView
       payslipId={slipId}
       backHref={`/payroll/payroll-runs/${runId}`}
+      backLabel="Payroll Run"
     />
   );
 }

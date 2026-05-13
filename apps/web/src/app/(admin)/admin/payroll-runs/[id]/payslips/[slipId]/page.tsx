@@ -20,6 +20,7 @@ export default function AdminRunPayslipDetailPage() {
     <PayslipDetailView
       payslipId={slipId}
       backHref={`/admin/payroll-runs/${runId}`}
+      backLabel="Payroll Run"
     />
   );
 }

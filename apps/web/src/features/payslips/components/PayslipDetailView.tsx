@@ -661,9 +661,19 @@ interface PayslipDetailViewProps {
   payslipId: string | number;
   /** Role-prefixed back-link, e.g. "/admin/payslips" or "/employee/payslips". */
   backHref: string;
+  /**
+   * Label shown in the breadcrumb / back-link. Defaults to "My Payslips"
+   * for the self-service drill-down; the run-context drill-downs pass
+   * something like "Payroll Run".
+   */
+  backLabel?: string;
 }
 
-export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProps) {
+export function PayslipDetailView({
+  payslipId,
+  backHref,
+  backLabel = 'My Payslips',
+}: PayslipDetailViewProps) {
   const { data: payslip, isLoading, isError } = usePayslip(Number(payslipId));
 
   const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? String(payslipId));
@@ -689,7 +699,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          My Payslips
+          {backLabel}
         </Link>
         {payslip && (
           <>
@@ -716,7 +726,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
             The payslip may not exist or you may not have permission to view it.
           </p>
           <Link href={backHref} className="text-forest underline text-sm hover:text-emerald transition-colors">
-            Back to My Payslips
+            Back to {backLabel}
           </Link>
         </div>
       )}
@@ -726,7 +736,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
         <div className="text-center py-12">
           <p className="text-slate text-sm mb-3">Payslip not found.</p>
           <Link href={backHref} className="text-forest underline text-sm hover:text-emerald transition-colors">
-            Back to My Payslips
+            Back to {backLabel}
           </Link>
         </div>
       )}
