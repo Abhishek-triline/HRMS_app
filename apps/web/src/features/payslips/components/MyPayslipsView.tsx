@@ -24,6 +24,7 @@
 
 import { useState, useMemo } from 'react';
 import { usePayslipsList } from '@/lib/hooks/usePayslips';
+import { useMe } from '@/lib/hooks/useAuth';
 import { MyOverviewHero } from '@/features/overview/components/MyOverviewHero';
 import { PayslipCard } from './PayslipCard';
 import { Spinner } from '@/components/ui/Spinner';
@@ -115,7 +116,18 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
   // For 8+ year tenures the oldest FYs would clip silently; v1.1 backend
   // backlog: a dedicated /payslips/stats endpoint returning aggregates so we
   // can paginate the card grid without losing hero accuracy.
-  const { data, isLoading, isError } = usePayslipsList({ limit: 100 });
+  //
+  // employeeId scoping: the server treats Admin/PayrollOfficer as "see all"
+  // when no employeeId is passed, which would leak other employees' payslips
+  // into the "My Payslips" view. Always pass the caller's own id here so
+  // every role sees only their own slips (Employee/Manager already auto-scope
+  // server-side; passing it is a no-op for them).
+  const { data: me } = useMe();
+  const meId = me?.data?.user?.id ?? 0;
+  const { data, isLoading, isError } = usePayslipsList(
+    meId > 0 ? { employeeId: meId, limit: 100 } : { limit: 100 },
+    { enabled: meId > 0 },
+  );
   const allPayslips: PayslipSummary[] = data?.data ?? [];
 
   // Available FY options — derive from payslips + always show current FY

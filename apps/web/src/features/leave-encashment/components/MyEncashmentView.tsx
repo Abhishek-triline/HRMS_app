@@ -23,7 +23,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useMe } from '@/lib/hooks/useAuth';
 import { useLeaveBalances } from '@/lib/hooks/useLeave';
 import {
-  useMyEncashments,
+  useEncashmentList,
   useSubmitEncashment,
   useCancelEncashment,
   useEncashment,
@@ -317,7 +317,12 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
   const currentYear = new Date().getFullYear();
 
   const balancesQuery = useLeaveBalances(employeeId);
-  const encashmentsQuery = useMyEncashments(currentYear);
+  // Scope to self even when caller is Admin/PayrollOfficer (server treats those
+  // roles as "see all" without an employeeId filter, which would mix other
+  // employees' encashment requests into the "My Encashment" view).
+  const encashmentsQuery = useEncashmentList(
+    employeeId > 0 ? { employeeId, year: currentYear } : { year: currentYear },
+  );
 
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<number | null>(null);

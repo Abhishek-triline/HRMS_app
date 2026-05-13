@@ -28,11 +28,15 @@ function generateKey(): string {
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
-export function usePayslipsList(query: Partial<PayslipListQuery> = {}) {
+export function usePayslipsList(
+  query: Partial<PayslipListQuery> = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: qk.payslips.list(query),
     queryFn: () => listPayslips(query),
     staleTime: 30_000,
+    enabled: options.enabled ?? true,
   });
 }
 

@@ -106,8 +106,16 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
 
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
   // Server-side cursor pagination — resets to page 1 when the tab changes.
-  const pager = useCursorPagination({ pageSize: 10, filtersKey: activeTab });
+  // Filters key also captures employeeId so the cursor map resets when the
+  // user prop changes (e.g. role-switching demo logins).
+  const pager = useCursorPagination({
+    pageSize: 10,
+    filtersKey: `${employeeId}|${activeTab}`,
+  });
+  // Always pass employeeId so Admin/PayrollOfficer (who otherwise see all
+  // requests) get a self-scoped list on their "My Leave" page.
   const listQuery = useLeaveList({
+    employeeId,
     ...(activeStatus !== undefined ? { status: activeStatus } : {}),
     limit: pager.pageSize,
     cursor: pager.cursor,
