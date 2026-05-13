@@ -13,12 +13,14 @@
  *   5. Actions cell: Approve + Reject stacked buttons + audit italic subtext
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { REG_STATUS } from '@/lib/status/maps';
 import type { RegStatusValue } from '@nexora/contracts/attendance';
 
@@ -68,20 +70,39 @@ export default function AdminRegularisationQueuePage() {
     toDate: '',
   });
 
+  // Server-side cursor pagination. Auto-resets when filtersKey changes.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+  });
+
   // Build query from applied filters
   const query = {
     routedToId: 2 as const,
     ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
   };
 
   const { data, isLoading, isError, error, refetch } = useRegularisations(query);
 
-  // All rows from the query (unfiltered by employee name)
+  // Cache nextCursor for the next-page click as soon as a response lands.
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
+
+  // Rows from the current page only (server already orders newest-first via
+  // the (approverId, status) index — server-side pending-first ordering is
+  // a backend concern; we no longer client-sort because that would reorder
+  // only the visible page, not the dataset).
   const allRows = data?.data ?? [];
 
-  // Client-side employee name search
+  // Client-side employee name search — page-local only. Note: with server
+  // pagination this filters only the current 20 rows. A true cross-page
+  // search needs a backend `q`/`employeeName` query param (not yet in
+  // RegularisationListQuerySchema).
   const filteredRows = useMemo(() => {
     const q = appliedFilters.employee.toLowerCase().trim();
     if (!q) return allRows;
@@ -93,7 +114,8 @@ export default function AdminRegularisationQueuePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, appliedFilters.employee]);
 
-  // Pending-first sort
+  // Pending-first within the current page (server already orders so but
+  // we re-sort defensively for the displayed slice).
   const sorted = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
       if (a.status === REG_STATUS.Pending && b.status !== REG_STATUS.Pending) return -1;
@@ -102,7 +124,11 @@ export default function AdminRegularisationQueuePage() {
     });
   }, [filteredRows]);
 
-  // KPI counts — always from full unfiltered rows of that query
+  // KPI counts — current page only. With cursor pagination these reflect
+  // the loaded page (max 20 rows); a true org-wide count needs a separate
+  // count endpoint or cursor-walk helper (see useEmployeesCount pattern).
+  // For now the "+" suffix on the total in the paginator below tells the
+  // user that more rows exist beyond these counts.
   const pendingCount = allRows.filter((r) => r.status === REG_STATUS.Pending).length;
   const approvedCount = allRows.filter((r) => r.status === REG_STATUS.Approved).length;
   const rejectedCount = allRows.filter((r) => r.status === REG_STATUS.Rejected).length;
@@ -345,6 +371,16 @@ export default function AdminRegularisationQueuePage() {
                 )}
               </tbody>
             </table>
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={allRows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+            />
           </div>
         )}
       </div>
