@@ -272,6 +272,7 @@ export default function EmployeeDetailPage() {
 
   const initials = getInitials(employee.name);
   const salary = employee.salaryStructure;
+  const isExited = employee.status === EMPLOYEE_STATUS.Exited;
 
   // Salary 4-tile breakdown — use the real component fields when present.
   // If a legacy record has only basic+allowances stored, fall back to a 40%
@@ -316,6 +317,31 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      {isExited && (
+        <div
+          role="note"
+          className="flex items-start gap-3 bg-lockedbg border border-sage/40 rounded-xl px-5 py-4 mb-5 text-sm text-charcoal"
+        >
+          <svg
+            className="w-5 h-5 text-slate flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <div>
+            <div className="font-semibold mb-0.5">Read-only record</div>
+            <p className="text-xs text-slate leading-relaxed">
+              This employee has exited{employee.exitDate ? ` on ${formatDate(employee.exitDate)}` : ''}.
+              Profile details, salary structure, and reporting manager are locked. Historical data remains visible for audit.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 2-column grid */}
       <div className="flex gap-5 items-start">
@@ -452,9 +478,11 @@ export default function EmployeeDetailPage() {
               <h3 className="text-xs font-semibold text-slate uppercase tracking-wide">
                 Salary Structure
               </h3>
-              <Button variant="secondary" size="sm" onClick={salaryModal.open}>
-                Edit Salary
-              </Button>
+              {!isExited && (
+                <Button variant="secondary" size="sm" onClick={salaryModal.open}>
+                  Edit Salary
+                </Button>
+              )}
             </div>
             {salary ? (
               <>
@@ -508,8 +536,8 @@ export default function EmployeeDetailPage() {
             )}
           </div>
 
-          {/* Edit Profile Form (toggled) */}
-          {showEditForm ? (
+          {/* Edit Profile Form (toggled) — hidden entirely for Exited employees */}
+          {!isExited && showEditForm ? (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading text-sm font-bold text-charcoal">Edit Profile</h3>
@@ -552,28 +580,30 @@ export default function EmployeeDetailPage() {
                 version={employee.version}
               />
 
-              <div className="border-t border-sage/20 pt-3 space-y-2">
-                <button
-                  type="button"
-                  onClick={reassignModal.open}
-                  className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Change Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditForm((prev) => !prev)}
-                  className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
-                </button>
-              </div>
+              {!isExited && (
+                <div className="border-t border-sage/20 pt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={reassignModal.open}
+                    className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Change Manager
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditForm((prev) => !prev)}
+                    className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
