@@ -35,6 +35,7 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/admin/payroll-runs':              { title: 'Payroll Runs',                     subtitle: 'FY 2026-27 · April 2026 onwards' },
   '/admin/payroll-runs/new':          { title: 'Initiate Payroll Run' },
   '/admin/payslips':                  { title: 'My Payslips' },
+  '/admin/reports':                   { title: 'Payroll Reports' },
   '/admin/reversal-history':          { title: 'Reversal History' },
   '/admin/tax-config':                { title: 'Tax Settings (v1)' },
   '/admin/leave-config':              { title: 'Leave Configuration' },
