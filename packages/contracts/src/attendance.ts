@@ -233,6 +233,12 @@ export const TodayAttendanceResponseSchema = z.object({
     standardDailyHours: z.number().int().positive(), // BL-025a (display only)
     /** Late count for the current calendar month (TC-ATT-008/009 / BL-028). */
     lateMonthCount: z.number().int().min(0),
+    /**
+     * Minutes after a check-out within which the employee may undo it.
+     * 0 means undo is disabled — the panel should hide / disable the
+     * Undo control and any successful checkout is final.
+     */
+    undoWindowMinutes: z.number().int().min(0).max(60),
   }),
 });
 export type TodayAttendanceResponse = z.infer<typeof TodayAttendanceResponseSchema>;

@@ -339,11 +339,37 @@ interface ConfirmPanelProps {
   checkInIso: string;
   checkOutIso: string;
   hoursWorkedMinutes: number | null;
+  /** Live clock (ticks once per second). */
+  now: Date;
+  /** Configured grace window in minutes. 0 disables undo entirely. */
+  undoWindowMinutes: number;
   onUndo: () => void;
   isLoading: boolean;
 }
 
-function ConfirmPanel({ checkInIso, checkOutIso, hoursWorkedMinutes, onUndo, isLoading }: ConfirmPanelProps) {
+function ConfirmPanel({
+  checkInIso,
+  checkOutIso,
+  hoursWorkedMinutes,
+  now,
+  undoWindowMinutes,
+  onUndo,
+  isLoading,
+}: ConfirmPanelProps) {
+  const undoDisabled = undoWindowMinutes === 0;
+  const checkOutMs = checkOutIso ? new Date(checkOutIso).getTime() : 0;
+  const windowMs = undoWindowMinutes * 60_000;
+  const remainingMs = undoDisabled ? 0 : Math.max(0, windowMs - (now.getTime() - checkOutMs));
+  const windowExpired = !undoDisabled && remainingMs === 0;
+
+  // Live MM:SS countdown while the window is open.
+  function fmtCountdown(ms: number): string {
+    const total = Math.ceil(ms / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
   return (
     <div className="nx-confirm bg-white/95 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl shadow-forest/30 px-10 py-10 w-full max-w-md text-center">
       <div className="w-16 h-16 rounded-full bg-greenbg flex items-center justify-center mx-auto mb-4" aria-hidden="true">
@@ -369,14 +395,32 @@ function ConfirmPanel({ checkInIso, checkOutIso, hoursWorkedMinutes, onUndo, isL
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onUndo}
-        disabled={isLoading}
-        className="text-xs text-emerald font-semibold hover:underline mt-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded disabled:opacity-50"
-      >
-        {isLoading ? 'Undoing…' : 'Undo (still working) →'}
-      </button>
+      {/* Undo control + window hint */}
+      {undoDisabled ? (
+        <div className="mt-6 bg-offwhite border border-sage/40 rounded-lg px-4 py-3 text-xs text-slate" role="note">
+          Undo is disabled. Submit a regularisation request if you need to correct this check-out.
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={onUndo}
+            disabled={isLoading || windowExpired}
+            className="text-xs text-emerald font-semibold hover:underline mt-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
+          >
+            {isLoading
+              ? 'Undoing…'
+              : windowExpired
+                ? 'Undo window expired'
+                : `Undo (still working) — ${fmtCountdown(remainingMs)} left →`}
+          </button>
+          <p className="text-[10px] text-slate mt-2 leading-relaxed">
+            {windowExpired
+              ? `${undoWindowMinutes}-minute window passed — undo no longer available. Submit a regularisation request to correct this record.`
+              : `Undo is available for ${undoWindowMinutes} minute${undoWindowMinutes !== 1 ? 's' : ''} after check-out. After that, only a regularisation request can correct the record.`}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -414,6 +458,7 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
   const lateThreshold = data?.lateThreshold ?? '10:30';
   const standardDailyHours = data?.standardDailyHours ?? 8;
   const lateMonthCount = data?.lateMonthCount ?? 0;
+  const undoWindowMinutes = data?.undoWindowMinutes ?? 5;
 
   if (isError) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -470,6 +515,8 @@ export function CheckInPanel({ firstName = 'there' }: CheckInPanelProps) {
             checkInIso={record?.checkInTime ?? ''}
             checkOutIso={record?.checkOutTime ?? ''}
             hoursWorkedMinutes={record?.hoursWorkedMinutes ?? null}
+            now={now}
+            undoWindowMinutes={undoWindowMinutes}
             onUndo={handleUndo}
             isLoading={undoCheckOutMutation.isPending}
           />

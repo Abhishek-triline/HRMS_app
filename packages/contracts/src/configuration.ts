@@ -32,15 +32,17 @@ export const WeekdaySchema = z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', '
 export type Weekday = z.infer<typeof WeekdaySchema>;
 
 /**
- * AttendanceConfig — values persisted as three separate Configuration rows:
- *   ATTENDANCE_LATE_THRESHOLD_TIME  → "HH:MM" string (e.g. "10:30")
- *   ATTENDANCE_STANDARD_DAILY_HOURS → integer 1..24
- *   ATTENDANCE_WEEKLY_OFF_DAYS      → JSON array of Weekday tokens (e.g. ["Sat","Sun"])
+ * AttendanceConfig — values persisted as separate Configuration rows:
+ *   ATTENDANCE_LATE_THRESHOLD_TIME   → "HH:MM" string (e.g. "10:30")
+ *   ATTENDANCE_STANDARD_DAILY_HOURS  → integer 1..24
+ *   ATTENDANCE_WEEKLY_OFF_DAYS       → JSON array of Weekday tokens (e.g. ["Sat","Sun"])
+ *   ATTENDANCE_UNDO_WINDOW_MINUTES   → integer 0..60 (0 disables undo)
  *
  * Default values (BL-027 + Indian 5-day work-week standard):
  *   lateThresholdTime  = "10:30"
  *   standardDailyHours = 8
  *   weeklyOffDays      = ["Sat", "Sun"]
+ *   undoWindowMinutes  = 5
  */
 export const AttendanceConfigSchema = z.object({
   /** HH:MM 24-hour format. Default "10:30". */
@@ -63,6 +65,13 @@ export const AttendanceConfigSchema = z.object({
    * Duplicates are tolerated by the schema but the API deduplicates on write.
    */
   weeklyOffDays: z.array(WeekdaySchema).max(7).default(['Sat', 'Sun']),
+  /**
+   * Grace window after check-out within which an employee may undo it (and
+   * return to the "Working" state). Default 5 minutes. Set to 0 to disable
+   * undo entirely — every check-out is final and any correction must go
+   * through a regularisation request.
+   */
+  undoWindowMinutes: z.number().int().min(0).max(60),
 });
 export type AttendanceConfig = z.infer<typeof AttendanceConfigSchema>;
 

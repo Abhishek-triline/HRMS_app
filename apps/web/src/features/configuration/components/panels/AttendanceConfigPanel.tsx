@@ -123,6 +123,9 @@ export default function AttendanceConfigPanel() {
   // ── Card 3: Late threshold ────────────────────────────────────────────────
   const [thresholdDraft, setThresholdDraft] = useState<string>('10:30');
 
+  // ── Card 3b: Undo check-out window (minutes) ──────────────────────────────
+  const [undoWindowDraft, setUndoWindowDraft] = useState<string>('5');
+
   // ── Card 4: Weekly off + holidays ─────────────────────────────────────────
   const [weeklyOffDraft, setWeeklyOffDraft] = useState<Weekday[]>(['Sat', 'Sun']);
   const [newHolidayName, setNewHolidayName] = useState('');
@@ -142,6 +145,7 @@ export default function AttendanceConfigPanel() {
       setHoursDraft(String(attendanceQuery.data.standardDailyHours));
       setThresholdDraft(attendanceQuery.data.lateThresholdTime);
       setWeeklyOffDraft([...attendanceQuery.data.weeklyOffDays]);
+      setUndoWindowDraft(String(attendanceQuery.data.undoWindowMinutes));
     }
   }, [attendanceQuery.data]);
 
@@ -162,6 +166,9 @@ export default function AttendanceConfigPanel() {
   const thresholdDirty =
     attendanceQuery.data !== undefined &&
     thresholdDraft !== attendanceQuery.data.lateThresholdTime;
+  const undoWindowDirty =
+    attendanceQuery.data !== undefined &&
+    Number(undoWindowDraft) !== attendanceQuery.data.undoWindowMinutes;
   const weeklyOffDirty =
     attendanceQuery.data !== undefined &&
     !arraysEqualSet(weeklyOffDraft, attendanceQuery.data.weeklyOffDays);
@@ -216,6 +223,15 @@ export default function AttendanceConfigPanel() {
     void saveAttendancePartial({ lateThresholdTime: thresholdDraft }, 'Late threshold');
   }
 
+  function handleSaveUndoWindow() {
+    const n = Number(undoWindowDraft);
+    if (!Number.isInteger(n) || n < 0 || n > 60) {
+      showToast({ type: 'error', title: 'Invalid value', message: 'Window must be 0–60 minutes.' });
+      return;
+    }
+    void saveAttendancePartial({ undoWindowMinutes: n }, 'Undo window');
+  }
+
   function handleSaveWeeklyOff() {
     void saveAttendancePartial({ weeklyOffDays: weeklyOffDraft }, 'Working week');
   }
@@ -257,6 +273,9 @@ export default function AttendanceConfigPanel() {
   }
   function resetThreshold() {
     if (attendanceQuery.data) setThresholdDraft(attendanceQuery.data.lateThresholdTime);
+  }
+  function resetUndoWindow() {
+    if (attendanceQuery.data) setUndoWindowDraft(String(attendanceQuery.data.undoWindowMinutes));
   }
 
   function handleAddHoliday() {
@@ -430,6 +449,58 @@ export default function AttendanceConfigPanel() {
           onSave={handleSaveThreshold}
           saving={attendanceMutation.isPending}
           dirty={thresholdDirty}
+        />
+      </div>
+
+      {/* ── Card 3b: Undo Check-out Window ───────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-heading text-base font-semibold text-charcoal">
+              Undo Check-out Window
+            </h3>
+            <p className="text-xs text-slate mt-1">
+              How long after a check-out an employee can revert it and return to the &ldquo;Working&rdquo; state
+            </p>
+          </div>
+          <ActivePill />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div>
+            <label htmlFor="att-undo-window" className="block text-xs font-semibold text-charcoal mb-1.5">
+              Window (minutes)
+            </label>
+            <input
+              id="att-undo-window"
+              type="number"
+              min={0}
+              max={60}
+              step={1}
+              value={undoWindowDraft}
+              onChange={(e) => setUndoWindowDraft(e.target.value)}
+              className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest"
+            />
+            <p className="text-xs text-slate mt-1.5">Default 5 · range 0–60</p>
+          </div>
+          <div className="lg:col-span-2 bg-umberbg/40 border border-umber/30 rounded-lg px-4 py-3">
+            <div className="text-xs font-semibold text-umber mb-1">Set 0 to disable undo entirely</div>
+            <p className="text-xs text-charcoal">
+              When set to <strong>0</strong>, the &ldquo;Undo&rdquo; control is hidden on the check-in panel and
+              every check-out is final. Employees who need to correct a check-out must submit a
+              regularisation request.
+            </p>
+            <p className="text-xs text-slate mt-1">
+              The window starts from the check-out timestamp. Undo is also rejected once the day
+              rolls over (BL-024).
+            </p>
+          </div>
+        </div>
+        <CardFooter
+          showReset
+          onReset={resetUndoWindow}
+          onSave={handleSaveUndoWindow}
+          saving={attendanceMutation.isPending}
+          dirty={undoWindowDirty}
         />
       </div>
 
