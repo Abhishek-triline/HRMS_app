@@ -94,7 +94,7 @@ function KpiTile({ label, value, subtitle, valueClass = 'text-charcoal' }: KpiTi
 function AdminAttendanceRouter() {
   const searchParams = useSearchParams();
   if (searchParams.get('scope') === 'me') {
-    return <MyAttendanceView />;
+    return <MyAttendanceView regularisationHref="/admin/regularisation" />;
   }
   return <OrgAttendancePage />;
 }

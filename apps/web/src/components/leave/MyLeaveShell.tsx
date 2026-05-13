@@ -10,17 +10,19 @@
  * v2: employeeId is a number; status filter uses INT constants.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { LeaveBalanceGrid } from './LeaveBalanceGrid';
 import { LeaveRequestRow, LeaveRequestCard } from './LeaveRequestRow';
 import { CancelLeaveModal } from './CancelLeaveModal';
 import { useLeaveBalances, useLeaveList, useCancelLeave, useLeave } from '@/lib/hooks/useLeave';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
 import { LEAVE_STATUS } from '@/lib/status/maps';
@@ -103,7 +105,16 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
-  const listQuery = useLeaveList(activeStatus ? { status: activeStatus } : {});
+  // Server-side cursor pagination — resets to page 1 when the tab changes.
+  const pager = useCursorPagination({ pageSize: 10, filtersKey: activeTab });
+  const listQuery = useLeaveList({
+    ...(activeStatus !== undefined ? { status: activeStatus } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
+  });
+  useEffect(() => {
+    if (listQuery.data) pager.cacheNextCursor(listQuery.data.nextCursor);
+  }, [listQuery.data, pager]);
 
   const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
@@ -247,6 +258,17 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
                   />
                 ))}
               </div>
+
+              <CursorPaginator
+                currentPage={pager.currentPage}
+                pageSize={pager.pageSize}
+                currentPageCount={listQuery.data.data.length}
+                hasMore={pager.hasMore}
+                highestReachablePage={pager.highestReachablePage}
+                onPageChange={pager.goToPage}
+                onPrev={pager.goPrev}
+                onNext={pager.goNext}
+              />
             </>
           )}
         </div>

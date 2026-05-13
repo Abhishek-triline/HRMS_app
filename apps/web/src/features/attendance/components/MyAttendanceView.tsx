@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MyAttendanceView — personal attendance view for the admin's ?scope=me branch.
- * Visual reference: prototype/admin/my-attendance.html
+ * MyAttendanceView — personal attendance view used by every role.
+ * Visual reference: prototype/<role>/my-attendance.html
  *
  * Sections (prototype-exact order):
  *   1. Hero band — month nav, Attendance %, Total Hours, Regularise CTA
@@ -12,7 +12,9 @@
  *   5. Late Marks notice banner (only when lateMonthCount > 0)
  *   6. Detailed Log table
  *
- * Regularise link → /admin/regularisation (admin variant of the form).
+ * Pass `regularisationHref` from the role's wrapper so the Regularise CTA
+ * lands on the right page (e.g. "/employee/regularisation",
+ * "/admin/regularisation"). Defaults to "/regularisation" for safety.
  */
 
 import { useState, useCallback } from 'react';
@@ -153,7 +155,12 @@ function StatusBadge({ status }: { status: number }) {
 
 // ── MyAttendanceView ───────────────────────────────────────────────────────────
 
-export function MyAttendanceView() {
+interface MyAttendanceViewProps {
+  /** Where the Regularise CTA should link (defaults to "/regularisation"). */
+  regularisationHref?: string;
+}
+
+export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyAttendanceViewProps = {}) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -162,7 +169,10 @@ export function MyAttendanceView() {
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to });
+  // A single user's calendar month tops out at ~31 rows. limit:100 keeps the
+  // call well under the API ceiling and guards against the legacy default-20
+  // silent truncation that bit manager/payroll attendance pages.
+  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to, limit: 100 });
 
   const handleMonthChange = useCallback((y: number, m: number) => {
     setYear(y);
@@ -306,7 +316,7 @@ export function MyAttendanceView() {
 
             {/* Regularise CTA */}
             <Link
-              href="/admin/regularisation"
+              href={regularisationHref}
               className="group relative bg-gradient-to-br from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 text-forest px-5 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-amber-500/50 ring-2 ring-white/40 hover:ring-white/70 hover:scale-105 hover:-translate-y-0.5 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
             >
               <span className="absolute inset-0 rounded-xl bg-amber-200/30 blur-md -z-10" aria-hidden="true" />
@@ -485,10 +495,48 @@ export function MyAttendanceView() {
 
       {/* ── Detailed Log Table ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30">
-        <div className="px-6 py-4 border-b border-sage/20">
+        <div className="px-6 py-4 border-b border-sage/20 flex items-center justify-between gap-3">
           <h2 className="font-heading text-base font-semibold text-charcoal">
             Detailed Log — {monthName} {year}
           </h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => {
+                if (month === 1) handleMonthChange(year - 1, 12);
+                else handleMonthChange(year, month - 1);
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const t = new Date();
+                handleMonthChange(t.getFullYear(), t.getMonth() + 1);
+              }}
+              className="text-xs font-semibold text-forest hover:text-emerald px-2 py-1 rounded-lg border border-forest/30 hover:bg-softmint transition-colors"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => {
+                if (month === 12) handleMonthChange(year + 1, 1);
+                else handleMonthChange(year, month + 1);
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
