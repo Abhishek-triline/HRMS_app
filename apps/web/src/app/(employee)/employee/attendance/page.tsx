@@ -71,11 +71,12 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
   const targetPct = ((maxH - targetHours) / maxH) * 100;
 
   return (
-    <div className="relative" aria-hidden="true">
+    <div className="relative">
       {/* Target line */}
       <div
         className="absolute inset-x-0 border-t border-dashed border-forest/30 pointer-events-none"
         style={{ top: `${targetPct}%` }}
+        aria-hidden="true"
       >
         <span className="absolute -top-2.5 right-0 text-[9px] text-forest/70 bg-white px-1 font-semibold">
           {targetHours}h target
@@ -86,12 +87,31 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
       <div className="flex items-end justify-between gap-1.5" style={{ height: `${chartH + 18}px`, paddingTop: '4px' }}>
         {bars.map((b) => {
           const pct = maxH > 0 ? (b.hours / maxH) * 100 : 0;
+          const tooltipText = `${b.hours.toFixed(1)} hours${b.late ? ' (late)' : ''}`;
           return (
-            <div key={b.label} className="flex-1 flex flex-col items-center gap-1">
+            <div
+              key={b.label}
+              className="group relative flex-1 flex flex-col items-center gap-1"
+              tabIndex={0}
+              role="img"
+              aria-label={`${b.label}: ${tooltipText}`}
+            >
+              {/* Tooltip — visible on hover (mouse) or keyboard focus */}
               <div
-                className={`w-full rounded-t-sm ${b.late ? 'bg-gradient-to-t from-crimson to-crimson/70' : 'bg-gradient-to-t from-forest to-emerald'}`}
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md bg-charcoal text-white text-[10px] font-semibold whitespace-nowrap shadow-md opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100 z-10"
+              >
+                <div className="text-center">
+                  <div className="text-mint/90 text-[9px] font-medium uppercase tracking-wide">{b.label}</div>
+                  <div className="font-bold">{tooltipText}</div>
+                </div>
+                {/* Caret */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-charcoal" />
+              </div>
+
+              <div
+                className={`w-full rounded-t-sm transition-opacity duration-150 group-hover:opacity-80 group-focus-within:opacity-80 ${b.late ? 'bg-gradient-to-t from-crimson to-crimson/70' : 'bg-gradient-to-t from-forest to-emerald'}`}
                 style={{ height: `${Math.max((pct / 100) * chartH, 2)}px` }}
-                title={`${b.label}: ${b.hours.toFixed(1)}h${b.late ? ' (Late)' : ''}`}
               />
               <span className={`text-[9px] ${b.late ? 'text-crimson font-semibold' : 'text-slate'}`}>
                 {b.label}
