@@ -102,13 +102,18 @@ export function CursorPaginator(props: CursorPaginatorProps) {
 
   const from = (currentPage - 1) * pageSize + 1;
   const to = (currentPage - 1) * pageSize + currentPageCount;
-  // Floor estimate of total: highest reachable page × pageSize, but we know
-  // at least `to` rows exist. When hasMore is true on the last reached page,
-  // we don't know the upper bound — we surface that with a "+" suffix.
-  const knownFloor = Math.max(to, highestReachablePage * pageSize);
+  // Total estimate. On the *final* page (we've seen the last row, so
+  // !hasMore on the current page) the total is exact — `to`. Earlier
+  // pages can only floor the total at `highestReachablePage * pageSize`
+  // because we don't yet know how full the last page will be, so the
+  // label gets a "+" suffix.
+  const onFinalPage = !hasMore && currentPage >= highestReachablePage;
+  const knownFloor = onFinalPage
+    ? to
+    : Math.max(to, highestReachablePage * pageSize);
   const text = label
     ? label({ from, to, total: knownFloor, hasMore })
-    : `Showing ${from}–${to} of ${knownFloor}${hasMore ? '+' : ''}`;
+    : `Showing ${from}–${to} of ${knownFloor}${onFinalPage ? '' : '+'}`;
 
   // Numbered buttons: 1..highestReachablePage. Cap at 7 visible numbers with
   // an ellipsis if highestReachablePage is large.
