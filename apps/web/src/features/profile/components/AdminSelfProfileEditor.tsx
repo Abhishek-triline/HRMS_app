@@ -163,10 +163,10 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
         </svg>
         <div className="text-sm text-charcoal">
           <span className="font-semibold">Editable record.</span>{' '}
-          As Admin you can edit your own employee record (A-04 / BL-004). Every change is
-          written to the audit log against your name and timestamp (BL-047). Salary edits
+          As Admin you can edit your own employee record. Every change is
+          written to the audit log against your name and timestamp. Salary edits
           apply from the <span className="font-semibold">next payroll run</span> only —
-          historical payslips remain immutable (BL-030).
+          historical payslips remain immutable.
         </div>
       </div>
 
@@ -256,7 +256,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
       <div className="bg-white rounded-xl shadow-sm border border-sage/30 px-6 py-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-heading text-base font-semibold text-charcoal">Job Details</h3>
-          <span className="text-[11px] text-slate">EMP code is permanent (BL-008)</span>
+          <span className="text-[11px] text-slate">EMP code is permanent</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -312,7 +312,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
               className="w-full border border-sage/40 rounded-lg px-3 py-2 text-sm bg-offwhite text-slate cursor-not-allowed"
             />
             <p className="text-[10px] text-slate mt-1">
-              On-Leave is set automatically by the system (BL-006). Manual transitions
+              On-Leave is set automatically by the system. Manual transitions
               go through Employee Detail.
             </p>
           </div>

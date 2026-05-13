@@ -153,7 +153,7 @@ export default function AdminLeaveDetailPage() {
             <div className="sm:col-span-2">
               <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Escalated At</div>
               <div className="text-sm text-umber font-semibold">{formatDateTime(request.escalatedAt)}</div>
-              <div className="text-xs text-slate mt-0.5">Manager did not respond within 5 working days (BL-018)</div>
+              <div className="text-xs text-slate mt-0.5">Manager did not respond within 5 working days</div>
             </div>
           )}
           {request.decisionNote && (

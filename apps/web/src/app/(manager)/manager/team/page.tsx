@@ -333,7 +333,7 @@ export default function MyTeamPage() {
       {activeTab === 'past' && (
         <div>
           <p className="text-xs text-slate mb-4">
-            Employees who previously reported to you. Read-only — historical record retained for audit (BL-007 / BL-042).
+            Employees who previously reported to you. Read-only — historical record retained for audit.
           </p>
 
           {past.length === 0 ? (
@@ -369,7 +369,7 @@ export default function MyTeamPage() {
             <div>
               <p className="text-sm font-semibold text-charcoal mb-1">Read-only history</p>
               <p className="text-sm text-slate leading-relaxed">
-                You cannot approve or reject leave or attendance for past members. Those rights moved with the reporting line. Records remain visible for audit (BL-007). Pending requests submitted before a reassignment remain with you to action (BL-022).
+                You cannot approve or reject leave or attendance for past members. Those rights moved with the reporting line. Records remain visible for audit. Pending requests submitted before a reassignment remain with you to action.
               </p>
             </div>
           </div>

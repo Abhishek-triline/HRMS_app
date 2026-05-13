@@ -47,7 +47,7 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
   let body: React.ReactNode = null;
 
   if (code === ErrorCode.LEAVE_OVERLAP) {
-    heading = 'Leave date conflict — request blocked (BL-009)';
+    heading = 'Leave date conflict — request blocked';
     const conflictId = details?.conflictCode ?? details?.conflictId ?? 'unknown';
     const dates = details?.conflictFrom
       ? formatDateRange(details.conflictFrom, details.conflictTo ?? null)
@@ -63,7 +63,7 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
       </p>
     );
   } else if (code === ErrorCode.LEAVE_REG_CONFLICT) {
-    heading = 'Leave / Attendance conflict — request blocked (BL-010)';
+    heading = 'Leave / Attendance conflict — request blocked';
     const conflictId = details?.conflictCode ?? details?.conflictId ?? 'unknown';
     const dates = details?.conflictFrom
       ? formatDateRange(details.conflictFrom, details.conflictTo ?? null)
@@ -78,7 +78,7 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
       </p>
     );
   } else if (code === ErrorCode.INSUFFICIENT_BALANCE) {
-    heading = 'Insufficient leave balance (BL-014)';
+    heading = 'Insufficient leave balance';
     const requested = details?.requestedDays;
     const available = details?.availableDays;
     body = (

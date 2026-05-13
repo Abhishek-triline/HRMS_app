@@ -33,7 +33,7 @@ interface AllowedOption {
 
 const CONSEQUENCE: Record<ManualStatusCode, string> = {
   2: 'Employee will be placed on a notice period. Pending leave approvals route to Admin if no manager is assigned. Active sessions remain valid until the employee logs out.',
-  5: 'Employee access will be revoked on the effective date. All future approvals route to Admin. Historical records are preserved per BL-007. This cannot be reversed — use "Active" (revert from On-Notice) if this was set in error.',
+  5: 'Employee access will be revoked on the effective date. All future approvals route to Admin. Historical records are preserved. This cannot be reversed — use "Active" (revert from On-Notice) if this was set in error.',
   1: 'Employee will revert from On-Notice to Active status. This only applies when the employee is currently On-Notice.',
 };
 

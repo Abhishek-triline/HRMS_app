@@ -27,7 +27,7 @@ export default function NewPerformanceCyclePage() {
       showToast({
         type: 'success',
         title: `Cycle ${result.cycle.code} created`,
-        message: `${result.reviewCount} reviews created.${skippedCount > 0 ? ` ${skippedCount} mid-cycle joiner(s) skipped (BL-037).` : ''}`,
+        message: `${result.reviewCount} reviews created.${skippedCount > 0 ? ` ${skippedCount} mid-cycle joiner(s) skipped.` : ''}`,
       });
       router.push(`/admin/performance-cycles/${result.cycle.id}`);
     } catch (err) {

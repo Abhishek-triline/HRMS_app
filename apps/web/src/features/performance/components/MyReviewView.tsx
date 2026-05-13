@@ -90,7 +90,7 @@ interface NoReviewsEmptyStateProps {
 function NoReviewsEmptyState({ inFlight, upcoming }: NoReviewsEmptyStateProps) {
   let subline: string;
   if (inFlight) {
-    subline = `Cycle ${inFlight.code} (${cyclePeriod(inFlight.fyStart, inFlight.fyEnd)}) is currently in ${(CYCLE_STATUS_MAP[inFlight.status]?.label ?? String(inFlight.status)).toLowerCase()}. You joined after this cycle started, so your first review will begin with the next cycle (BL-037).`;
+    subline = `Cycle ${inFlight.code} (${cyclePeriod(inFlight.fyStart, inFlight.fyEnd)}) is currently in ${(CYCLE_STATUS_MAP[inFlight.status]?.label ?? String(inFlight.status)).toLowerCase()}. You joined after this cycle started, so your first review will begin with the next cycle.`;
   } else if (upcoming) {
     subline = `The next performance cycle — ${upcoming.code} (${cyclePeriod(upcoming.fyStart, upcoming.fyEnd)}) — has not started yet. Your review will be created when Self-Review opens.`;
   } else {

@@ -352,7 +352,7 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
                 <LineItem
                   label="Pro-ration"
                   value={`${payslip.daysWorked}/${payslip.workingDays} days`}
-                  sub="Mid-month joiner / exit (BL-036)"
+                  sub="Mid-month joiner / exit"
                 />
               )}
               <LineItem
@@ -368,7 +368,7 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
               <h4 className="font-heading text-xs font-bold text-crimson uppercase tracking-wider mb-3">Deductions</h4>
               <LineItem
                 label="LOP Deduction"
-                sub={`${payslip.lopDays} days × daily rate (BL-035)`}
+                sub={`${payslip.lopDays} days × daily rate`}
                 value={<MoneyDisplay paise={payslip.lopDeductionPaise} />}
                 negative={(payslip.lopDeductionPaise ?? 0) > 0}
               />
@@ -376,7 +376,7 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
                 label="Income Tax (TDS)"
                 sub={
                   payslip.status === 3 // 3=Finalised
-                    ? 'Entered by Payroll Officer (BL-036a)'
+                    ? 'Entered by Payroll Officer'
                     : payslip.referenceTaxPaise !== null
                       ? `Reference: ₹${Math.floor(payslip.referenceTaxPaise / 100).toLocaleString('en-IN')}`
                       : ''

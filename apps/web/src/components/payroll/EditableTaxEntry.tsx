@@ -55,7 +55,7 @@ export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
         showToast({
           type: 'error',
           title: 'Payslip is finalised',
-          message: 'This payslip is finalised and cannot be edited (BL-031).',
+          message: 'This payslip is finalised and cannot be edited.',
         });
       } else if (err instanceof ApiError && err.code === 'VERSION_MISMATCH') {
         showToast({
@@ -117,7 +117,7 @@ export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
 
       {/* BL-036a footnote */}
       <p className="text-[10px] text-slate/60 text-center">
-        Manual · v1 — slab engine deferred to v2 (BL-036a)
+        Manual · v1 — slab engine deferred to v2
       </p>
     </div>
   );

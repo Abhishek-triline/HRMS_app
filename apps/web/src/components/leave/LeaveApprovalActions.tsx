@@ -154,7 +154,7 @@ export function LeaveApprovalActions({
         onClose={approveModal.close}
         title="Approve Leave Request"
         requireConfirm
-        consequenceText={`You are approving ${request.code} (${request.leaveTypeName} leave, ${request.days} day${request.days !== 1 ? 's' : ''} for ${request.employeeName}). The balance will be deducted immediately on approval (BL-021).`}
+        consequenceText={`You are approving ${request.code} (${request.leaveTypeName} leave, ${request.days} day${request.days !== 1 ? 's' : ''} for ${request.employeeName}). The balance will be deducted immediately on approval.`}
         footer={
           <>
             <Button variant="secondary" onClick={approveModal.close} disabled={approveMutation.isPending}>

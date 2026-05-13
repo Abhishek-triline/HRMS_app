@@ -198,7 +198,7 @@ export function LeaveRequestForm({
                 </svg>
                 <p className="text-sm text-forest">
                   <span className="font-semibold">{selectedTypeName} leave</span> is event-based and
-                  goes directly to Admin for approval — your manager is bypassed (BL-015/016).
+                  goes directly to Admin for approval — your manager is bypassed.
                 </p>
               </div>
             )}
@@ -354,11 +354,11 @@ export function LeaveRequestForm({
             {[
               {
                 label: 'No half-day leave',
-                text: '— leave is taken in full-day units only (BL-011).',
+                text: '— leave is taken in full-day units only.',
               },
               {
                 label: 'No date overlap',
-                text: '— two leave requests cannot overlap in dates (BL-009).',
+                text: '— two leave requests cannot overlap in dates.',
               },
               {
                 label: 'Maternity & Paternity leave',
@@ -366,7 +366,7 @@ export function LeaveRequestForm({
               },
               {
                 label: 'Cancellation:',
-                text: 'before start date = full balance restored; after start = only remaining days restored (BL-019/020).',
+                text: 'before start date = full balance restored; after start = only remaining days restored.',
               },
             ].map(({ label, text }) => (
               <li key={label} className="flex items-start gap-3 text-sm text-slate">
@@ -420,14 +420,14 @@ export function LeaveRequestForm({
                 Maternity / Paternity (event-based)
               </div>
               <div className="text-xs text-slate">
-                Admin only — both bypass the manager (BL-015/016).
+                Admin only — both bypass the manager.
               </div>
             </div>
           </div>
           <div className="mt-3 bg-umberbg rounded-lg p-3">
             <div className="text-xs text-umber">
               <span className="font-semibold">Escalation:</span> If your manager does not act
-              within 5 working days, the request is automatically escalated to Admin (BL-018).
+              within 5 working days, the request is automatically escalated to Admin.
             </div>
           </div>
         </div>

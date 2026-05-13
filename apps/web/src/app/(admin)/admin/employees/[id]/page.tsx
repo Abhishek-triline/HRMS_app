@@ -109,7 +109,7 @@ function SalaryEditModal({
       showToast({
         type: 'success',
         title: 'Salary updated',
-        message: `${employeeName}'s salary will apply from next payroll run (BL-030).`,
+        message: `${employeeName}'s salary will apply from next payroll run.`,
       });
       onClose();
     } catch (err) {
@@ -225,7 +225,7 @@ function QuickStatusChange({
       </div>
       <p className="text-[11px] text-slate mt-1.5 leading-snug">
         <span className="font-semibold text-charcoal">On-Leave</span> is set automatically when an
-        approved leave is active. It cannot be set manually (BL-006).
+        approved leave is active. It cannot be set manually.
       </p>
     </div>
   );

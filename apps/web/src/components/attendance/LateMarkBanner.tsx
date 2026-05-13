@@ -34,13 +34,13 @@ export function LateMarkBanner({ lateMonthCount, lateThreshold, className }: Lat
   if (isDeduction) {
     const deductions = Math.floor(lateMonthCount / 3);
     title = `Late deduction applied — ${deductions} day${deductions > 1 ? 's' : ''} deducted`;
-    body = `You have accumulated ${lateMonthCount} late mark${lateMonthCount > 1 ? 's' : ''} this month. Every 3 late marks = 1 day deducted from Annual leave (BL-028).`;
+    body = `You have accumulated ${lateMonthCount} late mark${lateMonthCount > 1 ? 's' : ''} this month. Every 3 late marks = 1 day deducted from Annual leave.`;
   } else if (isWarning) {
     title = 'Late mark warning — 2 of 3';
-    body = `You have ${lateMonthCount} late mark${lateMonthCount > 1 ? 's' : ''} this month. One more late check-in after ${lateThreshold} will trigger a leave deduction (BL-028).`;
+    body = `You have ${lateMonthCount} late mark${lateMonthCount > 1 ? 's' : ''} this month. One more late check-in after ${lateThreshold} will trigger a leave deduction.`;
   } else {
     title = 'Late mark recorded — 1 of 3';
-    body = `You checked in after ${lateThreshold}. You have ${lateMonthCount} late mark this month. 2 more will deduct 1 day from Annual leave (BL-028).`;
+    body = `You checked in after ${lateThreshold}. You have ${lateMonthCount} late mark this month. 2 more will deduct 1 day from Annual leave.`;
   }
 
   return (

@@ -140,7 +140,7 @@ export default function EmployeeSelfRatingPage() {
         />
         {canProposeGoal && (
           <p className="text-xs text-slate mt-3">
-            You can propose additional goals during the self-review window (BL-038). Proposals are
+            You can propose additional goals during the self-review window. Proposals are
             subject to your manager&apos;s approval.
           </p>
         )}
@@ -181,7 +181,7 @@ export default function EmployeeSelfRatingPage() {
           <div className="flex items-center gap-4">
             <span className="text-4xl font-bold text-mint">{review.finalRating}</span>
             <p className="text-sm text-white/80">
-              Cycle closed and final rating locked (BL-041).
+              Cycle closed and final rating locked.
               {review.lockedAt && (
                 <span className="block text-xs text-white/60 mt-0.5">
                   Locked on {new Date(review.lockedAt).toLocaleDateString('en-IN')}

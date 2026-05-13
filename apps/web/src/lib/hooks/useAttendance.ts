@@ -71,7 +71,7 @@ export function useCheckIn() {
         showToast({
           type: 'error',
           title: 'Late deduction applied',
-          message: `3 late marks this month — 1 day deducted from Annual leave (BL-028).`,
+          message: `3 late marks this month — 1 day deducted from Annual leave.`,
         });
       } else if (data.record.late) {
         showToast({

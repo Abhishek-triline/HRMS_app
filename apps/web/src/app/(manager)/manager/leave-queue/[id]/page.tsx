@@ -156,7 +156,7 @@ export default function ManagerLeaveDetailPage() {
       {request.escalatedAt && (
         <div className="bg-umberbg border border-umber/20 rounded-xl p-4 mb-5 text-sm text-umber">
           <span className="font-semibold">Escalated:</span> This request was escalated to Admin on{' '}
-          {formatDateTime(request.escalatedAt)} because it was not actioned within 5 working days (BL-018).
+          {formatDateTime(request.escalatedAt)} because it was not actioned within 5 working days.
         </div>
       )}
 

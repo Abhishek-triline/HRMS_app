@@ -143,14 +143,14 @@ export default function POPayrollRunDetailPage() {
             {isFinalised && (
               <>
                 <div className="bg-greenbg/60 border border-richgreen/30 rounded-xl px-4 py-3 mb-3">
-                  <p className="text-xs text-richgreen font-semibold">Run finalised — all payslips locked (BL-031).</p>
+                  <p className="text-xs text-richgreen font-semibold">Run finalised — all payslips locked.</p>
                   {run.finalisedByName && (
                     <p className="text-xs text-richgreen/80 mt-0.5">By {run.finalisedByName}</p>
                   )}
                 </div>
                 <div className="bg-offwhite border border-sage/40 rounded-xl px-4 py-3">
                   <p className="text-xs text-slate">
-                    Reversals can only be initiated by Admin (BL-033).
+                    Reversals can only be initiated by Admin.
                   </p>
                 </div>
               </>

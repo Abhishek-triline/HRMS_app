@@ -294,7 +294,7 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
             </svg>
             <p className="text-charcoal font-semibold text-sm">
               <strong>Finalised — locked permanently.</strong>{' '}
-              This payslip is immutable. Corrections require an Admin-initiated reversal that creates a new record (BL-031 / BL-032).
+              This payslip is immutable. Corrections require an Admin-initiated reversal that creates a new record.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -534,7 +534,7 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
                 {payslip.daysWorked < payslip.workingDays && (
                   <tr>
                     <td className="py-2.5 text-slate text-xs italic" colSpan={2}>
-                      Pro-rated: {payslip.daysWorked}/{payslip.workingDays} days worked (BL-036)
+                      Pro-rated: {payslip.daysWorked}/{payslip.workingDays} days worked
                     </td>
                   </tr>
                 )}

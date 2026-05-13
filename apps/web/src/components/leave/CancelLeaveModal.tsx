@@ -94,7 +94,7 @@ export function CancelLeaveModal({
           className={`rounded-lg p-4 text-sm ${beforeStart ? 'bg-greenbg' : 'bg-umberbg'}`}
         >
           <div className={`font-semibold mb-1 ${beforeStart ? 'text-richgreen' : 'text-umber'}`}>
-            {beforeStart ? 'Full balance restore' : 'Partial balance restore (BL-020)'}
+            {beforeStart ? 'Full balance restore' : 'Partial balance restore'}
           </div>
           <div className={`text-xs ${beforeStart ? 'text-richgreen/80' : 'text-umber/80'}`}>
             {restoreHint}

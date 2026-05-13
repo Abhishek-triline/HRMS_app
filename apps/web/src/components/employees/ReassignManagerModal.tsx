@@ -71,7 +71,7 @@ export function ReassignManagerModal({ isOpen, onClose, employee }: ReassignMana
       if (err instanceof ApiError) {
         if (err.code === 'CIRCULAR_REPORTING') {
           setCircularError(
-            `BL-005: A manager cannot, directly or indirectly, report to anyone in their own subtree. ${
+            `A manager cannot, directly or indirectly, report to anyone in their own subtree. ${
               (err.details as { path?: string })?.path
                 ? `Conflict path: ${(err.details as { path: string }).path}`
                 : ''
@@ -187,7 +187,7 @@ export function ReassignManagerModal({ isOpen, onClose, employee }: ReassignMana
 
         {/* Pending approvals info */}
         <div className="bg-softmint border border-mint rounded-lg px-4 py-3 text-xs text-forest leading-relaxed">
-          <span className="font-semibold">BL-022:</span> Pending leave/regularisation approvals from this employee will continue routing to their previous manager until resolved. If the employee exits, they route to Admin.
+          <span className="font-semibold">Note:</span> Pending leave/regularisation approvals from this employee will continue routing to their previous manager until resolved. If the employee exits, they route to Admin.
         </div>
       </div>
     </Modal>

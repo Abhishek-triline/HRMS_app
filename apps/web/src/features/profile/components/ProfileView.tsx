@@ -211,7 +211,7 @@ function ProfileAuditCard() {
         </Link>
       </div>
       <p className="text-xs text-slate leading-relaxed">
-        All profile edits are written to the system audit log (BL-047). View the full log
+        All profile edits are written to the system audit log. View the full log
         for a record of every change made to your profile.
       </p>
       <p className="text-[10px] text-slate mt-2 italic">

@@ -23,7 +23,7 @@ export function ManagerChangeAuditCard({ review, className }: ManagerChangeAudit
   return (
     <div
       role="note"
-      aria-label="Manager change audit — BL-042"
+      aria-label="Manager change audit"
       className={clsx(
         'bg-umberbg border border-umber/30 rounded-lg px-4 py-3 flex items-start gap-3',
         className,
@@ -40,7 +40,7 @@ export function ManagerChangeAuditCard({ review, className }: ManagerChangeAudit
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M4.93 19.07a10 10 0 1114.14 0H4.93z" />
       </svg>
       <div className="text-sm">
-        <div className="font-semibold text-umber mb-0.5">Manager changed mid-cycle (BL-042)</div>
+        <div className="font-semibold text-umber mb-0.5">Manager changed mid-cycle</div>
         <p className="text-xs text-charcoal/80 leading-relaxed">
           This review was previously managed by{' '}
           <span className="font-semibold text-charcoal">

@@ -806,7 +806,7 @@ export function AuditLogPageClient() {
           <p className="text-slate text-sm leading-relaxed">
             The audit log is <strong>system-generated and append-only</strong>. Every approval, rejection, cancellation,
             finalisation, reversal, status change, and configuration change is captured against a specific user and
-            timestamp. No user — Admin included — can edit or delete an entry (BL-047 / BL-048). Coverage spans every
+            timestamp. No user — Admin included — can edit or delete an entry. Coverage spans every
             module: user / hierarchy changes, leave decisions, attendance corrections, payroll runs and reversals, and
             review-cycle actions.
           </p>
@@ -1143,7 +1143,7 @@ export function AuditLogPageClient() {
             <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <span>Append-only · entries cannot be edited or deleted by any user, including Admin (BL-047).</span>
+            <span>Append-only · entries cannot be edited or deleted by any user, including Admin.</span>
           </div>
 
           {totalLoaded > 0 && (

@@ -393,7 +393,7 @@ export default function AttendanceConfigPanel() {
             <div className="text-xs font-semibold text-richgreen mb-1">Display only</div>
             <p className="text-xs text-charcoal">
               This is a display-only target. It does not deduct leave, trigger overtime, or affect
-              payroll. Late marks (BL-027) and hours worked (BL-025) are independent.
+              payroll. Late marks and hours worked are independent.
             </p>
           </div>
         </div>
@@ -491,7 +491,7 @@ export default function AttendanceConfigPanel() {
             </p>
             <p className="text-xs text-slate mt-1">
               The window starts from the check-out timestamp. Undo is also rejected once the day
-              rolls over (BL-024).
+              rolls over.
             </p>
           </div>
         </div>

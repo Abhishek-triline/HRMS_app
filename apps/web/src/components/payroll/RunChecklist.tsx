@@ -69,7 +69,7 @@ export function RunChecklist({ payslipCount, lopCount, workingDays }: RunCheckli
       detail:
         taxNotReviewed > 0
           ? `${taxNotReviewed} payslip(s) still at reference value — please review`
-          : 'v1: PO manually enters final tax per payslip (BL-036a)',
+          : 'v1: PO manually enters final tax per payslip',
       status: taxNotReviewed > 0 ? 'warn' : 'info',
     },
     {
@@ -117,7 +117,7 @@ export function RunChecklist({ payslipCount, lopCount, workingDays }: RunCheckli
       </div>
 
       <p className="text-[10px] text-slate/50 mt-3">
-        Working days: {workingDays} · Indian fiscal calendar (Apr–Mar, BL-003)
+        Working days: {workingDays} · Indian fiscal calendar (Apr–Mar)
       </p>
     </div>
   );

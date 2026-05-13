@@ -356,7 +356,7 @@ export default function ManagerRegularisationQueuePage() {
                                 onDecision={() => refetch()}
                               />
                               <p className="text-xs text-slate italic">
-                                Audit: Original record preserved per BL-007.
+                                Audit: Original record preserved.
                               </p>
                             </div>
                           ) : (

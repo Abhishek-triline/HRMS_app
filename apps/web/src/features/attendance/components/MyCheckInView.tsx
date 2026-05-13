@@ -134,22 +134,21 @@ export function MyCheckInView({ regularisationHref = '/regularisation' }: MyChec
                   Today&apos;s attendance row is auto-generated at midnight (default{' '}
                   <strong className="text-charcoal">absent</strong>). Check-in updates it to
                   present. <strong className="text-charcoal">Check-out is mandatory</strong> to
-                  complete the record (BL-024).
+                  complete the record.
                 </span>
               </li>
               <li className="flex items-start gap-3 text-sm text-slate">
                 <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
                 <span>
                   <strong className="text-charcoal">Late mark:</strong> Check-in after{' '}
-                  {lateThreshold} counts as a late mark for the day (BL-027).
+                  {lateThreshold} counts as a late mark for the day.
                 </span>
               </li>
               <li className="flex items-start gap-3 text-sm text-slate">
                 <div className="w-1.5 h-1.5 rounded-full bg-forest mt-2 flex-shrink-0" aria-hidden="true" />
                 <span>
                   <strong className="text-charcoal">3 late marks</strong> in a calendar month = 1
-                  day deducted from Annual leave balance. Each subsequent late = another full day
-                  (BL-028).
+                  day deducted from Annual leave balance. Each subsequent late = another full day.
                 </span>
               </li>
             </ul>

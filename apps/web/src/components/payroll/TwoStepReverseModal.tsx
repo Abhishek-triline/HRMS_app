@@ -124,8 +124,8 @@ export function TwoStepReverseModal({
         </svg>
         <p className="text-sm text-crimson">
           <strong>Admin-only action.</strong> A new reversal payroll run will be created with
-          negative values (BL-032). The original run remains unchanged and visible in history.
-          This action is audit-logged and cannot be undone (BL-033). Only initiate if the
+          negative values. The original run remains unchanged and visible in history.
+          This action is audit-logged and cannot be undone. Only initiate if the
           original run contained errors requiring correction.
         </p>
       </div>

@@ -152,8 +152,8 @@ export default function AdminRegularisationQueuePage() {
         </svg>
         <p className="text-sm text-umber">
           <span className="font-bold">Admin Review Required:</span>{' '}
-          Records older than 7 days require Admin approval per BL-029. Regularisation requests that
-          are 7 days or fewer are handled directly by the employee's reporting manager.
+          Records older than 7 days require Admin approval. Regularisation requests that are 7 days
+          or fewer are handled directly by the employee's reporting manager.
         </p>
       </div>
 
@@ -353,7 +353,7 @@ export default function AdminRegularisationQueuePage() {
                                 onDecision={() => refetch()}
                               />
                               <p className="text-xs text-slate italic">
-                                Audit: Original record preserved per BL-007.
+                                Audit: Original record preserved.
                               </p>
                             </div>
                           ) : (

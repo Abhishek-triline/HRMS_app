@@ -175,9 +175,9 @@ export default function PONewPayrollRunPage() {
             <div className="border-t border-sage/20 pt-5 space-y-3">
               {[
                 { text: 'Include all Active & On-Notice employees', sub: 'Exited employees excluded automatically' },
-                { text: 'Show reference tax (v1: PayrollOfficer enters final value)', sub: 'Standard formula: gross × flat reference rate. Slab engine deferred to v2 (BL-036a).' },
-                { text: 'Auto-calculate LOP from unpaid leaves', sub: 'Formula: (Basic + Allowances) ÷ working days × LOP days (BL-035)' },
-                { text: 'Pro-rate mid-month joiners and exits', sub: 'Days actually worked used for proration (BL-036)' },
+                { text: 'Show reference tax (v1: PayrollOfficer enters final value)', sub: 'Standard formula: gross × flat reference rate. Slab engine deferred to v2.' },
+                { text: 'Auto-calculate LOP from unpaid leaves', sub: 'Formula: (Basic + Allowances) ÷ working days × LOP days' },
+                { text: 'Pro-rate mid-month joiners and exits', sub: 'Days actually worked used for proration' },
               ].map((item, i) => (
                 <label key={i} className="flex items-start gap-3 cursor-default">
                   <input type="checkbox" checked disabled readOnly className="mt-1 accent-forest w-4 h-4 flex-shrink-0" aria-label={item.text} />

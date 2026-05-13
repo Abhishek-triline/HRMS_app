@@ -177,7 +177,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
       if (err instanceof ApiError) {
         if (err.code === 'CIRCULAR_REPORTING') {
           createForm.setError('reportingManagerId', {
-            message: `BL-005: Circular reporting detected. ${(err.details as { path?: string })?.path ?? ''}`,
+            message: `Circular reporting detected. ${(err.details as { path?: string })?.path ?? ''}`,
           });
         } else if (err.code === 'EMAIL_ALREADY_EXISTS') {
           createForm.setError('email', { message: 'This email is already in use.' });

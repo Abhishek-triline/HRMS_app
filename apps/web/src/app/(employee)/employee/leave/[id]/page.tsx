@@ -151,7 +151,7 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         pillBorder: 'border-umber/30',
         pillText: 'text-umber',
         label: 'Escalated to Admin',
-        sub: 'Manager did not respond within 5 working days (BL-018).',
+        sub: 'Manager did not respond within 5 working days.',
       };
     default:
       return {
@@ -378,7 +378,7 @@ export default function LeaveDetailPage() {
             <div>
               <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Escalation Deadline</div>
               <div className="text-sm font-semibold text-umber">{escalationDeadline}</div>
-              <div className="text-xs text-slate mt-0.5">5 working days from submission (BL-018)</div>
+              <div className="text-xs text-slate mt-0.5">5 working days from submission</div>
             </div>
           )}
           {request.decisionNote && (
@@ -581,7 +581,7 @@ export default function LeaveDetailPage() {
           <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancel This Request</h3>
           <p className="text-sm text-slate mb-4">
             {request.status === LEAVE_STATUS.Approved
-              ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} leave balance (BL-019).`
+              ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} leave balance.`
               : 'You can withdraw a pending request at any time before approval.'}
           </p>
           <Button
@@ -592,7 +592,7 @@ export default function LeaveDetailPage() {
             Cancel Request
           </Button>
           <p className="text-xs text-slate mt-3">
-            After the leave starts, only your Manager or Admin can cancel it (BL-020).
+            After the leave starts, only your Manager or Admin can cancel it.
           </p>
         </div>
       )}
