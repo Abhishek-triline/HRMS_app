@@ -175,85 +175,72 @@
          day commits to a clear-sky palette (deep cerulean → cyan → teal).
          Both finish in the forest base so the scene anchors. Cinematic feel
          comes from the base gradient itself plus a strong sun halo. */
-      [data-nx-hero][data-tod="morning"] {
-        background:
-          /* Bright sun halo (upper-right) */
-          radial-gradient(ellipse 60% 45% at 78% 22%, rgba(255,215,155,0.65), transparent 65%),
-          /* Sunrise gradient — purple → magenta → light coral → peach → cream.
-             No forest base; finishes warm so the scene reads "early sky" all
-             the way down. */
-          linear-gradient(180deg, #3D2C56 0%, #8A3B6B 22%, #E27866 42%, #F5A175 60%, #FBCB95 78%, #FDDEB5 100%);
-      }
-      [data-nx-hero][data-tod="day"] {
-        background:
-          /* Bright sun halo */
-          radial-gradient(ellipse 55% 42% at 80% 20%, rgba(255,235,170,0.65), transparent 62%),
-          /* Clear-sky gradient — deep cerulean → cyan → teal → forest */
-          linear-gradient(180deg, #1E5F8E 0%, #3A88BC 25%, #6FB5D6 48%, #6FBE9E 70%, #2D7A5F 90%, #1C3D2E 100%);
-      }
+      [data-nx-hero][data-tod="morning"] { background: linear-gradient(160deg, #2A1B3E 0%, #5B2D5C 22%, #A93B5E 45%, #E0735A 68%, #F4A56B 88%, #F8C99A 100%); }
+      [data-nx-hero][data-tod="day"]     { background: linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%); }
       [data-nx-hero][data-tod="evening"] { background: linear-gradient(180deg, #5B3D6F 0%, #B85B6F 45%, #F4A56B 80%, #B85B6F 100%); }
       [data-nx-hero][data-tod="night"]   { background: linear-gradient(180deg, #0A1F2E 0%, #112A38 40%, #1C3D2E 100%); }
 
-      /* Sun glow — strong warm drop-shadow so the sun reads as a light
-         source rather than a flat disc. Larger and warmer than before. */
-      [data-nx-hero][data-tod="morning"] .nx-sun { filter: drop-shadow(0 0 38px rgba(255, 190, 130, 0.75)); }
-      [data-nx-hero][data-tod="day"]     .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 225, 145, 0.75)); }
+      /* Ornament visibility — morning + day get the layered MyOverviewHero
+         treatment (aurora streak + sun glow + mountains + waves + ambient
+         twinkles). Evening + night rely on the gradient alone. */
+      [data-nx-hero] .nx-aurora,
+      [data-nx-hero] .nx-sun-glow,
+      [data-nx-hero] .nx-streak,
+      [data-nx-hero] .nx-waves,
+      [data-nx-hero] .nx-mtn-back-svg,
+      [data-nx-hero] .nx-mtn-front-svg,
+      [data-nx-hero] .nx-ambient { display:none; }
+      [data-nx-hero][data-tod="morning"] .nx-aurora,
+      [data-nx-hero][data-tod="morning"] .nx-sun-glow,
+      [data-nx-hero][data-tod="morning"] .nx-streak,
+      [data-nx-hero][data-tod="morning"] .nx-waves,
+      [data-nx-hero][data-tod="morning"] .nx-mtn-back-svg,
+      [data-nx-hero][data-tod="morning"] .nx-mtn-front-svg,
+      [data-nx-hero][data-tod="morning"] .nx-ambient,
+      [data-nx-hero][data-tod="day"]     .nx-aurora,
+      [data-nx-hero][data-tod="day"]     .nx-sun-glow,
+      [data-nx-hero][data-tod="day"]     .nx-streak,
+      [data-nx-hero][data-tod="day"]     .nx-waves,
+      [data-nx-hero][data-tod="day"]     .nx-mtn-back-svg,
+      [data-nx-hero][data-tod="day"]     .nx-mtn-front-svg,
+      [data-nx-hero][data-tod="day"]     .nx-ambient { display:block; }
 
-      /* Atmospheric horizon haze — soft band along the bottom for depth.
-         Tuned warm for morning, cool for day. */
-      [data-nx-hero][data-tod="morning"]::before,
-      [data-nx-hero][data-tod="day"]::before {
-        content: '';
-        position: absolute;
-        inset: auto 0 0 0;
-        height: 32%;
-        pointer-events: none;
-        z-index: 0;
-      }
-      [data-nx-hero][data-tod="morning"]::before {
-        background: linear-gradient(180deg, transparent 0%, rgba(255,170,110,0.16) 50%, transparent 100%);
-      }
-      [data-nx-hero][data-tod="day"]::before {
-        background: linear-gradient(180deg, transparent 0%, rgba(180,225,240,0.18) 50%, transparent 100%);
-      }
-
-      /* Sun-rays — soft conical glow radiating from the sun, only on
-         morning + day. Sits behind the sun SVG visually thanks to z-index. */
-      [data-nx-hero][data-tod="morning"]::after,
-      [data-nx-hero][data-tod="day"]::after {
-        content: '';
-        position: absolute;
-        top: -10%;
-        right: -5%;
-        width: 55%;
-        height: 75%;
-        background: conic-gradient(from 200deg at 75% 25%, transparent 0deg, rgba(255,220,160,0.10) 12deg, transparent 24deg, rgba(255,220,160,0.10) 40deg, transparent 56deg, rgba(255,220,160,0.10) 78deg, transparent 100deg);
-        pointer-events: none;
-        z-index: 0;
-        mix-blend-mode: screen;
-      }
-      /* Sun / moon colour per tod (recoloured shared markup) */
-      [data-nx-hero][data-tod="morning"] .nx-celestial { color:#F4A56B; }
-      [data-nx-hero][data-tod="day"]     .nx-celestial { color:#FFD56B; }
-      [data-nx-hero][data-tod="evening"] .nx-celestial { color:#FBC97D; }
-      [data-nx-hero][data-tod="night"]   .nx-celestial { color:#E4F1EB; }
-      /* Dot-grid colour swap on light gradients (morning, day, evening) */
-      [data-nx-hero][data-tod="morning"] .nx-dotgrid circle { fill:#1C3D2E; }
-      [data-nx-hero][data-tod="day"]     .nx-dotgrid circle { fill:#1C3D2E; }
-      [data-nx-hero][data-tod="evening"] .nx-dotgrid circle { fill:#FFFFFF; }
-      /* Stars only at night */
+      /* Stars only at night; sun hidden at night + evening */
       [data-nx-hero] .nx-stars { display:none; }
       [data-nx-hero][data-tod="night"] .nx-stars { display:block; }
-      /* Clouds only during day (overrides nx-clouds default = hidden) */
-      [data-nx-hero] .nx-clouds { display:none; }
-      [data-nx-hero][data-tod="day"] .nx-clouds { display:block; }
-      /* Mountains brighter on light gradients for legibility */
-      [data-nx-hero][data-tod="morning"] .nx-mtn-front { fill:#1C3D2E; fill-opacity:.7; }
-      [data-nx-hero][data-tod="morning"] .nx-mtn-back  { fill:#1C3D2E; fill-opacity:.4; }
-      [data-nx-hero][data-tod="day"]     .nx-mtn-front { fill:#1C3D2E; fill-opacity:.85; }
-      [data-nx-hero][data-tod="day"]     .nx-mtn-back  { fill:#2D7A5F; fill-opacity:.55; }
-      [data-nx-hero][data-tod="evening"] .nx-mtn-front { fill:#1A2420; fill-opacity:.75; }
-      [data-nx-hero][data-tod="evening"] .nx-mtn-back  { fill:#1A2420; fill-opacity:.45; }
+      [data-nx-hero][data-tod="night"] .nx-sun,
+      [data-nx-hero][data-tod="evening"] .nx-sun { display:none; }
+
+      /* Aurora shimmer (diagonal) */
+      [data-nx-hero][data-tod="morning"] .nx-aurora { background: linear-gradient(115deg, transparent 28%, rgba(255,210,170,0.22) 48%, rgba(255,255,255,0.08) 52%, transparent 72%); }
+      [data-nx-hero][data-tod="day"]     .nx-aurora { background: linear-gradient(115deg, transparent 28%, rgba(200,230,218,0.20) 48%, rgba(255,255,255,0.06) 52%, transparent 72%); }
+
+      /* Sun-glow halo (top-right blob) */
+      [data-nx-hero][data-tod="morning"] .nx-sun-glow { background: radial-gradient(circle, rgba(255,210,160,0.40) 0%, rgba(255,175,120,0.20) 30%, transparent 62%); filter: blur(24px); }
+      [data-nx-hero][data-tod="day"]     .nx-sun-glow { background: radial-gradient(circle, rgba(255,215,153,0.35) 0%, rgba(255,180,120,0.18) 28%, transparent 60%); filter: blur(24px); }
+
+      /* Ambient streak (bottom-left blob) */
+      [data-nx-hero][data-tod="morning"] .nx-streak { background: radial-gradient(circle, rgba(228,120,150,0.40) 0%, rgba(169,59,94,0.20) 35%, transparent 65%); filter: blur(36px); }
+      [data-nx-hero][data-tod="day"]     .nx-streak { background: radial-gradient(circle, rgba(111,190,158,0.45) 0%, rgba(45,122,95,0.20) 35%, transparent 65%); filter: blur(36px); }
+
+      /* Mountain silhouettes */
+      [data-nx-hero][data-tod="morning"] .nx-mtn-back  { fill:#2A1B3E; }
+      [data-nx-hero][data-tod="morning"] .nx-mtn-front { fill:#1A1226; }
+      [data-nx-hero][data-tod="day"]     .nx-mtn-back  { fill:#0F2E22; }
+      [data-nx-hero][data-tod="day"]     .nx-mtn-front { fill:#1C3D2E; }
+
+      /* Sun-SVG colour per tod */
+      [data-nx-hero][data-tod="morning"] .nx-celestial { color:#FFD2A8; }
+      [data-nx-hero][data-tod="day"]     .nx-celestial { color:#FFE39A; }
+      [data-nx-hero][data-tod="evening"] .nx-celestial { color:#FBC97D; }
+      [data-nx-hero][data-tod="night"]   .nx-celestial { color:#E4F1EB; }
+
+      /* Sun halo drop-shadow */
+      [data-nx-hero][data-tod="morning"] .nx-sun { filter: drop-shadow(0 0 36px rgba(255, 195, 140, 0.75)); }
+      [data-nx-hero][data-tod="day"]     .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 225, 145, 0.75)); }
+
+      /* Dot-grid colour — all tods use white now (matches MyOverviewHero) */
+      [data-nx-hero] .nx-dotgrid circle { fill:#FFFFFF; }
       /* Drifting clouds (day only) */
       @keyframes nx-cloud-drift { from { transform: translateX(-15%); } to { transform: translateX(115%); } }
       .nx-cloud { animation: nx-cloud-drift 50s linear infinite; }
