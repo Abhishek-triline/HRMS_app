@@ -65,6 +65,14 @@ export interface NavLink {
   iconPath: string;
   /** Renders with crimson hover (sign-out) */
   danger?: boolean;
+  /**
+   * Extra path prefixes that should also light up this nav item. Use for
+   * contextual sub-pages that don't have their own sidebar entry — e.g.
+   * the regularisation form belongs visually under "My Attendance" even
+   * though it lives at /<role>/regularisation. Matched as a prefix
+   * (`currentPath === prefix || currentPath.startsWith(prefix + '/')`).
+   */
+  matchPaths?: string[];
 }
 
 export interface NavSubhead {
@@ -95,7 +103,7 @@ const adminNav: NavEntry[] = [
   { type: 'subhead', label: 'My Records' },
   { type: 'link', label: 'My Leave',             href: '/admin/leave',                   iconPath: ICONS.leave },
   { type: 'link', label: 'My Encashment',        href: '/admin/leave-encashment',        iconPath: ICONS.encashment },
-  { type: 'link', label: 'My Attendance',        href: '/admin/attendance?scope=me',     iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'My Attendance',        href: '/admin/attendance?scope=me',     iconPath: ICONS.myAttendance, matchPaths: ['/admin/regularisation'] },
   { type: 'link', label: 'Check In',             href: '/admin/checkin',                 iconPath: ICONS.checkin },
   { type: 'link', label: 'My Payslips',          href: '/admin/payslips',                iconPath: ICONS.payslips },
   { type: 'link', label: 'My Review',            href: '/admin/my-review',               iconPath: ICONS.review },
@@ -114,7 +122,7 @@ const managerNav: NavEntry[] = [
   { type: 'subhead', label: 'My Records' },
   { type: 'link', label: 'My Leave',               href: '/manager/leave',                   iconPath: ICONS.leave },
   { type: 'link', label: 'My Encashment',          href: '/manager/leave-encashment',        iconPath: ICONS.encashment },
-  { type: 'link', label: 'My Attendance',          href: '/manager/attendance',              iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'My Attendance',          href: '/manager/attendance',              iconPath: ICONS.myAttendance, matchPaths: ['/manager/regularisation'] },
   { type: 'link', label: 'Check In',               href: '/manager/checkin',                 iconPath: ICONS.checkin },
   { type: 'link', label: 'My Reviews',             href: '/manager/my-review',               iconPath: ICONS.review },
   { type: 'link', label: 'My Payslips',            href: '/manager/payslips',                iconPath: ICONS.payslips },
@@ -127,7 +135,7 @@ const employeeNav: NavEntry[] = [
   { type: 'link', label: 'Dashboard',      href: '/employee/dashboard',           iconPath: ICONS.dashboard },
   { type: 'link', label: 'My Leave',       href: '/employee/leave',               iconPath: ICONS.leave },
   { type: 'link', label: 'My Encashment',  href: '/employee/leave-encashment',    iconPath: ICONS.encashment },
-  { type: 'link', label: 'My Attendance',  href: '/employee/attendance',          iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'My Attendance',  href: '/employee/attendance',          iconPath: ICONS.myAttendance, matchPaths: ['/employee/regularisation'] },
   { type: 'link', label: 'Check In',       href: '/employee/checkin',             iconPath: ICONS.checkin },
   { type: 'link', label: 'My Payslips',    href: '/employee/payslips',            iconPath: ICONS.payslips },
   { type: 'link', label: 'My Reviews',     href: '/employee/performance',         iconPath: ICONS.review },
@@ -144,7 +152,7 @@ const payrollNav: NavEntry[] = [
   { type: 'subhead', label: 'My Records' },
   { type: 'link', label: 'My Leave',         href: '/payroll/leave',               iconPath: ICONS.leave },
   { type: 'link', label: 'My Encashment',    href: '/payroll/leave-encashment',    iconPath: ICONS.encashment },
-  { type: 'link', label: 'My Attendance',    href: '/payroll/attendance',          iconPath: ICONS.myAttendance },
+  { type: 'link', label: 'My Attendance',    href: '/payroll/attendance',          iconPath: ICONS.myAttendance, matchPaths: ['/payroll/regularisation'] },
   { type: 'link', label: 'Check In',         href: '/payroll/checkin',             iconPath: ICONS.checkin },
   { type: 'link', label: 'My Payslips',      href: '/payroll/payslips',            iconPath: ICONS.payslips },
   { type: 'link', label: 'My Reviews',       href: '/payroll/my-review',           iconPath: ICONS.review },

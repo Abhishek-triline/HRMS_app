@@ -125,19 +125,27 @@ export function Sidebar({ role, currentPath: currentPathProp }: SidebarProps) {
             // current page's search params must match too. This disambiguates
             // sibling links that share a pathname but differ by query, like
             // Attendance (no scope) vs My Attendance (scope=me).
+            //
+            // matchPaths bypasses the query check: a matched alias means the
+            // user is on a contextual sub-page of this nav item (e.g. the
+            // regularisation form sitting under "My Attendance") and should
+            // light up the parent entry regardless of query string.
             const [entryPath, entryQuery = ''] = entry.href.split('?');
-            const pathMatches =
-              currentPath === entryPath ||
-              (entryPath !== '/' && currentPath.startsWith(entryPath + '/'));
-            const isActive = entryQuery
-              ? pathMatches && currentSearch === entryQuery
-              : pathMatches && !navByRole[role].some(
-                  (e) =>
-                    e.type === 'link' &&
-                    e !== entry &&
-                    e.href.startsWith(entryPath + '?') &&
-                    currentSearch === e.href.split('?')[1],
-                );
+            const matchesPrefix = (p: string) =>
+              currentPath === p || (p !== '/' && currentPath.startsWith(p + '/'));
+            const matchesViaAlias = (entry.matchPaths ?? []).some(matchesPrefix);
+            const matchesViaHref = matchesPrefix(entryPath);
+            const isActive = matchesViaAlias
+              ? true
+              : entryQuery
+                ? matchesViaHref && currentSearch === entryQuery
+                : matchesViaHref && !navByRole[role].some(
+                    (e) =>
+                      e.type === 'link' &&
+                      e !== entry &&
+                      e.href.startsWith(entryPath + '?') &&
+                      currentSearch === e.href.split('?')[1],
+                  );
 
             // Dynamic label for the check-in/out link.
             const liveLabel = entry.href.endsWith('/checkin')
