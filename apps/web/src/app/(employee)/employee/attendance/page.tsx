@@ -445,12 +445,8 @@ export default function MyAttendancePage() {
       <div className="bg-white rounded-2xl shadow-sm border border-sage/30 p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-heading text-base font-semibold text-charcoal">Daily Calendar</h2>
-          <div className="flex items-center gap-4 text-xs flex-wrap">
-            <span className="flex items-center gap-1.5 text-slate"><span className="w-2 h-2 rounded-full bg-richgreen" aria-hidden="true"></span>Present</span>
-            <span className="flex items-center gap-1.5 text-slate"><span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true"></span>Leave</span>
-            <span className="flex items-center gap-1.5 text-slate"><span className="w-2 h-2 rounded-full bg-crimson" aria-hidden="true"></span>Late</span>
-            <span className="flex items-center gap-1.5 text-slate"><span className="w-2 h-2 rounded-full bg-slate/40" aria-hidden="true"></span>Off</span>
-          </div>
+          {/* Status legend renders inside <AttendanceCalendar/> below — auto-generated
+              from ATTENDANCE_STATUS_MAP so it stays in sync with the codes. */}
         </div>
 
         {isLoading ? (
