@@ -49,7 +49,7 @@ export function useAdminDashboard() {
   const pendingLeaveTop5 = (pendingLeave.data?.data ?? []).slice(0, 5);
 
   // Recent activity — first page of audit logs
-  const recentActivity = auditLogs.data?.pages?.[0]?.data?.slice(0, 8) ?? [];
+  const recentActivity = auditLogs.data?.pages?.[0]?.data?.slice(0, 5) ?? [];
 
   // Active employee count — exact via cursor walk.
   const empTotal = activeCount.count;
