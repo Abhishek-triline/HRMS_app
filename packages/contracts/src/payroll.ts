@@ -145,27 +145,32 @@ export const PayslipSchema = z.object({
   /** Days actually worked — used for proration on mid-month joiners/exits (BL-036). */
   daysWorked: z.number().int().min(0).max(31),
   lopDays: z.number().int().min(0).max(31),
-  /** Snapshot of the salary structure applied — taken from the latest
-      `effectiveFrom <= periodStart` (BL-030). */
-  basicPaise: PaiseSchema,
-  allowancesPaise: PaiseSchema,
+  /**
+   * MONEY FIELDS — nullable for hardening (see canSeePayslipMoney). A
+   * Manager viewing a subordinate's payslip gets these as null; Admin,
+   * PayrollOfficer, and the employee themselves see real numbers.
+   * Snapshot of the salary structure applied — taken from the latest
+   * `effectiveFrom <= periodStart` (BL-030).
+   */
+  basicPaise: PaiseSchema.nullable(),
+  allowancesPaise: PaiseSchema.nullable(),
   /** Pro-rated amount actually earned this period (BL-036). */
-  grossPaise: PaiseSchema,
+  grossPaise: PaiseSchema.nullable(),
   /** Loss of pay deduction (BL-035). */
-  lopDeductionPaise: PaiseSchema,
+  lopDeductionPaise: PaiseSchema.nullable(),
   /** Reference figure computed from `gross × standardRate` (BL-036a). */
-  referenceTaxPaise: PaiseSchema,
+  referenceTaxPaise: PaiseSchema.nullable(),
   /** Final tax — entered by PO during Review. Defaults to referenceTaxPaise. */
-  finalTaxPaise: PaiseSchema,
+  finalTaxPaise: PaiseSchema.nullable(),
   /** Standard non-tax deductions (PF, professional tax, etc.). */
-  otherDeductionsPaise: PaiseSchema,
+  otherDeductionsPaise: PaiseSchema.nullable(),
   /** Net pay = gross − lopDeduction − finalTax − otherDeductions. */
-  netPayPaise: PaiseSchema,
+  netPayPaise: PaiseSchema.nullable(),
   finalisedAt: ISODateSchema.nullable(),
   /** Encashment days paid in this payslip (BL-LE-09). 0 if no encashment. */
   encashmentDays: z.number().int().min(0).default(0),
-  /** Encashment amount in paise (BL-LE-08). Adds to gross. */
-  encashmentPaise: z.number().int().min(0).default(0),
+  /** Encashment amount in paise (BL-LE-08). Adds to gross — null when redacted. */
+  encashmentPaise: z.number().int().min(0).nullable().default(0),
   /** FK to the encashment record paid in this payslip. Null for payslips without encashment. */
   encashmentId: IdSchema.nullable().default(null),
   /** Set on reversal records — links back to the original payslip. */

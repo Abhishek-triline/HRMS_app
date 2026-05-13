@@ -22,7 +22,8 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-function formatPaise(paise: number): string {
+function formatPaise(paise: number | null): string {
+  if (paise === null) return '—';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',

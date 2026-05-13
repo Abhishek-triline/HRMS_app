@@ -16,8 +16,13 @@ const fmtINR = new Intl.NumberFormat('en-IN', {
 });
 
 interface MoneyDisplayProps {
-  /** Value in paise (integer). ₹1 = 100 paise. */
-  paise: number;
+  /**
+   * Value in paise (integer). ₹1 = 100 paise.
+   * `null` is rendered as "—" — used for redacted money fields when
+   * a Manager views a subordinate's payslip (see canSeePayslipMoney
+   * on the API). Treat it as "not visible to me", not "zero".
+   */
+  paise: number | null;
   className?: string;
   /** When true, negative values render in crimson (used for reversals / deductions). */
   colorCode?: boolean;
@@ -31,6 +36,9 @@ export function MoneyDisplay({
   colorCode = false,
   dashOnZero = false,
 }: MoneyDisplayProps) {
+  if (paise === null) {
+    return <span className={clsx('text-slate', className)} title="Hidden — not visible to your role">—</span>;
+  }
   if (dashOnZero && paise === 0) {
     return <span className={clsx('text-slate', className)}>—</span>;
   }

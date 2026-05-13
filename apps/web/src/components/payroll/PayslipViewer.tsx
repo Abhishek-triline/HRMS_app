@@ -91,7 +91,12 @@ function numberToWords(n: number): string {
 }
 
 /** Format paise as Indian rupee string, no decimals. */
-function formatPaise(paise: number): string {
+function formatPaise(paise: number | null): string {
+  if (paise === null) return '—';
+  return formatPaiseRaw(paise);
+}
+
+function formatPaiseRaw(paise: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -365,22 +370,24 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
                 label="LOP Deduction"
                 sub={`${payslip.lopDays} days × daily rate (BL-035)`}
                 value={<MoneyDisplay paise={payslip.lopDeductionPaise} />}
-                negative={payslip.lopDeductionPaise > 0}
+                negative={(payslip.lopDeductionPaise ?? 0) > 0}
               />
               <LineItem
                 label="Income Tax (TDS)"
                 sub={
                   payslip.status === 3 // 3=Finalised
                     ? 'Entered by Payroll Officer (BL-036a)'
-                    : `Reference: ₹${Math.floor(payslip.referenceTaxPaise / 100).toLocaleString('en-IN')}`
+                    : payslip.referenceTaxPaise !== null
+                      ? `Reference: ₹${Math.floor(payslip.referenceTaxPaise / 100).toLocaleString('en-IN')}`
+                      : ''
                 }
                 value={<MoneyDisplay paise={payslip.finalTaxPaise} />}
-                negative={payslip.finalTaxPaise > 0}
+                negative={(payslip.finalTaxPaise ?? 0) > 0}
               />
               <LineItem
                 label="Other Deductions"
                 value={<MoneyDisplay paise={payslip.otherDeductionsPaise} />}
-                negative={payslip.otherDeductionsPaise > 0}
+                negative={(payslip.otherDeductionsPaise ?? 0) > 0}
               />
             </div>
           </div>
@@ -390,12 +397,18 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
         <div className="px-6 py-6">
           <div className="bg-forest text-white rounded-xl text-center py-6">
             <p className="text-xs uppercase tracking-widest opacity-80 mb-2">NET PAY</p>
-            <p className="font-heading text-5xl font-bold mb-2">
-              {formatPaise(payslip.netPayPaise)}
-            </p>
-            <p className="text-sm opacity-90 italic">
-              {paiseToWords(payslip.netPayPaise)}
-            </p>
+            {payslip.netPayPaise === null ? (
+              <p className="font-heading text-3xl font-bold mb-2">— Hidden —</p>
+            ) : (
+              <>
+                <p className="font-heading text-5xl font-bold mb-2">
+                  {formatPaise(payslip.netPayPaise)}
+                </p>
+                <p className="text-sm opacity-90 italic">
+                  {paiseToWords(payslip.netPayPaise)}
+                </p>
+              </>
+            )}
           </div>
         </div>
 

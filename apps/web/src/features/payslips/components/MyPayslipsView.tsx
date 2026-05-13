@@ -38,7 +38,8 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-function formatPaise(paise: number): string {
+function formatPaise(paise: number | null): string {
+  if (paise === null) return '—';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -148,9 +149,12 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
   const allSorted = useMemo(() => sortNewestFirst(allPayslips), [allPayslips]);
   const latestPayslip = allSorted[0] ?? null;
 
-  // Hero stats — derived from the SELECTED FY subset
-  const fyGross = fyPayslips.reduce((s, p) => s + p.grossPaise, 0);
-  const fyTax = fyPayslips.reduce((s, p) => s + p.finalTaxPaise, 0);
+  // Hero stats — derived from the SELECTED FY subset.
+  // MyPayslipsView is scoped to the caller's own payslips (employeeId=self),
+  // so money fields are never redacted here — but the contract still types
+  // them as nullable. Coerce with ?? 0 for the sum.
+  const fyGross = fyPayslips.reduce((s, p) => s + (p.grossPaise ?? 0), 0);
+  const fyTax = fyPayslips.reduce((s, p) => s + (p.finalTaxPaise ?? 0), 0);
   const fyMonthCount = fyPayslips.length;
 
   // Net of the very latest payslip (could be from any FY)

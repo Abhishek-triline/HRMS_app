@@ -27,15 +27,18 @@ interface EditableTaxEntryProps {
 }
 
 export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
-  const [taxPaise, setTaxPaise] = useState(payslip.finalTaxPaise);
+  // This component is gated to Admin/PayrollOfficer (PATCH /payslips/:id/tax
+  // requires those roles), so money fields on payslip are never redacted
+  // here in practice. Coerce nulls for TS happiness; runtime they're set.
+  const [taxPaise, setTaxPaise] = useState(payslip.finalTaxPaise ?? 0);
   const mutation = useUpdatePayslipTax(payslip.id);
 
   // Sync if the parent re-renders with a newer value (e.g. after cache invalidation).
   useEffect(() => {
-    setTaxPaise(payslip.finalTaxPaise);
+    setTaxPaise(payslip.finalTaxPaise ?? 0);
   }, [payslip.finalTaxPaise, payslip.id]);
 
-  const netPreview = payslip.grossPaise - payslip.lopDays * 0 - taxPaise;
+  const netPreview = (payslip.grossPaise ?? 0) - payslip.lopDays * 0 - taxPaise;
   // Note: lopDeductionPaise isn't on PayslipSummary, so we compute a rough
   // preview. The exact net comes from the backend after save.
 
@@ -79,7 +82,7 @@ export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
         </div>
         <button
           type="button"
-          onClick={() => setTaxPaise(payslip.finalTaxPaise)}
+          onClick={() => setTaxPaise(payslip.finalTaxPaise ?? 0)}
           className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors"
         >
           Use reference
