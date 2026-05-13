@@ -36,6 +36,12 @@ interface RunDetailTableProps {
   canEditTax: boolean; // true when run.status === 'Review' and user is PO/Admin
   onEditTax: (payslip: PayslipSummary) => void;
   isLoading?: boolean;
+  /**
+   * Zero-based offset for the SR column so the numbering continues across
+   * pages instead of restarting from 1. Default 0 (page 1). Pass
+   * `(currentPage - 1) * pageSize`.
+   */
+  startIndex?: number;
 }
 
 // ── Personal history variant ──────────────────────────────────────────────────
@@ -183,7 +189,7 @@ export function PayslipTable(props: PayslipTableProps) {
 
   // ── Run-detail mode ─────────────────────────────────────────────────────────
   if (props.mode === 'run-detail') {
-    const { canEditTax, onEditTax } = props;
+    const { canEditTax, onEditTax, startIndex = 0 } = props;
 
     return (
       <>
@@ -208,7 +214,7 @@ export function PayslipTable(props: PayslipTableProps) {
               ) : (
                 payslips.map((ps, idx) => (
                   <tr key={ps.id} className="hover:bg-offwhite/60 transition-colors">
-                    <td className="px-4 py-3.5 text-slate text-xs">{idx + 1}</td>
+                    <td className="px-4 py-3.5 text-slate text-xs">{startIndex + idx + 1}</td>
                     <td className="px-4 py-3.5 font-medium text-charcoal">{ps.employeeName}</td>
                     <td className="px-4 py-3.5 font-mono text-xs text-forest">{ps.employeeCode}</td>
                     <td className="px-4 py-3.5 text-right text-charcoal">

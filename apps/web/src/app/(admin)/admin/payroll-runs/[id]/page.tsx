@@ -122,6 +122,7 @@ export default function PayrollRunDetailPage() {
               basePath="/admin/payslips"
               canEditTax={isReview}
               onEditTax={setSelectedPayslip}
+              startIndex={(pager.currentPage - 1) * pager.pageSize}
             />
             <CursorPaginator
               currentPage={pager.currentPage}
