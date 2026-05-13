@@ -565,11 +565,16 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
   const userId = auth?.data?.user?.id ?? '';
 
   // ── List of all reviews for this user ────────────────────────────────────
+  // The page categorises reviews into "Active" (one row, the current
+  // unrated cycle) and "Past" (everything finalised). That categorisation
+  // needs the full list. Bumped to API max so up to ~50 years of past
+  // cycles (2/year) fit in one fetch. Past Cycles table doesn't paginate
+  // — at 60+ rows we'd revisit, but those are out-of-scope tenures.
   const {
     data: listData,
     isLoading: listLoading,
     isError: listError,
-  } = useReviews({ employeeId: userId || undefined });
+  } = useReviews({ employeeId: userId || undefined, limit: 100 });
 
   // Cycle queries used only for the empty state to explain *why* there's
   // no review yet (in-flight cycle the user joined late vs. next cycle

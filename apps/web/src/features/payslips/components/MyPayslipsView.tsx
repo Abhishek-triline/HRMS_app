@@ -108,7 +108,14 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
 
   const [selectedFYStart, setSelectedFYStart] = useState(currentFYStart);
 
-  const { data, isLoading, isError } = usePayslipsList();
+  // Hero stats (FY totals, latest payslip) need the FULL payslip list, not a
+  // single page. The card grid is already FY-filtered to ~12 entries per
+  // selected FY so it doesn't need UI pagination. Bumped to the API's hard
+  // ceiling so up to ~8 years of payslips fit in one fetch.
+  // For 8+ year tenures the oldest FYs would clip silently; v1.1 backend
+  // backlog: a dedicated /payslips/stats endpoint returning aggregates so we
+  // can paginate the card grid without losing hero accuracy.
+  const { data, isLoading, isError } = usePayslipsList({ limit: 100 });
   const allPayslips: PayslipSummary[] = data?.data ?? [];
 
   // Available FY options — derive from payslips + always show current FY
