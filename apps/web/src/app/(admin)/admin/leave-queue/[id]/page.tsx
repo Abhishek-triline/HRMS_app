@@ -42,7 +42,11 @@ function formatDateTime(iso: string): string {
 export default function AdminLeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: request, isLoading, error } = useLeave(Number(id));
+  // Pass the URL param through as-is — useLeave accepts both numeric ids
+  // and L-YYYY-NNNN codes. Wrapping in Number() forced "L-2026-0018" to
+  // NaN and surfaced "Could not load leave request" on notification
+  // deep-links. Mirrors the fix on /employee/leave/[id]/page.tsx.
+  const { data: request, isLoading, error } = useLeave(id);
 
   if (isLoading) {
     return (
