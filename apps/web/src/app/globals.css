@@ -167,10 +167,10 @@ aside > * {
  * on-brand at peak hours. Morning uses a warm pre-dawn variant.
  */
 [data-nx-hero][data-tod="morning"] {
-  background: linear-gradient(160deg, #2A1B3E 0%, #5B2D5C 22%, #A93B5E 45%, #E0735A 68%, #F4A56B 88%, #F8C99A 100%);
+  background: linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%);
 }
 [data-nx-hero][data-tod="day"] {
-  background: linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%);
+  background: linear-gradient(160deg, #1C3D2E 0%, #2D7A5F 28%, #4DA37A 50%, #C8843B 78%, #E8A14A 100%);
 }
 [data-nx-hero][data-tod="evening"] {
   background: linear-gradient(180deg, #5B3D6F 0%, #B85B6F 45%, #F4A56B 80%, #B85B6F 100%);
@@ -214,47 +214,47 @@ aside > * {
 /* ── Per-tod ornament tinting ─────────────────────────────────────── */
 /* Aurora shimmer streak (diagonal) */
 [data-nx-hero][data-tod="morning"] .nx-aurora {
-  background: linear-gradient(115deg, transparent 28%, rgba(255,210,170,0.22) 48%, rgba(255,255,255,0.08) 52%, transparent 72%);
+  background: linear-gradient(115deg, transparent 28%, rgba(200,230,218,0.20) 48%, rgba(255,255,255,0.06) 52%, transparent 72%);
 }
 [data-nx-hero][data-tod="day"] .nx-aurora {
-  background: linear-gradient(115deg, transparent 28%, rgba(200,230,218,0.20) 48%, rgba(255,255,255,0.06) 52%, transparent 72%);
+  background: linear-gradient(115deg, transparent 28%, rgba(255,210,140,0.22) 48%, rgba(255,255,255,0.07) 52%, transparent 72%);
 }
 
 /* Sun glow halo (top-right blob) */
 [data-nx-hero][data-tod="morning"] .nx-sun-glow {
-  background: radial-gradient(circle, rgba(255,210,160,0.40) 0%, rgba(255,175,120,0.20) 30%, transparent 62%);
+  background: radial-gradient(circle, rgba(255,215,153,0.35) 0%, rgba(255,180,120,0.18) 28%, transparent 60%);
   filter: blur(24px);
 }
 [data-nx-hero][data-tod="day"] .nx-sun-glow {
-  background: radial-gradient(circle, rgba(255,215,153,0.35) 0%, rgba(255,180,120,0.18) 28%, transparent 60%);
+  background: radial-gradient(circle, rgba(255,190,110,0.45) 0%, rgba(232,150,60,0.22) 30%, transparent 62%);
   filter: blur(24px);
 }
 
 /* Ambient streak (bottom-left blob) */
 [data-nx-hero][data-tod="morning"] .nx-streak {
-  background: radial-gradient(circle, rgba(228,120,150,0.40) 0%, rgba(169,59,94,0.20) 35%, transparent 65%);
+  background: radial-gradient(circle, rgba(111,190,158,0.45) 0%, rgba(45,122,95,0.20) 35%, transparent 65%);
   filter: blur(36px);
 }
 [data-nx-hero][data-tod="day"] .nx-streak {
-  background: radial-gradient(circle, rgba(111,190,158,0.45) 0%, rgba(45,122,95,0.20) 35%, transparent 65%);
+  background: radial-gradient(circle, rgba(77,163,122,0.42) 0%, rgba(232,161,74,0.20) 38%, transparent 68%);
   filter: blur(36px);
 }
 
 /* Mountain silhouettes */
-[data-nx-hero][data-tod="morning"] .nx-mtn-back  { fill: #2A1B3E; }
-[data-nx-hero][data-tod="morning"] .nx-mtn-front { fill: #1A1226; }
+[data-nx-hero][data-tod="morning"] .nx-mtn-back  { fill: #0F2E22; }
+[data-nx-hero][data-tod="morning"] .nx-mtn-front { fill: #1C3D2E; }
 [data-nx-hero][data-tod="day"]     .nx-mtn-back  { fill: #0F2E22; }
 [data-nx-hero][data-tod="day"]     .nx-mtn-front { fill: #1C3D2E; }
 
 /* Sun-SVG colour per tod */
-[data-nx-hero][data-tod="morning"] .nx-celestial { color: #FFD2A8; }
-[data-nx-hero][data-tod="day"]     .nx-celestial { color: #FFE39A; }
+[data-nx-hero][data-tod="morning"] .nx-celestial { color: #FFE39A; }
+[data-nx-hero][data-tod="day"]     .nx-celestial { color: #FFC479; }
 [data-nx-hero][data-tod="evening"] .nx-celestial { color: #FBC97D; }
 [data-nx-hero][data-tod="night"]   .nx-celestial { color: #E4F1EB; }
 
 /* Sun halo — strong warm drop-shadow so it reads as a real light source. */
-[data-nx-hero][data-tod="morning"] .nx-sun { filter: drop-shadow(0 0 36px rgba(255, 195, 140, 0.75)); }
-[data-nx-hero][data-tod="day"]     .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 225, 145, 0.75)); }
+[data-nx-hero][data-tod="morning"] .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 225, 145, 0.75)); }
+[data-nx-hero][data-tod="day"]     .nx-sun { filter: drop-shadow(0 0 42px rgba(255, 175, 95, 0.80)); }
 
 /* Dot-grid colour swap (kept from previous design) */
 [data-nx-hero][data-tod="morning"] .nx-dotgrid circle { fill: #FFFFFF; }
