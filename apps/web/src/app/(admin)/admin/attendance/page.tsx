@@ -31,7 +31,7 @@ import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
@@ -350,7 +350,7 @@ function OrgAttendancePage() {
                         ? `${Math.floor(r.hoursWorkedMinutes / 60)}h ${r.hoursWorkedMinutes % 60}m`
                         : r.checkInTime && !r.checkOutTime
                           ? 'In progress'
-                          : '—';
+                          : '';
                       return (
                         <tr key={`${r.employeeId}-${r.date}`} className="hover:bg-offwhite/50 transition-colors">
                           <td className="px-5 py-3">
@@ -359,13 +359,13 @@ function OrgAttendancePage() {
                                 {initials}
                               </div>
                               <div>
-                                <div className="font-semibold text-charcoal">{r.employeeName ?? '—'}</div>
-                                <div className="text-xs text-slate">{r.employeeCode ?? '—'}</div>
+                                <div className="font-semibold text-charcoal">{r.employeeName ?? ''}</div>
+                                <div className="text-xs text-slate">{r.employeeCode ?? ''}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-slate">
-                            {(r as unknown as { department?: string }).department ?? '—'}
+                            {(r as unknown as { department?: string }).department ?? ''}
                           </td>
                           <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} late={r.late} /></td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkInTime)}</td>
