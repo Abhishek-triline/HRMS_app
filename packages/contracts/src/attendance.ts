@@ -187,6 +187,8 @@ export const AttendanceListResponseSchema = z.object({
       employeeCode: EmployeeCodeSchema.optional(),
       /** Department name for grid views; null when employee has no department. */
       department: z.string().nullable().optional(),
+      /** Running count of late marks in the row's calendar month, snapshotted at last write. */
+      lateMonthCount: z.number().int().min(0),
     }),
   ),
   nextCursor: z.string().nullable(),

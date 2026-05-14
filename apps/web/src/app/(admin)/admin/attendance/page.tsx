@@ -372,7 +372,7 @@ function OrgAttendancePage() {
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
                           <td className="px-4 py-3 text-slate">{hours}</td>
                           <td className="px-4 py-3 text-slate">
-                            {(r as unknown as { lateThisMonth?: number }).lateThisMonth ?? '—'}
+                            {r.lateMonthCount}
                           </td>
                         </tr>
                       );
