@@ -65,10 +65,16 @@ export function TimeOfDayHero({ firstName, subtitle, badge, customTitle, action 
 
   const greeting = `${greetingPrefix(tod)}, ${firstName}`;
 
+  // Visual mapping — morning and afternoon (day) scenes are intentionally
+  // swapped. The greeting text still reflects the real time of day; only
+  // the painted background changes.
+  const visualTod: TimeOfDay =
+    tod === 'morning' ? 'day' : tod === 'day' ? 'morning' : tod;
+
   return (
     <div
       data-nx-hero
-      data-tod={tod}
+      data-tod={visualTod}
       className="relative rounded-2xl overflow-hidden mb-6 shadow-2xl shadow-forest/30"
       aria-label={`Dashboard hero — ${greeting}`}
     >
