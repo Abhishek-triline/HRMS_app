@@ -109,3 +109,37 @@ export async function attachApiCookiesToBrowser(
   const storage = await apiCtx.storageState();
   await browserCtx.addCookies(storage.cookies);
 }
+
+/**
+ * Read the current annual / casual / sick balance for an employee.
+ * Returns a map keyed by leaveTypeId → remaining days. Used by tests
+ * that assert balance restoration after a cancel (BL-019).
+ */
+export async function getLeaveBalances(
+  ctx: APIRequestContext,
+  employeeId: number,
+): Promise<Record<number, number>> {
+  const res = await ctx.get(`/api/v1/leave/balances/${employeeId}`);
+  if (!res.ok()) {
+    throw new Error(`getLeaveBalances(${employeeId}) failed: ${res.status()}`);
+  }
+  const body = await res.json();
+  const rows: Array<{ leaveTypeId: number; remaining: number }> =
+    body?.data?.balances ?? body?.balances ?? [];
+  const map: Record<number, number> = {};
+  for (const r of rows) map[r.leaveTypeId] = r.remaining;
+  return map;
+}
+
+/** Fetch a leave request by numeric id; throws on non-2xx. */
+export async function getLeaveRequest(
+  ctx: APIRequestContext,
+  id: number,
+): Promise<{ id: number; status: number; version: number; code: string }> {
+  const res = await ctx.get(`/api/v1/leave/requests/${id}`);
+  if (!res.ok()) {
+    throw new Error(`getLeaveRequest(${id}) failed: ${res.status()}`);
+  }
+  const body = await res.json();
+  return body?.data ?? body;
+}
