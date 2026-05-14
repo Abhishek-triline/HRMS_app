@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MyAttendanceView — personal attendance view for the admin's ?scope=me branch.
- * Visual reference: prototype/admin/my-attendance.html
+ * MyAttendanceView — personal attendance view used by every role.
+ * Visual reference: prototype/<role>/my-attendance.html
  *
  * Sections (prototype-exact order):
  *   1. Hero band — month nav, Attendance %, Total Hours, Regularise CTA
@@ -12,15 +12,18 @@
  *   5. Late Marks notice banner (only when lateMonthCount > 0)
  *   6. Detailed Log table
  *
- * Regularise link → /admin/regularisation (admin variant of the form).
+ * Pass `regularisationHref` from the role's wrapper so the Regularise CTA
+ * lands on the right page (e.g. "/employee/regularisation",
+ * "/admin/regularisation"). Defaults to "/regularisation" for safety.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { MyOverviewHero } from '@/features/overview/components/MyOverviewHero';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { ATTENDANCE_STATUS } from '@/lib/status/maps';
 import type { CalendarDay } from '@/components/attendance/AttendanceCalendar';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -32,7 +35,7 @@ function minutesToHM(mins: number): string {
 }
 
 function fmtTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   const d = new Date(iso);
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
@@ -60,46 +63,123 @@ const MONTH_NAMES = [
 
 // ── Hours Worked SVG Bar Chart ─────────────────────────────────────────────────
 
-interface BarChartProps {
-  bars: { label: string; hours: number; late: boolean }[];
-  targetHours?: number;
+interface ChartBar {
+  /** YYYY-MM-DD — used as a stable key */
+  date: string;
+  /** "Mon", "Tue", … */
+  weekday: string;
+  /** Day-of-month, e.g. "12" */
+  dayNum: string;
+  /** Hours worked (0 when not Present). */
+  hours: number;
+  /**
+   * Daily-hours target that applied on this date (snapshotted server-side
+   * at row creation). The "below target" classification compares hours
+   * against this per-bar value so the visual stays correct after the
+   * global config changes.
+   */
+  targetHours: number;
+  /** ATTENDANCE_STATUS code. */
+  status: number;
+  /** Late mark — only meaningful for Present. */
+  late: boolean;
 }
 
-function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
+/** Per-status visual treatment for chart bars. */
+const STATUS_BAR_STYLES: Record<number, { gradient: string; label: string; labelClass: string }> = {
+  [ATTENDANCE_STATUS.Present]:   { gradient: 'bg-gradient-to-t from-forest to-emerald',     label: 'Present',    labelClass: 'text-slate' },
+  [ATTENDANCE_STATUS.Absent]:    { gradient: 'bg-gradient-to-t from-crimson/80 to-crimson/40', label: 'Absent',  labelClass: 'text-crimson font-semibold' },
+  [ATTENDANCE_STATUS.OnLeave]:   { gradient: 'bg-gradient-to-t from-amber-500 to-amber-300', label: 'On Leave',   labelClass: 'text-amber-700 font-semibold' },
+  [ATTENDANCE_STATUS.WeeklyOff]: { gradient: 'bg-gradient-to-t from-slate/60 to-slate/30',   label: 'Weekly Off', labelClass: 'text-slate' },
+  [ATTENDANCE_STATUS.Holiday]:   { gradient: 'bg-gradient-to-t from-mint to-mint/50',       label: 'Holiday',    labelClass: 'text-forest font-semibold' },
+};
+
+/** Present-bar gradient when the day fell short of the target hours. */
+const UNDER_TARGET_GRADIENT = 'bg-gradient-to-t from-emerald/40 to-mint/60';
+
+interface BarChartProps {
+  bars: ChartBar[];
+}
+
+function HoursBarChart({ bars }: BarChartProps) {
   if (bars.length === 0) return null;
 
-  const maxH = Math.max(...bars.map((b) => b.hours), targetHours + 1);
-  const chartH = 90;
-  const targetPct = ((maxH - targetHours) / maxH) * 100;
+  // Target dashed line follows the latest bar's target. When the policy
+  // changes mid-window, the per-bar comparison stays honest; the global
+  // line is just an approximate orientation cue.
+  const lineTarget = bars[bars.length - 1]!.targetHours;
+  const targetsVary = bars.some((b) => b.targetHours !== lineTarget);
+  const maxH = Math.max(...bars.map((b) => b.hours), ...bars.map((b) => b.targetHours), lineTarget + 1);
+  const chartH = 110;
+  const targetPct = ((maxH - lineTarget) / maxH) * 100;
+  // Non-Present bars don't have hours to scale; render a fixed indicator
+  // height so they're still visible and hover-able.
+  const indicatorPx = 14;
 
   return (
-    <div className="relative" aria-hidden="true">
+    <div className="relative">
       {/* Target dashed line */}
       <div
         className="absolute inset-x-0 border-t border-dashed border-forest/30 pointer-events-none"
         style={{ top: `${targetPct}%` }}
+        aria-hidden="true"
       >
         <span className="absolute -top-2.5 right-0 text-[9px] text-forest/70 bg-white px-1 font-semibold">
-          {targetHours}h target
+          {lineTarget}h target{targetsVary ? '*' : ''}
         </span>
       </div>
 
       {/* Bars */}
       <div
-        className="flex items-end justify-between gap-1.5"
-        style={{ height: `${chartH + 18}px`, paddingTop: '4px' }}
+        className="flex items-end justify-between gap-2"
+        style={{ height: `${chartH + 30}px`, paddingTop: '4px' }}
       >
         {bars.map((b) => {
+          const isPresent = b.status === ATTENDANCE_STATUS.Present;
+          const style = STATUS_BAR_STYLES[b.status] ?? STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!;
+          const underTarget = isPresent && b.hours > 0 && b.hours < b.targetHours;
+          const gradient = isPresent && b.late
+            ? 'bg-gradient-to-t from-crimson to-crimson/70'
+            : isPresent && underTarget
+              ? UNDER_TARGET_GRADIENT
+              : style.gradient;
           const pct = maxH > 0 ? (b.hours / maxH) * 100 : 0;
+          const barHeight = isPresent
+            ? Math.max((pct / 100) * chartH, 4)
+            : indicatorPx;
+          const tooltipMain = isPresent
+            ? `${b.hours.toFixed(1)} hrs / ${b.targetHours}h target${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
+            : style.label;
+          const dateLabel = `${b.weekday} ${b.dayNum}`;
           return (
-            <div key={b.label} className="flex-1 flex flex-col items-center gap-1">
+            <div
+              key={b.date}
+              className="group relative flex-1 flex flex-col items-center gap-1"
+              tabIndex={0}
+              role="img"
+              aria-label={`${dateLabel}: ${tooltipMain}`}
+            >
+              {/* Tooltip — visible on hover (mouse) or keyboard focus */}
               <div
-                className={`w-full rounded-t-sm ${b.late ? 'bg-gradient-to-t from-crimson to-crimson/70' : 'bg-gradient-to-t from-forest to-emerald'}`}
-                style={{ height: `${Math.max((pct / 100) * chartH, 2)}px` }}
-                title={`${b.label}: ${b.hours.toFixed(1)}h${b.late ? ' (Late)' : ''}`}
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md bg-charcoal text-white text-[10px] font-semibold whitespace-nowrap shadow-md opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100 z-10"
+              >
+                <div className="text-center">
+                  <div className="text-mint/90 text-[9px] font-medium uppercase tracking-wide">{dateLabel}</div>
+                  <div className="font-bold">{tooltipMain}</div>
+                </div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-charcoal" />
+              </div>
+
+              <div
+                className={`w-full rounded-t-sm transition-opacity duration-150 group-hover:opacity-80 group-focus-within:opacity-80 ${gradient}`}
+                style={{ height: `${barHeight}px` }}
               />
-              <span className={`text-[9px] ${b.late ? 'text-crimson font-semibold' : 'text-slate'}`}>
-                {b.label}
+              <span className={`text-[9px] uppercase tracking-wide ${isPresent && b.late ? 'text-crimson font-semibold' : style.labelClass}`}>
+                {b.weekday}
+              </span>
+              <span className="text-[10px] text-charcoal font-semibold leading-none">
+                {b.dayNum}
               </span>
             </div>
           );
@@ -109,57 +189,121 @@ function HoursBarChart({ bars, targetHours = 8 }: BarChartProps) {
   );
 }
 
+/** Compact status legend shown above the chart. */
+function ChartLegend() {
+  const items: { gradient: string; key: string }[] = [
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Present]!.gradient,   key: 'On / over target' },
+    { gradient: UNDER_TARGET_GRADIENT,                                    key: 'Below target' },
+    { gradient: 'bg-gradient-to-t from-crimson to-crimson/70',            key: 'Late check-in' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!.gradient,    key: 'Absent' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.OnLeave]!.gradient,   key: 'Leave' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Holiday]!.gradient,   key: 'Holiday' },
+    { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.WeeklyOff]!.gradient, key: 'Weekly Off' },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate mt-3">
+      {items.map((it) => (
+        <div key={it.key} className="flex items-center gap-1.5">
+          <span className={`inline-block w-2.5 h-2.5 rounded-sm ${it.gradient}`} aria-hidden="true" />
+          <span>{it.key}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Status badge for the log table ────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Present: 'bg-greenbg text-richgreen',
-    Absent: 'bg-crimsonbg text-crimson',
-    'On-Leave': 'bg-amber-50 text-amber-700 border border-amber-200',
-    'Weekly-Off': 'bg-gray-100 text-slate',
-    Holiday: 'bg-softmint text-forest',
+function StatusBadge({ status }: { status: number }) {
+  const map: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]:   'bg-greenbg text-richgreen',
+    [ATTENDANCE_STATUS.Absent]:    'bg-crimsonbg text-crimson',
+    [ATTENDANCE_STATUS.OnLeave]:   'bg-amber-50 text-amber-700 border border-amber-200',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'bg-gray-100 text-slate',
+    [ATTENDANCE_STATUS.Holiday]:   'bg-softmint text-forest',
+  };
+  const labels: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]:   'Present',
+    [ATTENDANCE_STATUS.Absent]:    'Absent',
+    [ATTENDANCE_STATUS.OnLeave]:   'On Leave',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'Weekly Off',
+    [ATTENDANCE_STATUS.Holiday]:   'Holiday',
   };
   const cls = map[status] ?? 'bg-gray-100 text-slate';
-  const label =
-    status === 'On-Leave' ? 'On Leave'
-    : status === 'Weekly-Off' ? 'Weekly Off'
-    : status;
+  const label = labels[status] ?? String(status);
   return <span className={`text-xs font-bold px-2 py-1 rounded ${cls}`}>{label}</span>;
 }
 
 // ── MyAttendanceView ───────────────────────────────────────────────────────────
 
-export function MyAttendanceView() {
+interface MyAttendanceViewProps {
+  /** Where the Regularise CTA should link (defaults to "/regularisation"). */
+  regularisationHref?: string;
+}
+
+export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyAttendanceViewProps = {}) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
+
+  // Live clock — ticks once per minute. Used to derive in-progress hours
+  // for today's row (checked in, not yet checked out). Anchored to setState
+  // so the chart bar and detailed-log table auto-update without a refetch.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-  const { data, isLoading, isError, error } = useAttendanceList('me', { from, to });
+  // A single user's calendar month tops out at ~31 rows. limit:100 keeps the
+  // call well under the API ceiling and guards against the legacy default-20
+  // silent truncation that bit manager/payroll attendance pages.
+  const { data, isLoading, isError, error } = useAttendanceList(
+    'me',
+    { from, to, limit: 100 },
+    { keepPrevious: true },
+  );
 
   const handleMonthChange = useCallback((y: number, m: number) => {
     setYear(y);
     setMonth(m);
   }, []);
 
-  const rows: CalendarDay[] = (data?.data ?? []).map((r) => ({
-    date: r.date,
-    status: r.status,
-    checkInTime: r.checkInTime,
-    checkOutTime: r.checkOutTime,
-    hoursWorkedMinutes: r.hoursWorkedMinutes,
-    late: r.late,
-  }));
+  const rows = (data?.data ?? []).map((r) => {
+    // For today's row, if the employee has checked in but not yet checked
+    // out, surface the live elapsed minutes so the chart and table reflect
+    // progress instead of showing 0 until check-out commits the value.
+    let effectiveMinutes = r.hoursWorkedMinutes;
+    if (
+      r.date === todayISO &&
+      r.checkInTime &&
+      !r.checkOutTime
+    ) {
+      const start = new Date(r.checkInTime).getTime();
+      effectiveMinutes = Math.max(0, Math.floor((now.getTime() - start) / 60_000));
+    }
+    return {
+      date: r.date,
+      status: r.status,
+      checkInTime: r.checkInTime,
+      checkOutTime: r.checkOutTime,
+      hoursWorkedMinutes: effectiveMinutes,
+      late: r.late,
+      targetHours: r.targetHours,
+    };
+  });
 
   // ── Computed stats ──────────────────────────────────────────────────────────
 
-  const workingRows = rows.filter((r) => r.status !== 'Weekly-Off' && r.status !== 'Holiday');
-  const presentRows = rows.filter((r) => r.status === 'Present');
+  const workingRows = rows.filter((r) => r.status !== ATTENDANCE_STATUS.WeeklyOff && r.status !== ATTENDANCE_STATUS.Holiday);
+  const presentRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.Present);
   const lateRows = rows.filter((r) => r.late);
-  const leaveRows = rows.filter((r) => r.status === 'On-Leave');
+  const leaveRows = rows.filter((r) => r.status === ATTENDANCE_STATUS.OnLeave);
 
   const presentCount = presentRows.length;
   const workingDayCount = workingRows.length;
@@ -169,7 +313,12 @@ export function MyAttendanceView() {
 
   const totalMinutes = presentRows.reduce((sum, r) => sum + (r.hoursWorkedMinutes ?? 0), 0);
   const avgHours = presentCount > 0 ? totalMinutes / presentCount / 60 : 0;
-  const avgDelta = avgHours - 8;
+  // Average target across the present days the user actually clocked.
+  // Falls back to 8 when there are no present rows yet.
+  const avgTargetHours = presentCount > 0
+    ? presentRows.reduce((s, r) => s + r.targetHours, 0) / presentCount
+    : 8;
+  const avgDelta = avgHours - avgTargetHours;
 
   const leaveDatesLabel = leaveRows
     .slice(0, 3)
@@ -179,18 +328,52 @@ export function MyAttendanceView() {
     })
     .join(' · ');
 
-  // Last 14 working days with hours for chart
-  const chartBars = rows
-    .filter((r) => r.status === 'Present' && r.hoursWorkedMinutes !== null)
-    .slice(-14)
+  // Every day of the month becomes a bar — including leave / holiday /
+  // weekly-off / absent so the user can see the rhythm of the whole month.
+  // Sorted by date so weekly slicing is deterministic.
+  const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allBars: ChartBar[] = rows
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
     .map((r) => {
       const d = new Date(r.date);
-      const label = `${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getDate()}`;
-      return { label, hours: (r.hoursWorkedMinutes ?? 0) / 60, late: r.late };
+      return {
+        date: r.date,
+        weekday: WEEKDAY_LABELS[d.getDay()] ?? '',
+        dayNum: String(d.getDate()),
+        hours: (r.hoursWorkedMinutes ?? 0) / 60,
+        targetHours: r.targetHours,
+        status: r.status,
+        late: r.late,
+      };
     });
 
-  const chartTotal = chartBars.reduce((s, b) => s + b.hours, 0);
-  const chartAvg = chartBars.length > 0 ? chartTotal / chartBars.length : 0;
+  // 7-day slices starting from day 1. On initial load and on month change,
+  // jump to the slice containing TODAY so the latest week is the default
+  // view; fall back to the last slice when today isn't in the rendered
+  // month (e.g. the user is viewing a past or future month). Manual prev/
+  // next clicks are preserved because the effect only re-fires when the
+  // visible data set actually changes (year / month / row count).
+  const WEEK_SIZE = 7;
+  const weekCount = Math.max(1, Math.ceil(allBars.length / WEEK_SIZE));
+  const [weekIndex, setWeekIndex] = useState(0);
+  useEffect(() => {
+    const todayIdx = allBars.findIndex((b) => b.date === todayISO);
+    const target =
+      todayIdx >= 0 ? Math.floor(todayIdx / WEEK_SIZE) : Math.max(0, weekCount - 1);
+    setWeekIndex(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, allBars.length]);
+  const clampedWeek = Math.min(weekIndex, weekCount - 1);
+  const weekStart = clampedWeek * WEEK_SIZE;
+  const chartBars = allBars.slice(weekStart, weekStart + WEEK_SIZE);
+
+  const presentInWeek = chartBars.filter((b) => b.status === ATTENDANCE_STATUS.Present);
+  const chartTotal = presentInWeek.reduce((s, b) => s + b.hours, 0);
+  const chartAvg = presentInWeek.length > 0 ? chartTotal / presentInWeek.length : 0;
+  const weekRangeLabel = chartBars.length > 0
+    ? `${chartBars[0]!.dayNum} – ${chartBars[chartBars.length - 1]!.dayNum} ${MONTH_NAMES[month - 1]}`
+    : '';
 
   const monthName = MONTH_NAMES[month - 1];
   const attendancePct =
@@ -282,7 +465,7 @@ export function MyAttendanceView() {
 
             {/* Regularise CTA */}
             <Link
-              href="/admin/regularisation"
+              href={regularisationHref}
               className="group relative bg-gradient-to-br from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 text-forest px-5 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-amber-500/50 ring-2 ring-white/40 hover:ring-white/70 hover:scale-105 hover:-translate-y-0.5 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
             >
               <span className="absolute inset-0 rounded-xl bg-amber-200/30 blur-md -z-10" aria-hidden="true" />
@@ -389,20 +572,8 @@ export function MyAttendanceView() {
       <div className="bg-white rounded-2xl shadow-sm border border-sage/30 p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-heading text-base font-semibold text-charcoal">Daily Calendar</h2>
-          <div className="flex items-center gap-4 text-xs flex-wrap">
-            <span className="flex items-center gap-1.5 text-slate">
-              <span className="w-2 h-2 rounded-full bg-richgreen" aria-hidden="true" />Present
-            </span>
-            <span className="flex items-center gap-1.5 text-slate">
-              <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true" />Leave
-            </span>
-            <span className="flex items-center gap-1.5 text-slate">
-              <span className="w-2 h-2 rounded-full bg-crimson" aria-hidden="true" />Late
-            </span>
-            <span className="flex items-center gap-1.5 text-slate">
-              <span className="w-2 h-2 rounded-full bg-slate/40" aria-hidden="true" />Off
-            </span>
-          </div>
+          {/* Status legend renders inside <AttendanceCalendar/> below — auto-generated
+              from ATTENDANCE_STATUS_MAP so it stays in sync with the codes. */}
         </div>
 
         {isLoading ? (
@@ -424,27 +595,62 @@ export function MyAttendanceView() {
       </div>
 
       {/* ── Hours Worked Bar Chart ────────────────────────────────────────────── */}
-      {chartBars.length > 0 && (
+      {allBars.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-sage/30 p-6 mb-6">
-          <div className="flex items-end justify-between mb-5">
+          <div className="flex items-end justify-between mb-5 gap-3 flex-wrap">
             <div>
               <h2 className="font-heading text-base font-semibold text-charcoal">Hours Worked</h2>
               <p className="text-xs text-slate mt-0.5">
-                Last {chartBars.length} working days · Target 8h/day
+                {(() => {
+                  if (chartBars.length === 0) return 'No data for this week';
+                  const targets = Array.from(new Set(chartBars.map((b) => b.targetHours)));
+                  const targetText = targets.length === 1
+                    ? `Target ${targets[0]}h/day`
+                    : `Target ${Math.min(...targets)}–${Math.max(...targets)}h/day`;
+                  return weekRangeLabel ? `${weekRangeLabel} · ${targetText}` : targetText;
+                })()}
               </p>
             </div>
             <div className="flex items-center gap-5">
               <div className="text-right">
                 <div className="font-heading text-xl font-bold text-forest">{chartAvg.toFixed(1)}h</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Average</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Avg (present)</div>
               </div>
               <div className="text-right">
                 <div className="font-heading text-xl font-bold text-charcoal">{Math.round(chartTotal)}h</div>
-                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Total</div>
+                <div className="text-[10px] text-slate uppercase tracking-wide font-semibold">Week total</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous week"
+                  onClick={() => setWeekIndex((i) => Math.max(0, i - 1))}
+                  disabled={clampedWeek === 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-[11px] font-semibold text-slate tabular-nums">
+                  Week {clampedWeek + 1} / {weekCount}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next week"
+                  onClick={() => setWeekIndex((i) => Math.min(weekCount - 1, i + 1))}
+                  disabled={clampedWeek >= weekCount - 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
-          <HoursBarChart bars={chartBars} targetHours={8} />
+          <HoursBarChart bars={chartBars} />
+          <ChartLegend />
         </div>
       )}
 
@@ -473,10 +679,48 @@ export function MyAttendanceView() {
 
       {/* ── Detailed Log Table ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-sage/30">
-        <div className="px-6 py-4 border-b border-sage/20">
+        <div className="px-6 py-4 border-b border-sage/20 flex items-center justify-between gap-3">
           <h2 className="font-heading text-base font-semibold text-charcoal">
             Detailed Log — {monthName} {year}
           </h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => {
+                if (month === 1) handleMonthChange(year - 1, 12);
+                else handleMonthChange(year, month - 1);
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const t = new Date();
+                handleMonthChange(t.getFullYear(), t.getMonth() + 1);
+              }}
+              className="text-xs font-semibold text-forest hover:text-emerald px-2 py-1 rounded-lg border border-forest/30 hover:bg-softmint transition-colors"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => {
+                if (month === 12) handleMonthChange(year + 1, 1);
+                else handleMonthChange(year, month + 1);
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-sage/40 text-slate hover:bg-offwhite hover:text-charcoal transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -516,18 +760,16 @@ export function MyAttendanceView() {
                     <td className="px-4 py-3 text-slate">
                       {r.hoursWorkedMinutes !== null && r.hoursWorkedMinutes !== undefined
                         ? minutesToHM(r.hoursWorkedMinutes)
-                        : '—'}
+                        : ''}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={r.status} />
                     </td>
                     <td className="px-4 py-3">
-                      {r.late ? (
+                      {r.late && (
                         <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-0.5 rounded" aria-label="Late mark">
                           Late
                         </span>
-                      ) : (
-                        <span className="text-slate text-xs" aria-label="Not late">—</span>
                       )}
                     </td>
                   </tr>

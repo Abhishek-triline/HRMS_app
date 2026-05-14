@@ -81,7 +81,7 @@ export function TwoStepFinaliseModal({
         if (details) {
           setConflictDetails(details);
         } else {
-          setConflictDetails({ winnerId: '', winnerName: 'Another user', winnerAt: new Date().toISOString() });
+          setConflictDetails({ winnerId: 0, winnerName: 'Another user', winnerAt: new Date().toISOString() });
         }
       } else {
         showToast({
@@ -128,9 +128,9 @@ export function TwoStepFinaliseModal({
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         <p className="text-sm text-crimson">
-          <strong>This action is irreversible.</strong> Finalising locks all payslips permanently
-          (BL-031). Corrections require an Admin-initiated reversal that creates a new record
-          (BL-032 / BL-034). Exactly one concurrent finalise attempt will succeed.
+          <strong>This action is irreversible.</strong> Finalising locks all payslips permanently.
+          Corrections require an Admin-initiated reversal that creates a new record. Exactly one
+          concurrent finalise attempt will succeed.
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export function TwoStepFinaliseModal({
             {new Date(conflictDetails.winnerAt).toLocaleString('en-IN')}.
           </p>
           <p className="text-xs text-umber/80 mt-1">
-            Reload to view the latest state (BL-034).
+            Reload to view the latest state.
           </p>
           <Button
             variant="secondary"

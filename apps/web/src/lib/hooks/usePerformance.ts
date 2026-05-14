@@ -62,31 +62,31 @@ export function useCycles(query: Partial<CycleListQuery> = {}) {
   });
 }
 
-export function useCycle(id: string) {
+export function useCycle(id: number) {
   return useQuery({
     queryKey: qk.performance.cycle(id),
     queryFn: () => getCycle(id),
-    enabled: !!id,
+    enabled: id > 0,
     staleTime: 20_000,
   });
 }
 
 // ── Report queries ────────────────────────────────────────────────────────────
 
-export function useDistribution(cycleId: string) {
+export function useDistribution(cycleId: number) {
   return useQuery({
     queryKey: qk.performance.reports.distribution(cycleId),
     queryFn: () => getDistribution(cycleId),
-    enabled: !!cycleId,
+    enabled: cycleId > 0,
     staleTime: 60_000,
   });
 }
 
-export function useMissingReviews(cycleId: string) {
+export function useMissingReviews(cycleId: number) {
   return useQuery({
     queryKey: qk.performance.reports.missing(cycleId),
     queryFn: () => getMissingReviews(cycleId),
-    enabled: !!cycleId,
+    enabled: cycleId > 0,
     staleTime: 30_000,
   });
 }
@@ -101,11 +101,11 @@ export function useReviews(query: Partial<ReviewListQuery> = {}) {
   });
 }
 
-export function useReview(id: string) {
+export function useReview(id: number) {
   return useQuery({
     queryKey: qk.performance.review(id),
     queryFn: () => getReview(id),
-    enabled: !!id,
+    enabled: id > 0,
     staleTime: 15_000,
   });
 }
@@ -123,7 +123,7 @@ export function useCreateCycle() {
   });
 }
 
-export function useCloseCycle(cycleId: string) {
+export function useCloseCycle(cycleId: number) {
   const queryClient = useQueryClient();
   const idempotencyKeyRef = useRef<string>(generateKey());
 
@@ -144,7 +144,7 @@ export function useCloseCycle(cycleId: string) {
 
 // ── Review mutations ──────────────────────────────────────────────────────────
 
-export function useCreateGoal(reviewId: string) {
+export function useCreateGoal(reviewId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -155,7 +155,7 @@ export function useCreateGoal(reviewId: string) {
   });
 }
 
-export function useProposeGoal(reviewId: string) {
+export function useProposeGoal(reviewId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -166,7 +166,7 @@ export function useProposeGoal(reviewId: string) {
   });
 }
 
-export function useSubmitSelfRating(reviewId: string) {
+export function useSubmitSelfRating(reviewId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -182,7 +182,7 @@ export function useSubmitSelfRating(reviewId: string) {
   });
 }
 
-export function useSubmitManagerRating(reviewId: string) {
+export function useSubmitManagerRating(reviewId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({

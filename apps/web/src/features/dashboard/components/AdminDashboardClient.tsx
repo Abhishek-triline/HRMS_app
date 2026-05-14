@@ -15,6 +15,7 @@ import { useCycles } from '@/lib/hooks/usePerformance';
 import { useEmployeesList } from '@/lib/hooks/useEmployees';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { useAdminDashboard } from '@/features/dashboard/hooks/useAdminDashboard';
+import { EMPLOYEE_STATUS, PAYROLL_STATUS, LEAVE_TYPE_MAP, ROLE_MAP } from '@/lib/status/maps';
 import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
@@ -58,15 +59,15 @@ function timeAgo(iso?: string | null): string {
   return `${days}d ago`;
 }
 
-function payslipStatusPill(status?: string) {
-  if (status === 'Finalised') {
+function payslipStatusPill(status?: number) {
+  if (status === PAYROLL_STATUS.Finalised) {
     return (
       <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">
         Finalised
       </span>
     );
   }
-  if (status === 'Review') {
+  if (status === PAYROLL_STATUS.Review) {
     return (
       <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">
         Review
@@ -90,7 +91,7 @@ export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboar
     firstNameProp ?? me.data?.data?.user?.name?.split(' ')[0] ?? '';
 
   const dashboard = useAdminDashboard();
-  const openCycles = useCycles({ status: 'Open' } as Record<string, unknown>);
+  const openCycles = useCycles({ status: 1 }); // 1 = Open
   const activeCycle = openCycles.data?.data?.[0] ?? null;
 
   // Late marks this month — team-wide attendance
@@ -102,7 +103,7 @@ export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboar
   ).length;
 
   // Employees on notice (status transitions for upcoming exits)
-  const onNotice = useEmployeesList({ status: 'On-Notice', limit: 10 });
+  const onNotice = useEmployeesList({ status: EMPLOYEE_STATUS.OnNotice, limit: 10 });
   const upcomingExits = (onNotice.data?.data ?? []).slice(0, 3);
 
   const badge = `${currentMonthLabel()} · ${currentFYLabel()}`;
@@ -240,7 +241,7 @@ export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboar
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-xs text-slate">{req.type}</td>
+                    <td className="px-3 py-3 text-xs text-slate">{LEAVE_TYPE_MAP[req.leaveTypeId]?.label ?? req.leaveTypeName}</td>
                     <td className="px-3 py-3 text-xs text-slate">
                       {formatDate(req.fromDate)}
                       {req.fromDate !== req.toDate && `–${formatDate(req.toDate)}`}
@@ -296,7 +297,7 @@ export function AdminDashboardClient({ firstName: firstNameProp }: AdminDashboar
                   <div>
                     <p className="text-xs text-charcoal font-medium">{entry.action}</p>
                     <p className="text-xs text-slate mt-0.5">
-                      {entry.actorRole} · {entry.module}
+                      {ROLE_MAP[entry.actorRoleId]?.label ?? String(entry.actorRoleId)} · {entry.moduleName}
                     </p>
                     <p className="text-xs text-sage mt-0.5">{timeAgo(entry.createdAt)}</p>
                   </div>

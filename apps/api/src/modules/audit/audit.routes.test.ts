@@ -25,6 +25,9 @@ vi.mock('../../lib/prisma.js', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
+    auditModule: {
+      findUnique: vi.fn(),
+    },
     employee: {
       findMany: vi.fn(),
     },
@@ -55,24 +58,26 @@ vi.mock('../../lib/config.js', () => ({
 // Mock requireSession and requireRole middlewares
 vi.mock('../../middleware/requireSession.js', () => ({
   requireSession: () => (req: express.Request, _res: express.Response, next: express.NextFunction) => {
-    // Default: authenticated as admin — tests override via req.user injection
-    const role = (req as unknown as Record<string, unknown>).__testRole as string ?? 'Admin';
+    // Default: authenticated as admin — tests override via __testRole injection
+    const roleStr = (req as unknown as Record<string, unknown>).__testRole as string ?? 'Admin';
+    const roleNameToId: Record<string, number> = { Admin: 4, Manager: 2, Employee: 1, PayrollOfficer: 3 };
+    const roleId = roleNameToId[roleStr] ?? 4;
     req.user = {
-      id: 'admin-id-001',
+      id: 1,
       name: 'Priya Sharma',
-      role,
+      roleId,
       email: 'admin@triline.co.in',
       code: 'EMP-2024-0001',
-      employmentType: 'Permanent',
-      status: 'Active',
+      status: 1,
+      mustResetPassword: false,
     } as unknown as typeof req.user;
     next();
   },
 }));
 
 vi.mock('../../middleware/requireRole.js', () => ({
-  requireRole: (requiredRole: string) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (!req.user || req.user.role !== requiredRole) {
+  requireRole: (..._requiredRoles: number[]) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (!req.user || !_requiredRoles.includes(req.user.roleId)) {
       res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You are not authorised for this action.' } });
       return;
     }
@@ -119,16 +124,17 @@ function makeApp(role = 'Admin') {
 // ── Helper: seed audit row fixture ───────────────────────────────────────────
 
 const mockAuditRow = {
-  id: '01KR9THFXHR6YP9GJ7BS36WFXG',
-  actorId: 'admin-id-001',
-  actorRole: 'Admin',
+  id: 1,
+  actorId: 1,
+  actorRoleId: 4,
   actorIp: '127.0.0.1',
   action: 'leave.approve',
-  module: 'leave',
-  targetType: 'LeaveRequest',
-  targetId: 'lr-001',
-  before: { status: 'Pending' },
-  after: { status: 'Approved' },
+  module: { name: 'leave' },
+  moduleId: 3,
+  targetTypeId: 2,
+  targetId: 1,
+  before: { status: 1 },
+  after: { status: 2 },
   createdAt: new Date('2026-05-10T12:00:00.000Z'),
 };
 
@@ -146,9 +152,10 @@ describe('GET /api/v1/audit-logs', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data[0]).toMatchObject({
-      id: mockAuditRow.id,
+      id: 1,
       action: 'leave.approve',
-      module: 'leave',
+      moduleId: 3,
+      moduleName: 'leave',
     });
   });
 
@@ -181,24 +188,25 @@ describe('GET /api/v1/audit-logs', () => {
     expect(res.status).toBe(404);
   });
 
-  it('TC-AUD-009: module filter narrows results', async () => {
+  it('TC-AUD-009: moduleId filter passes the INT to the Prisma where clause', async () => {
+    // v2: clients send INT codes directly (no name→id lookup on the server).
     const app = makeApp('Admin');
-    const res = await request(app).get('/api/v1/audit-logs?module=leave');
+    const res = await request(app).get('/api/v1/audit-logs?moduleId=3');
     expect(res.status).toBe(200);
-    // Verify prisma was called (filter would be applied in the where clause)
     expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ module: 'leave' }),
+        where: expect.objectContaining({ moduleId: 3 }),
       }),
     );
   });
 
-  it('TC-AUD-009: actorRole filter passed to DB', async () => {
+  it('TC-AUD-009: actorRoleId filter passed to DB as INT', async () => {
     const app = makeApp('Admin');
-    await request(app).get('/api/v1/audit-logs?actorRole=Admin');
+    await request(app).get('/api/v1/audit-logs?actorRoleId=4');
+    // Admin roleId = 4 per RoleId constants
     expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ actorRole: 'Admin' }),
+        where: expect.objectContaining({ actorRoleId: 4 }),
       }),
     );
   });
@@ -214,9 +222,9 @@ describe('GET /api/v1/audit-logs', () => {
   });
 
   it('nextCursor is present when there are more pages', async () => {
-    // Return limit+1 rows to trigger hasMore=true
+    // Return limit+1 rows to trigger hasMore=true; ids must be INTs
     (prisma.auditLog.findMany as Mock).mockResolvedValue(
-      Array.from({ length: 21 }, (_, i) => ({ ...mockAuditRow, id: `row-${i}` })),
+      Array.from({ length: 21 }, (_, i) => ({ ...mockAuditRow, id: i + 1 })),
     );
     const app = makeApp('Admin');
     const res = await request(app).get('/api/v1/audit-logs?limit=20');
@@ -267,7 +275,7 @@ describe('PUT /api/v1/config/attendance', () => {
     (bustConfigCache as Mock).mockReturnValue(undefined);
     (prisma.$transaction as Mock).mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn({
       configuration: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn() },
-      employee: { findMany: vi.fn().mockResolvedValue([{ id: 'admin-id-001' }]) },
+      employee: { findMany: vi.fn().mockResolvedValue([{ id: 1 }]) },
     }));
   });
 
@@ -333,7 +341,7 @@ describe('PUT /api/v1/config/leave', () => {
     (bustConfigCache as Mock).mockReturnValue(undefined);
     (prisma.$transaction as Mock).mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn({
       configuration: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn() },
-      employee: { findMany: vi.fn().mockResolvedValue([{ id: 'admin-id-001' }]) },
+      employee: { findMany: vi.fn().mockResolvedValue([{ id: 1 }]) },
     }));
   });
 

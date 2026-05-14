@@ -5,34 +5,61 @@
  * Visual reference: prototype/manager/attendance-team.html
  *
  * - Date picker + employee filter
- * - Table view of team attendance
  * - Toggle: calendar / table
+ *
+ * Pagination: table view uses server-side cursor pagination (a team-month
+ * easily crosses 100 rows — e.g. 5 employees × 22 days). Calendar view is
+ * only meaningful when one employee is selected, since multiple employees
+ * collapse into one date-keyed map; we surface an empty-state prompt
+ * otherwise instead of silently merging.
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { Spinner } from '@/components/ui/Spinner';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { AttendanceTable } from '@/components/attendance/AttendanceTable';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
 import type { CalendarDay } from '@/components/attendance/AttendanceCalendar';
+
+const PAGE_SIZE = 20;
 
 export default function TeamAttendancePage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [employeeId, setEmployeeId] = useState('');
+  const [employeeIdStr, setEmployeeIdStr] = useState('');
   const [view, setView] = useState<'calendar' | 'table'>('table');
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
+  const employeeId = employeeIdStr ? Number(employeeIdStr) : undefined;
+
+  // Table view: cursor pagination. Calendar view: bulk fetch for one
+  // employee's month (max 31 rows, well under the API ceiling).
+  const pager = useCursorPagination({
+    pageSize: PAGE_SIZE,
+    filtersKey: `${view}|${from}|${to}|${employeeIdStr}`,
+  });
+
+  const isCalendarReady = view === 'calendar' && employeeId !== undefined;
+
   const { data, isLoading, isError, error } = useAttendanceList('team', {
     from,
     to,
+    ...(view === 'table'
+      ? { limit: pager.pageSize, cursor: pager.cursor }
+      : { limit: 100 }),
     ...(employeeId ? { employeeId } : {}),
   });
+
+  useEffect(() => {
+    if (view === 'table' && data) pager.cacheNextCursor(data.nextCursor);
+  }, [view, data, pager]);
 
   const rows: CalendarDay[] = (data?.data ?? []).map((r) => ({
     date: r.date,
@@ -55,8 +82,10 @@ export default function TeamAttendancePage() {
     'July','August','September','October','November','December',
   ];
 
-  // Late marks summary
+  // Late marks in the currently visible rows (paginated view = current page;
+  // calendar view = whole month for the selected employee).
   const lateDays = rows.filter((r) => r.late);
+  const hasMoreLatePages = view === 'table' && pager.hasMore;
 
   return (
     <div>
@@ -81,12 +110,14 @@ export default function TeamAttendancePage() {
           />
         </div>
         <div>
-          <label htmlFor="att-emp" className="block text-xs font-semibold text-charcoal mb-1">Employee (optional)</label>
+          <label htmlFor="att-emp" className="block text-xs font-semibold text-charcoal mb-1">
+            Employee {view === 'calendar' ? <span className="text-crimson">*</span> : '(optional)'}
+          </label>
           <input
             id="att-emp"
             type="text"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
+            value={employeeIdStr}
+            onChange={(e) => setEmployeeIdStr(e.target.value)}
             placeholder="Employee ID…"
             className="border border-sage rounded-lg px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
           />
@@ -117,7 +148,12 @@ export default function TeamAttendancePage() {
             </h2>
           </div>
           <div className="p-5">
-            {isLoading ? (
+            {view === 'calendar' && !isCalendarReady ? (
+              <div className="py-12 text-center text-sm text-slate">
+                <p className="font-medium text-charcoal mb-1">Pick one employee to see the calendar.</p>
+                <p>Calendar view shows a single employee&apos;s month. Switch to the table view to see the whole team.</p>
+              </div>
+            ) : isLoading ? (
               <div className="flex justify-center py-12">
                 <Spinner size="lg" aria-label="Loading team attendance…" />
               </div>
@@ -128,7 +164,7 @@ export default function TeamAttendancePage() {
             ) : view === 'table' ? (
               <AttendanceTable
                 rows={rows}
-                showEmployee={!employeeId}
+                showEmployee={!employeeIdStr}
                 caption={`Team attendance for ${MONTH_NAMES[month - 1]} ${year}`}
               />
             ) : (
@@ -140,6 +176,18 @@ export default function TeamAttendancePage() {
               />
             )}
           </div>
+          {view === 'table' && (
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={rows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+            />
+          )}
         </div>
 
         {/* Late marks sidebar */}
@@ -149,7 +197,9 @@ export default function TeamAttendancePage() {
               <svg className="w-4 h-4 text-umber" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              <h3 className="font-heading text-sm font-semibold text-charcoal">Recent Late Marks</h3>
+              <h3 className="font-heading text-sm font-semibold text-charcoal">
+                Recent Late Marks{hasMoreLatePages ? ' (this page)' : ''}
+              </h3>
             </div>
             <div className="p-4 space-y-2">
               {lateDays.slice(0, 10).map((r) => (

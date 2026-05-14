@@ -68,7 +68,7 @@ export function NotificationsPageClient({ role }: NotificationsPageClientProps) 
         <span>
           Notifications are retained for <span className="font-semibold text-charcoal">90 days</span>.
           Audit-relevant events (approvals, payroll runs, reversals, status changes) are kept permanently in the system audit log —{' '}
-          <span className="font-semibold text-charcoal">system-generated and append-only</span>; no user can edit or delete entries (BL-047).
+          <span className="font-semibold text-charcoal">system-generated and append-only</span>; no user can edit or delete entries.
         </span>
       </p>
     </div>

@@ -40,13 +40,13 @@ export function useRegularisations(query: Partial<RegularisationListQuery> = {})
 
 // ── Detail ────────────────────────────────────────────────────────────────────
 
-export function useRegularisation(id: string) {
+export function useRegularisation(id: number) {
   return useQuery({
     queryKey: qk.regularisations.detail(id),
     queryFn: () => getRegularisation(id),
     staleTime: 30_000,
     retry: 1,
-    enabled: Boolean(id),
+    enabled: id > 0,
   });
 }
 
@@ -78,7 +78,7 @@ export function useSubmitRegularisation() {
 
 // ── Approve ───────────────────────────────────────────────────────────────────
 
-export function useApproveRegularisation(id: string) {
+export function useApproveRegularisation(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -101,7 +101,7 @@ export function useApproveRegularisation(id: string) {
 
 // ── Reject ────────────────────────────────────────────────────────────────────
 
-export function useRejectRegularisation(id: string) {
+export function useRejectRegularisation(id: number) {
   const queryClient = useQueryClient();
 
   return useMutation({

@@ -12,13 +12,14 @@
 import { useState, useCallback, useMemo, useRef, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
 import { AttendanceStatusBadge } from './AttendanceStatusBadge';
-import type { AttendanceStatus } from '@nexora/contracts/attendance';
+import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface CalendarDay {
   date: string; // YYYY-MM-DD
-  status: AttendanceStatus;
+  /** INT status code: 1=Present, 2=Absent, 3=OnLeave, 4=WeeklyOff, 5=Holiday */
+  status: number;
   checkInTime: string | null;
   checkOutTime: string | null;
   hoursWorkedMinutes: number | null;
@@ -37,20 +38,20 @@ interface AttendanceCalendarProps {
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 
-const dotColour: Record<AttendanceStatus, string> = {
-  Present: 'bg-richgreen',
-  Absent: 'bg-crimson',
-  'On-Leave': 'bg-forest',
-  'Weekly-Off': 'bg-slate/40',
-  Holiday: 'bg-mint',
+const dotColour: Record<number, string> = {
+  [ATTENDANCE_STATUS.Present]: 'bg-richgreen',
+  [ATTENDANCE_STATUS.Absent]: 'bg-crimson',
+  [ATTENDANCE_STATUS.OnLeave]: 'bg-forest',
+  [ATTENDANCE_STATUS.WeeklyOff]: 'bg-slate/40',
+  [ATTENDANCE_STATUS.Holiday]: 'bg-mint',
 };
 
-const cellBg: Record<AttendanceStatus, string> = {
-  Present: 'hover:bg-greenbg/60',
-  Absent: 'hover:bg-crimsonbg/60',
-  'On-Leave': 'hover:bg-softmint/60',
-  'Weekly-Off': 'hover:bg-sage/20',
-  Holiday: 'hover:bg-mint/20',
+const cellBg: Record<number, string> = {
+  [ATTENDANCE_STATUS.Present]: 'hover:bg-greenbg/60',
+  [ATTENDANCE_STATUS.Absent]: 'hover:bg-crimsonbg/60',
+  [ATTENDANCE_STATUS.OnLeave]: 'hover:bg-softmint/60',
+  [ATTENDANCE_STATUS.WeeklyOff]: 'hover:bg-sage/20',
+  [ATTENDANCE_STATUS.Holiday]: 'hover:bg-mint/20',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -331,12 +332,16 @@ export function AttendanceCalendar({
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate" aria-label="Status legend">
-        {Object.entries(dotColour).map(([status, colour]) => (
-          <div key={status} className="flex items-center gap-1.5">
-            <span className={clsx('w-2 h-2 rounded-full', colour)} aria-hidden="true" />
-            {status}
-          </div>
-        ))}
+        {(Object.entries(dotColour) as [string, string][]).map(([codeStr, colour]) => {
+          const code = Number(codeStr);
+          const label = ATTENDANCE_STATUS_MAP[code]?.label ?? `Status ${code}`;
+          return (
+            <div key={codeStr} className="flex items-center gap-1.5">
+              <span className={clsx('w-2 h-2 rounded-full', colour)} aria-hidden="true" />
+              {label}
+            </div>
+          );
+        })}
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-umber" aria-hidden="true" />
           Late

@@ -72,9 +72,9 @@ export async function listCycles(
 }
 
 /** GET /performance/cycles/:id — role-scoped. */
-export async function getCycle(id: string): Promise<CycleDetailResponse['data']> {
+export async function getCycle(id: number): Promise<CycleDetailResponse['data']> {
   const res = await apiClient.get<CycleDetailResponse>(
-    `${BASE}/cycles/${encodeURIComponent(id)}`,
+    `${BASE}/cycles/${id}`,
   );
   return res.data;
 }
@@ -85,11 +85,11 @@ export async function getCycle(id: string): Promise<CycleDetailResponse['data']>
  * Locks all final ratings (BL-041).
  */
 export async function closeCycle(
-  id: string,
+  id: number,
   input: CloseCycleRequest,
 ): Promise<CloseCycleResponse['data']> {
   const res = await apiClient.post<CloseCycleResponse>(
-    `${BASE}/cycles/${encodeURIComponent(id)}/close`,
+    `${BASE}/cycles/${id}/close`,
     input,
   );
   return res.data;
@@ -97,20 +97,20 @@ export async function closeCycle(
 
 /** GET /performance/cycles/:id/reports/distribution — Admin only. A-22. */
 export async function getDistribution(
-  cycleId: string,
+  cycleId: number,
 ): Promise<DistributionReportResponse['data']> {
   const res = await apiClient.get<DistributionReportResponse>(
-    `${BASE}/cycles/${encodeURIComponent(cycleId)}/reports/distribution`,
+    `${BASE}/cycles/${cycleId}/reports/distribution`,
   );
   return res.data;
 }
 
 /** GET /performance/cycles/:id/reports/missing — Admin only. A-23. */
 export async function getMissingReviews(
-  cycleId: string,
+  cycleId: number,
 ): Promise<MissingReviewsResponse['data']> {
   const res = await apiClient.get<MissingReviewsResponse>(
-    `${BASE}/cycles/${encodeURIComponent(cycleId)}/reports/missing`,
+    `${BASE}/cycles/${cycleId}/reports/missing`,
   );
   return res.data;
 }
@@ -127,20 +127,20 @@ export async function listReviews(
 }
 
 /** GET /performance/reviews/:id — role-scoped. 404 if not visible. */
-export async function getReview(id: string): Promise<ReviewDetailResponse['data']> {
+export async function getReview(id: number): Promise<ReviewDetailResponse['data']> {
   const res = await apiClient.get<ReviewDetailResponse>(
-    `${BASE}/reviews/${encodeURIComponent(id)}`,
+    `${BASE}/reviews/${id}`,
   );
   return res.data;
 }
 
 /** POST /performance/reviews/:id/goals — Manager or Admin. BL-038. */
 export async function createGoal(
-  reviewId: string,
+  reviewId: number,
   input: CreateGoalRequest,
 ): Promise<CreateGoalResponse['data']> {
   const res = await apiClient.post<CreateGoalResponse>(
-    `${BASE}/reviews/${encodeURIComponent(reviewId)}/goals`,
+    `${BASE}/reviews/${reviewId}/goals`,
     input,
   );
   return res.data;
@@ -148,11 +148,11 @@ export async function createGoal(
 
 /** POST /performance/reviews/:id/goals/propose — Employee only, window-gated. BL-038. */
 export async function proposeGoal(
-  reviewId: string,
+  reviewId: number,
   input: ProposeGoalRequest,
 ): Promise<ProposeGoalResponse['data']> {
   const res = await apiClient.post<ProposeGoalResponse>(
-    `${BASE}/reviews/${encodeURIComponent(reviewId)}/goals/propose`,
+    `${BASE}/reviews/${reviewId}/goals/propose`,
     input,
   );
   return res.data;
@@ -160,11 +160,11 @@ export async function proposeGoal(
 
 /** PATCH /performance/reviews/:id/self-rating — Employee only, deadline-gated. BL-039. */
 export async function submitSelfRating(
-  reviewId: string,
+  reviewId: number,
   input: SelfRatingRequest,
 ): Promise<SelfRatingResponse['data']> {
   const res = await apiClient.patch<SelfRatingResponse>(
-    `${BASE}/reviews/${encodeURIComponent(reviewId)}/self-rating`,
+    `${BASE}/reviews/${reviewId}/self-rating`,
     input,
   );
   return res.data;
@@ -172,11 +172,11 @@ export async function submitSelfRating(
 
 /** POST /performance/reviews/:id/manager-rating — Manager or Admin, deadline-gated. BL-040. */
 export async function submitManagerRating(
-  reviewId: string,
+  reviewId: number,
   input: ManagerRatingRequest,
 ): Promise<ManagerRatingResponse['data']> {
   const res = await apiClient.post<ManagerRatingResponse>(
-    `${BASE}/reviews/${encodeURIComponent(reviewId)}/manager-rating`,
+    `${BASE}/reviews/${reviewId}/manager-rating`,
     input,
   );
   return res.data;

@@ -12,11 +12,12 @@ import Link from 'next/link';
 import { useCycles } from '@/lib/hooks/usePerformance';
 import { CycleStatusBadge } from '@/components/performance/CycleStatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 
 export default function ManagerPerformanceCyclesPage() {
   const { data, isLoading, isError } = useCycles();
   const cycles = data?.data ?? [];
-  const activeCycle = cycles.find((c) => c.status !== 'Closed');
+  const activeCycle = cycles.find((c) => c.status !== CYCLE_STATUS.Closed);
 
   return (
     <>

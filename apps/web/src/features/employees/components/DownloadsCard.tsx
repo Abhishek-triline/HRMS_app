@@ -23,7 +23,7 @@ const DownloadIcon = () => (
 );
 
 interface Props {
-  employeeId: string;
+  employeeId: number;
 }
 
 export function DownloadsCard({ employeeId }: Props) {

@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/Label';
 import { FieldError } from '@/components/ui/FieldError';
 
 interface PickedManager {
-  id: string;
+  id: number;
   name: string;
   code: string;
   designation: string | null;
@@ -25,18 +25,24 @@ interface PickedManager {
 
 interface HierarchyPickerProps {
   /** Currently selected manager id (null = no manager) */
-  value: string | null;
+  value: number | null;
   /**
    * Called when the selection changes.
    * The second argument is the selected manager's display name (or null when cleared).
    */
-  onChange: (managerId: string | null, managerName?: string | null) => void;
+  onChange: (managerId: number | null, managerName?: string | null) => void;
   /** ID of the employee being edited — excluded from results */
-  excludeId?: string;
+  excludeId?: number;
   label?: string;
   error?: string;
   required?: boolean;
   disabled?: boolean;
+  /**
+   * Comma-separated list of role IDs to include in the dropdown.
+   * Defaults to "2,4" (Manager, Admin). For an Admin being created/edited,
+   * pass "4" so the picker shows only other Admins.
+   */
+  eligibleRoles?: string;
 }
 
 function getInitials(name: string) {
@@ -53,6 +59,7 @@ export function HierarchyPicker({
   error,
   required,
   disabled = false,
+  eligibleRoles = '2,4',
 }: HierarchyPickerProps) {
   const uid = useId();
   const inputId = `${uid}-manager`;
@@ -64,6 +71,7 @@ export function HierarchyPicker({
   const [open, setOpen] = useState(false);
   const [selectedDisplay, setSelectedDisplay] = useState<PickedManager | null>(null);
 
+
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +82,11 @@ export function HierarchyPicker({
   }, [query]);
 
   const { data, isLoading } = useEmployeesList({
-    status: 'Active',
+    status: 1, // 1 = Active
+    // Only Managers and Admins are valid reporting managers (BL-015 / BL-017 / BL-022).
+    // For an Admin employee being created/edited, the caller passes "4" only —
+    // an Admin can only report to another Admin. Default "2,4" = Manager + Admin.
+    roleId: eligibleRoles,
     q: debouncedQuery || undefined,
     limit: 10,
   });
@@ -89,7 +101,7 @@ export function HierarchyPicker({
       const found = candidates.find((e) => e.id === value);
       if (found && found.id !== selectedDisplay?.id) {
         setSelectedDisplay({
-          id: found.id,
+          id: found.id as number,
           name: found.name,
           code: found.code,
           designation: found.designation,
@@ -238,7 +250,7 @@ export function HierarchyPicker({
           )}
 
           {candidates.map((emp) => {
-            const isSelected = emp.id === value;
+            const isSelected = (emp.id as number) === value;
             return (
               <li
                 key={emp.id}
@@ -246,7 +258,7 @@ export function HierarchyPicker({
                 aria-selected={isSelected}
                 onClick={() =>
                   selectManager({
-                    id: emp.id,
+                    id: emp.id as number,
                     name: emp.name,
                     code: emp.code,
                     designation: emp.designation,

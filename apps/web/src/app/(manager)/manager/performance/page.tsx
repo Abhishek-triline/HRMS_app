@@ -20,8 +20,14 @@ export default function ManagerPerformanceQueuePage() {
   const { data: auth } = useMe();
   const userId = auth?.data?.user?.id ?? '';
 
+  // The page splits results into "Pending action" and "Completed" sections
+  // client-side, which needs the full list. Bumped to the API max so up to
+  // ~100 historical reviews fit. Beyond that (long-tenure manager with high
+  // team turnover) we'd need server-side filter by finalRating presence
+  // (not yet in ReviewListQuerySchema — v1.1 backlog).
   const { data, isLoading, isError } = useReviews({
     managerId: userId || undefined,
+    limit: 100,
   });
 
   const reviews = data?.data ?? [];

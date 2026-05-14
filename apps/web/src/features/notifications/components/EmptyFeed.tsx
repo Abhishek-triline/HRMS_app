@@ -2,10 +2,25 @@
  * EmptyFeed — friendly empty state for the notification feed.
  *
  * Copy changes per active filter so users know the filter is working.
+ * v2: filter can be 'all', 'unread', or an INT category ID.
  */
 
+import { NOTIFICATION_CATEGORY_ID } from '@/lib/status/maps';
+
+// Reverse lookup: category ID → label
+const CATEGORY_LABEL: Record<number, string> = {
+  [NOTIFICATION_CATEGORY_ID.Leave]:         'Leave',
+  [NOTIFICATION_CATEGORY_ID.Attendance]:    'Attendance',
+  [NOTIFICATION_CATEGORY_ID.Payroll]:       'Payroll',
+  [NOTIFICATION_CATEGORY_ID.Performance]:   'Performance',
+  [NOTIFICATION_CATEGORY_ID.Status]:        'Status',
+  [NOTIFICATION_CATEGORY_ID.Configuration]: 'Configuration',
+  [NOTIFICATION_CATEGORY_ID.Auth]:          'Auth',
+  [NOTIFICATION_CATEGORY_ID.System]:        'System',
+};
+
 interface EmptyFeedProps {
-  filter?: string;
+  filter?: string | number;
 }
 
 export function EmptyFeed({ filter }: EmptyFeedProps) {
@@ -15,8 +30,9 @@ export function EmptyFeed({ filter }: EmptyFeedProps) {
   if (filter === 'unread') {
     heading = 'No unread notifications';
     sub = 'Everything has been read. Check back later.';
-  } else if (filter && filter !== 'all') {
-    heading = `No ${filter} notifications`;
+  } else if (filter != null && filter !== 'all') {
+    const label = typeof filter === 'number' ? (CATEGORY_LABEL[filter] ?? String(filter)) : filter;
+    heading = `No ${label} notifications`;
     sub = `Nothing in this category right now. We'll notify you when something arrives.`;
   }
 

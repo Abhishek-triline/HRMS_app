@@ -40,6 +40,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 import type { PerformanceReviewSummary } from '@nexora/contracts/performance';
+import { CYCLE_STATUS, CYCLE_STATUS_MAP, GOAL_OUTCOME, GOAL_OUTCOME_MAP } from '@/lib/status/maps';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ function daysUntil(dateStr: string): number {
 
 interface NoReviewsEmptyStateProps {
   /** The currently in-flight cycle, if any (Self-Review or Manager-Review). */
-  inFlight?: { code: string; fyStart: string; fyEnd: string; status: string } | null;
+  inFlight?: { code: string; fyStart: string; fyEnd: string; status: number } | null;
   /** The next cycle (Open, not yet started). */
   upcoming?: { code: string; fyStart: string; fyEnd: string; selfReviewStart?: string } | null;
 }
@@ -89,7 +90,7 @@ interface NoReviewsEmptyStateProps {
 function NoReviewsEmptyState({ inFlight, upcoming }: NoReviewsEmptyStateProps) {
   let subline: string;
   if (inFlight) {
-    subline = `Cycle ${inFlight.code} (${cyclePeriod(inFlight.fyStart, inFlight.fyEnd)}) is currently in ${inFlight.status.toLowerCase()}. You joined after this cycle started, so your first review will begin with the next cycle (BL-037).`;
+    subline = `Cycle ${inFlight.code} (${cyclePeriod(inFlight.fyStart, inFlight.fyEnd)}) is currently in ${(CYCLE_STATUS_MAP[inFlight.status]?.label ?? String(inFlight.status)).toLowerCase()}. You joined after this cycle started, so your first review will begin with the next cycle.`;
   } else if (upcoming) {
     subline = `The next performance cycle — ${upcoming.code} (${cyclePeriod(upcoming.fyStart, upcoming.fyEnd)}) — has not started yet. Your review will be created when Self-Review opens.`;
   } else {
@@ -124,18 +125,18 @@ function NoReviewsEmptyState({ inFlight, upcoming }: NoReviewsEmptyStateProps) {
 
 // ── Outcome badge ─────────────────────────────────────────────────────────────
 
-const OUTCOME_COLORS: Record<string, string> = {
-  Met: 'bg-greenbg text-richgreen',
-  Partial: 'bg-umberbg text-umber',
-  Missed: 'bg-crimsonbg text-crimson',
-  Pending: 'bg-umberbg text-umber',
+const OUTCOME_COLORS: Record<number, string> = {
+  [GOAL_OUTCOME.Met]:     'bg-greenbg text-richgreen',
+  [GOAL_OUTCOME.Partial]: 'bg-umberbg text-umber',
+  [GOAL_OUTCOME.Missed]:  'bg-crimsonbg text-crimson',
+  [GOAL_OUTCOME.Pending]: 'bg-umberbg text-umber',
 };
 
-const OUTCOME_LABELS: Record<string, string> = {
-  Met: 'Met',
-  Partial: 'Partially Met',
-  Missed: 'Missed',
-  Pending: 'Pending',
+const OUTCOME_LABELS: Record<number, string> = {
+  [GOAL_OUTCOME.Met]:     'Met',
+  [GOAL_OUTCOME.Partial]: 'Partially Met',
+  [GOAL_OUTCOME.Missed]:  'Missed',
+  [GOAL_OUTCOME.Pending]: 'Pending',
 };
 
 // ── Self-Rating inline form ───────────────────────────────────────────────────
@@ -163,7 +164,7 @@ function ReviewHeroBanner({
   selfReviewDeadline: string;
   managerReviewDeadline: string;
   managerName: string | null;
-  status: string;
+  status: number;
 }) {
   return (
     <div
@@ -299,13 +300,13 @@ function PastCyclesSkeleton() {
 // ── Self-rating section ───────────────────────────────────────────────────────
 
 interface SelfRatingSectionProps {
-  reviewId: string;
+  reviewId: number;
   selfRating: number | null;
   selfNote: string | null;
   selfSubmittedAt: string | null;
   selfReviewDeadline: string;
   lockedAt: string | null;
-  cycleStatus: string;
+  cycleStatus: number;
   isMidCycleJoiner: boolean;
   version: number;
   basePath: string;
@@ -326,7 +327,7 @@ function SelfRatingSection({
   const { mutateAsync, isPending } = useSubmitSelfRating(reviewId);
 
   const deadlinePassed = new Date(selfReviewDeadline) < new Date();
-  const isClosed = lockedAt !== null || cycleStatus === 'Closed';
+  const isClosed = lockedAt !== null || cycleStatus === CYCLE_STATUS.Closed;
   const isEditable = !deadlinePassed && !isClosed && !isMidCycleJoiner;
   const daysLeft = daysUntil(selfReviewDeadline);
 
@@ -564,18 +565,23 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
   const userId = auth?.data?.user?.id ?? '';
 
   // ── List of all reviews for this user ────────────────────────────────────
+  // The page categorises reviews into "Active" (one row, the current
+  // unrated cycle) and "Past" (everything finalised). That categorisation
+  // needs the full list. Bumped to API max so up to ~50 years of past
+  // cycles (2/year) fit in one fetch. Past Cycles table doesn't paginate
+  // — at 60+ rows we'd revisit, but those are out-of-scope tenures.
   const {
     data: listData,
     isLoading: listLoading,
     isError: listError,
-  } = useReviews({ employeeId: userId || undefined });
+  } = useReviews({ employeeId: userId || undefined, limit: 100 });
 
   // Cycle queries used only for the empty state to explain *why* there's
   // no review yet (in-flight cycle the user joined late vs. next cycle
   // hasn't started). Cheap — small payload, cached for 30s.
-  const { data: selfReviewCycles } = useCycles({ status: 'Self-Review' });
-  const { data: managerReviewCycles } = useCycles({ status: 'Manager-Review' });
-  const { data: openCycles } = useCycles({ status: 'Open' });
+  const { data: selfReviewCycles } = useCycles({ status: CYCLE_STATUS.SelfReview });
+  const { data: managerReviewCycles } = useCycles({ status: CYCLE_STATUS.ManagerReview });
+  const { data: openCycles } = useCycles({ status: CYCLE_STATUS.Open });
 
   const allReviews: PerformanceReviewSummary[] = listData?.data ?? [];
 
@@ -593,13 +599,13 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
   const {
     data: activeDetail,
     isLoading: detailLoading,
-  } = useReview(activeReviewSummary?.id ?? '');
+  } = useReview(activeReviewSummary?.id ?? 0);
 
   // ── Cycle info for active review (for deadlines) ──────────────────────────
   const {
     data: cycleData,
     isLoading: cycleLoading,
-  } = useCycle(activeReviewSummary?.cycleId ?? '');
+  } = useCycle(activeReviewSummary?.cycleId ?? 0);
 
   const loadingActive = detailLoading || cycleLoading;
 
@@ -784,9 +790,9 @@ export function MyReviewView({ basePath }: MyReviewViewProps) {
                       </div>
                       <span className={clsx(
                         'text-xs font-bold px-2 py-1 rounded shrink-0',
-                        OUTCOME_COLORS[goal.outcome] ?? 'bg-umberbg text-umber',
+                        OUTCOME_COLORS[goal.outcomeId] ?? 'bg-umberbg text-umber',
                       )}>
-                        {OUTCOME_LABELS[goal.outcome] ?? goal.outcome}
+                        {OUTCOME_LABELS[goal.outcomeId] ?? GOAL_OUTCOME_MAP[goal.outcomeId]?.label ?? String(goal.outcomeId)}
                       </span>
                     </div>
                   </div>

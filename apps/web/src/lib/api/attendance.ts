@@ -14,6 +14,8 @@ import type {
   TodayAttendanceResponse,
   AttendanceListQuery,
   AttendanceListResponse,
+  AttendanceStatsQuery,
+  AttendanceStatsResponse,
   CreateRegularisationRequest,
   CreateRegularisationResponse,
   RegularisationListQuery,
@@ -90,6 +92,23 @@ export async function listAttendance(
   return apiClient.get<AttendanceListResponse>(`${path}${qs ? `?${qs}` : ''}`);
 }
 
+/** GET /api/v1/attendance/stats — Admin aggregate counts for a date/range. */
+export async function getAttendanceStats(
+  query: Partial<AttendanceStatsQuery> = {},
+): Promise<AttendanceStatsResponse['data']> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  const res = await apiClient.get<AttendanceStatsResponse>(
+    `${ATT_BASE}/stats${qs ? `?${qs}` : ''}`,
+  );
+  return res.data;
+}
+
 // ── Regularisations ───────────────────────────────────────────────────────────
 
 /** POST /api/v1/regularisations — may return 409 LEAVE_REG_CONFLICT (BL-010) */
@@ -115,20 +134,20 @@ export async function listRegularisations(
 }
 
 /** GET /api/v1/regularisations/:id */
-export async function getRegularisation(id: string): Promise<RegularisationDetailResponse['data']> {
+export async function getRegularisation(id: number): Promise<RegularisationDetailResponse['data']> {
   const res = await apiClient.get<RegularisationDetailResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}`,
+    `${REG_BASE}/${id}`,
   );
   return res.data;
 }
 
 /** POST /api/v1/regularisations/:id/approve — Manager (≤7d) or Admin (>7d) */
 export async function approveRegularisation(
-  id: string,
+  id: number,
   input: ApproveRegularisationRequest,
 ): Promise<ApproveRegularisationResponse['data']> {
   const res = await apiClient.post<ApproveRegularisationResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}/approve`,
+    `${REG_BASE}/${id}/approve`,
     input,
   );
   return res.data;
@@ -136,11 +155,11 @@ export async function approveRegularisation(
 
 /** POST /api/v1/regularisations/:id/reject — note is REQUIRED */
 export async function rejectRegularisation(
-  id: string,
+  id: number,
   input: RejectRegularisationRequest,
 ): Promise<RejectRegularisationResponse['data']> {
   const res = await apiClient.post<RejectRegularisationResponse>(
-    `${REG_BASE}/${encodeURIComponent(id)}/reject`,
+    `${REG_BASE}/${id}/reject`,
     input,
   );
   return res.data;

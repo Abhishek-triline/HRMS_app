@@ -9,11 +9,11 @@
  * useCheckOut           — mutation
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { checkIn, checkOut, undoCheckOut, getTodayAttendance, listAttendance } from '@/lib/api/attendance';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { checkIn, checkOut, undoCheckOut, getTodayAttendance, listAttendance, getAttendanceStats } from '@/lib/api/attendance';
 import { qk } from '@/lib/api/query-keys';
 import { showToast } from '@/components/ui/Toast';
-import type { AttendanceListQuery } from '@nexora/contracts/attendance';
+import type { AttendanceListQuery, AttendanceStatsQuery } from '@nexora/contracts/attendance';
 
 // ── Today panel ───────────────────────────────────────────────────────────────
 
@@ -32,10 +32,25 @@ export function useTodayAttendance() {
 export function useAttendanceList(
   scope: 'me' | 'team' | 'all',
   query: Partial<AttendanceListQuery> = {},
+  options: { keepPrevious?: boolean } = {},
 ) {
   return useQuery({
     queryKey: qk.attendance.list(scope, query),
     queryFn: () => listAttendance(scope, query),
+    staleTime: 30_000,
+    retry: 1,
+    // Calendar / log views toggle the query key every time the user
+    // changes month. Keep the previous month's rows visible during the
+    // fetch so the section doesn't collapse and the page doesn't jump.
+    ...(options.keepPrevious ? { placeholderData: keepPreviousData } : {}),
+  });
+}
+
+/** Admin org-wide stats for KPI tiles. */
+export function useAttendanceStats(query: Partial<AttendanceStatsQuery> = {}) {
+  return useQuery({
+    queryKey: qk.attendance.stats(query as Record<string, unknown>),
+    queryFn: () => getAttendanceStats(query),
     staleTime: 30_000,
     retry: 1,
   });
@@ -56,7 +71,7 @@ export function useCheckIn() {
         showToast({
           type: 'error',
           title: 'Late deduction applied',
-          message: `3 late marks this month — 1 day deducted from Annual leave (BL-028).`,
+          message: `3 late marks this month — 1 day deducted from Annual leave.`,
         });
       } else if (data.record.late) {
         showToast({

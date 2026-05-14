@@ -20,6 +20,7 @@
 
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
+import { EMPLOYEE_STATUS, EMPLOYEE_STATUS_MAP, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 import type { EmployeeListItem } from '@nexora/contracts/employees';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -32,13 +33,13 @@ function getInitials(name: string): string {
 
 type AvatarStyle = { bg: string; text: string };
 
-function avatarStyleForStatus(status: EmployeeListItem['status']): AvatarStyle {
+function avatarStyleForStatus(status: number): AvatarStyle {
   switch (status) {
-    case 'On-Notice':
+    case EMPLOYEE_STATUS.OnNotice:
       return { bg: 'bg-umberbg', text: 'text-umber' };
-    case 'Exited':
+    case EMPLOYEE_STATUS.Exited:
       return { bg: 'bg-gray-100', text: 'text-slate' };
-    case 'On-Leave':
+    case EMPLOYEE_STATUS.OnLeave:
       return { bg: 'bg-softmint', text: 'text-forest' };
     default: // Active, Inactive
       return { bg: 'bg-mint', text: 'text-forest' };
@@ -47,18 +48,19 @@ function avatarStyleForStatus(status: EmployeeListItem['status']): AvatarStyle {
 
 type StatusPillStyle = { bg: string; text: string; label: string };
 
-function statusPillStyle(status: EmployeeListItem['status']): StatusPillStyle {
+function statusPillStyle(status: number): StatusPillStyle {
+  const label = EMPLOYEE_STATUS_MAP[status]?.label ?? String(status);
   switch (status) {
-    case 'Active':
-      return { bg: 'bg-mint', text: 'text-forest', label: 'Active' };
-    case 'On-Notice':
-      return { bg: 'bg-umberbg', text: 'text-umber', label: 'On Notice' };
-    case 'Exited':
-      return { bg: 'bg-gray-100', text: 'text-slate', label: 'Exited' };
-    case 'On-Leave':
-      return { bg: 'bg-softmint', text: 'text-forest', label: 'On Leave' };
+    case EMPLOYEE_STATUS.Active:
+      return { bg: 'bg-mint', text: 'text-forest', label };
+    case EMPLOYEE_STATUS.OnNotice:
+      return { bg: 'bg-umberbg', text: 'text-umber', label };
+    case EMPLOYEE_STATUS.Exited:
+      return { bg: 'bg-gray-100', text: 'text-slate', label };
+    case EMPLOYEE_STATUS.OnLeave:
+      return { bg: 'bg-softmint', text: 'text-forest', label };
     default:
-      return { bg: 'bg-gray-100', text: 'text-slate', label: status };
+      return { bg: 'bg-gray-100', text: 'text-slate', label };
   }
 }
 
@@ -194,7 +196,7 @@ export function EmployeeDirectoryTable({
               const initials = getInitials(emp.name);
               const avatar = avatarStyleForStatus(emp.status);
               const pill = statusPillStyle(emp.status);
-              const isExited = emp.status === 'Exited';
+              const isExited = emp.status === EMPLOYEE_STATUS.Exited;
 
               return (
                 <tr key={emp.id} className="hover:bg-offwhite/50 transition-colors">
@@ -224,7 +226,7 @@ export function EmployeeDirectoryTable({
                   <td className="px-4 py-3.5 text-sm text-slate">{emp.department ?? '—'}</td>
 
                   {/* Type */}
-                  <td className="px-4 py-3.5 text-xs text-slate">{emp.employmentType}</td>
+                  <td className="px-4 py-3.5 text-xs text-slate">{EMPLOYMENT_TYPE_MAP[emp.employmentTypeId]?.label ?? emp.employmentTypeId}</td>
 
                   {/* Status */}
                   <td className="px-4 py-3.5">
@@ -264,7 +266,7 @@ export function EmployeeDirectoryTable({
           const initials = getInitials(emp.name);
           const avatar = avatarStyleForStatus(emp.status);
           const pill = statusPillStyle(emp.status);
-          const isExited = emp.status === 'Exited';
+          const isExited = emp.status === EMPLOYEE_STATUS.Exited;
 
           return (
             <div key={emp.id} className="p-4">
@@ -288,7 +290,7 @@ export function EmployeeDirectoryTable({
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate mb-3">
                 {emp.department && <span>{emp.department}</span>}
-                <span>{emp.employmentType}</span>
+                <span>{EMPLOYMENT_TYPE_MAP[emp.employmentTypeId]?.label ?? emp.employmentTypeId}</span>
                 {emp.reportingManagerName && (
                   <span>Reports to: {emp.reportingManagerName}</span>
                 )}

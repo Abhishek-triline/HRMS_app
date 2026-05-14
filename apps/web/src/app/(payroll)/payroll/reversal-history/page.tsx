@@ -20,7 +20,7 @@ export default function POReversalHistoryPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="font-heading text-xl font-bold text-charcoal">Reversal History</h1>
-          <p className="text-xs text-slate mt-0.5">View-only — reversals are initiated by Admin (BL-033)</p>
+          <p className="text-xs text-slate mt-0.5">View-only — reversals are initiated by Admin</p>
         </div>
         <Link href="/payroll/payroll-runs" className="text-xs text-emerald font-semibold hover:underline">
           ← Payroll Runs

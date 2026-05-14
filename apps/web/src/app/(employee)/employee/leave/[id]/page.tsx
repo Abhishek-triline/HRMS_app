@@ -22,6 +22,7 @@ import { useCancelLeave, useLeave } from '@/lib/hooks/useLeave';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
 import type { LeaveRequest } from '@nexora/contracts/leave';
+import { LEAVE_STATUS, LEAVE_STATUS_MAP, LEAVE_TYPE_MAP, CANCELLED_BY_ROLE, ROUTED_TO } from '@/lib/status/maps';
 
 function formatDate(iso: string): string {
   try {
@@ -75,7 +76,7 @@ type StatusConfig = {
 
 function buildStatusConfig(request: LeaveRequest): StatusConfig {
   switch (request.status) {
-    case 'Pending':
+    case LEAVE_STATUS.Pending:
       return {
         bg: 'bg-umberbg',
         border: 'border-umber/20',
@@ -88,7 +89,7 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         label: 'Pending Approval',
         sub: `Awaiting review by ${request.approverName ?? 'approver'}`,
       };
-    case 'Approved':
+    case LEAVE_STATUS.Approved:
       return {
         bg: 'bg-greenbg',
         border: 'border-richgreen/20',
@@ -99,9 +100,9 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         pillBorder: 'border-richgreen/30',
         pillText: 'text-richgreen',
         label: 'Approved',
-        sub: request.decidedAt ? `Approved on ${formatDate(request.decidedAt)}` : 'Approved',
+        sub: request.decidedAt ? `Approved on ${formatDateTime(request.decidedAt)}` : 'Approved',
       };
-    case 'Rejected':
+    case LEAVE_STATUS.Rejected:
       return {
         bg: 'bg-crimsonbg',
         border: 'border-crimson/20',
@@ -114,7 +115,18 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         label: 'Rejected',
         sub: request.decisionNote ? `Reason: ${request.decisionNote}` : 'Request was rejected.',
       };
-    case 'Cancelled':
+    case LEAVE_STATUS.Cancelled: {
+      const cancellerLabel =
+        request.cancelledByRoleId === CANCELLED_BY_ROLE.Self
+          ? 'by you'
+          : request.cancelledByRoleId === CANCELLED_BY_ROLE.Admin
+            ? `by Admin${request.cancelledByName ? ` (${request.cancelledByName})` : ''}`
+            : request.cancelledByName
+              ? `by your reporting manager (${request.cancelledByName})`
+              : 'by your reporting manager';
+      const cancelledOnText = request.cancelledAt
+        ? `Cancelled on ${formatDateTime(request.cancelledAt)} ${cancellerLabel}`
+        : `Cancelled ${cancellerLabel}`;
       return {
         bg: 'bg-lockedbg',
         border: 'border-lockedfg/20',
@@ -125,9 +137,10 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         pillBorder: 'border-lockedfg/30',
         pillText: 'text-lockedfg',
         label: 'Cancelled',
-        sub: 'This leave request has been cancelled.',
+        sub: cancelledOnText,
       };
-    case 'Escalated':
+    }
+    case LEAVE_STATUS.Escalated:
       return {
         bg: 'bg-umberbg',
         border: 'border-umber/20',
@@ -138,7 +151,15 @@ function buildStatusConfig(request: LeaveRequest): StatusConfig {
         pillBorder: 'border-umber/30',
         pillText: 'text-umber',
         label: 'Escalated to Admin',
-        sub: 'Manager did not respond within 5 working days (BL-018).',
+        sub: 'Manager did not respond within 5 working days.',
+      };
+    default:
+      return {
+        bg: 'bg-umberbg', border: 'border-umber/20', iconColor: 'text-umber',
+        textColor: 'text-umber', subColor: 'text-umber/70',
+        pillBg: 'bg-umberbg', pillBorder: 'border-umber/30', pillText: 'text-umber',
+        label: LEAVE_STATUS_MAP[request.status]?.label ?? 'Unknown',
+        sub: '',
       };
   }
 }
@@ -172,8 +193,12 @@ export default function LeaveDetailPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
+  // `id` may be a numeric primary key OR a leave code like "L-2026-0018"
+  // (the latter comes from notification deep-links). useLeave accepts both;
+  // the cancel mutation needs the real numeric id, which we read back off
+  // the loaded request once it's resolved.
   const { data: request, isLoading, error } = useLeave(id);
-  const cancelMutation = useCancelLeave(id);
+  const cancelMutation = useCancelLeave(request?.id ?? 0);
   const [cancelOpen, setCancelOpen] = useState(false);
 
   async function handleCancel(note: string) {
@@ -220,11 +245,19 @@ export default function LeaveDetailPage() {
   }
 
   const beforeStart = isBeforeStart(request.fromDate);
+  // Self-cancel rules (BL-019):
+  //   - Pending leaves: always cancellable.
+  //   - Approved leaves: cancellable only while today < fromDate.
+  // After the start date the server returns 403 for an owner-initiated
+  // cancel — manager/admin then handles it (BL-020). Old UI showed the
+  // button anyway, which was confusing and produced a guaranteed 403.
   const canCancel =
-    (request.status === 'Pending' || request.status === 'Approved') &&
-    (beforeStart || request.status === 'Approved');
+    request.status === LEAVE_STATUS.Pending ||
+    (request.status === LEAVE_STATUS.Approved && beforeStart);
 
-  const submittedDate = formatDate(request.createdAt);
+  // createdAt is a full ISO timestamp — formatDateTime handles it correctly.
+  // formatDate is reserved for date-only YYYY-MM-DD strings (fromDate / toDate).
+  const submittedDate = formatDateTime(request.createdAt);
   const escalationDeadline = (() => {
     const d = new Date(request.createdAt);
     d.setDate(d.getDate() + 7); // approx 5 working days
@@ -237,7 +270,7 @@ export default function LeaveDetailPage() {
     : request.days;
   // We don't have the actual "before" balance from the request, so we show
   // deductedDays as the impact. The structured row shows the impact direction.
-  const showBalanceCard = request.status !== 'Rejected' && request.status !== 'Cancelled';
+  const showBalanceCard = request.status !== LEAVE_STATUS.Rejected && request.status !== LEAVE_STATUS.Cancelled;
 
   return (
     <>
@@ -265,7 +298,7 @@ export default function LeaveDetailPage() {
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Leave Type</div>
-            <div className="text-sm font-semibold text-charcoal">{request.type} Leave</div>
+            <div className="text-sm font-semibold text-charcoal">{LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave</div>
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Duration</div>
@@ -289,34 +322,63 @@ export default function LeaveDetailPage() {
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Reason</div>
             <div className="text-sm text-charcoal">{request.reason}</div>
           </div>
-          {request.approverName && (
-            <div>
-              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">
-                {request.status === 'Pending' || request.status === 'Escalated'
-                  ? 'Assigned To'
-                  : 'Decided By'}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div
-                  className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  aria-hidden="true"
-                >
-                  {request.approverName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-charcoal">{request.approverName}</div>
-                  <div className="text-xs text-slate">
-                    {request.routedTo === 'Admin' ? 'Admin' : 'Reporting Manager'}
+          {request.status === LEAVE_STATUS.Cancelled ? (
+            request.cancelledByName && (
+              <div>
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Cancelled By</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="w-7 h-7 rounded-full bg-lockedfg text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    aria-hidden="true"
+                  >
+                    {request.cancelledByName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-charcoal">{request.cancelledByName}</div>
+                    <div className="text-xs text-slate">
+                      {request.cancelledByRoleId === CANCELLED_BY_ROLE.Self
+                        ? 'You (self-cancelled)'
+                        : request.cancelledByRoleId === CANCELLED_BY_ROLE.Admin
+                          ? 'Admin'
+                          : 'Reporting Manager'}
+                    </div>
+                    {request.cancelledAt && (
+                      <div className="text-xs text-slate/70 mt-0.5">{formatDateTime(request.cancelledAt)}</div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
+            )
+          ) : (
+            request.approverName && (
+              <div>
+                <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">
+                  {request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated
+                    ? 'Assigned To'
+                    : 'Decided By'}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="w-7 h-7 rounded-full bg-emerald text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    aria-hidden="true"
+                  >
+                    {request.approverName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-charcoal">{request.approverName}</div>
+                    <div className="text-xs text-slate">
+                      {request.routedToId === ROUTED_TO.Admin ? 'Admin' : 'Reporting Manager'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
           )}
-          {(request.status === 'Pending' || request.status === 'Escalated') && (
+          {(request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated) && (
             <div>
               <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Escalation Deadline</div>
               <div className="text-sm font-semibold text-umber">{escalationDeadline}</div>
-              <div className="text-xs text-slate mt-0.5">5 working days from submission (BL-018)</div>
+              <div className="text-xs text-slate mt-0.5">5 working days from submission</div>
             </div>
           )}
           {request.decisionNote && (
@@ -338,9 +400,9 @@ export default function LeaveDetailPage() {
             Leave Balance Impact
           </h3>
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="text-sm text-slate">{request.type} Leave</div>
+            <div className="text-sm text-slate">{LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave</div>
             <div className="flex items-center gap-2 font-semibold">
-              {request.status === 'Approved' && request.deductedDays !== null ? (
+              {request.status === LEAVE_STATUS.Approved && request.deductedDays !== null ? (
                 <>
                   <span className="text-sm text-charcoal">
                     {/* We show deducted impact — the API does not return the before-balance in the request */}
@@ -366,7 +428,7 @@ export default function LeaveDetailPage() {
               )}
             </div>
             <span className="text-xs text-slate bg-white rounded px-2 py-0.5 border border-sage/30">
-              {request.status === 'Approved' ? 'deducted on approval' : 'if approved'}
+              {request.status === LEAVE_STATUS.Approved ? 'deducted on approval' : 'if approved'}
             </span>
           </div>
           {request.restoredDays !== null && request.restoredDays > 0 && (
@@ -400,7 +462,7 @@ export default function LeaveDetailPage() {
             </li>
 
             {/* Step 2: Pending Manager Review ⏱ (current when pending/escalated, completed when decided) */}
-            {request.decidedAt || request.status === 'Cancelled' ? (
+            {request.decidedAt || request.status === LEAVE_STATUS.Cancelled ? (
               /* Already decided — show as completed or skip */
               null
             ) : (
@@ -450,12 +512,12 @@ export default function LeaveDetailPage() {
               <li className="flex items-start gap-4">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
-                    request.status === 'Approved' ? 'bg-richgreen text-white' : 'bg-crimson text-white'
+                    request.status === LEAVE_STATUS.Approved ? 'bg-richgreen text-white' : 'bg-crimson text-white'
                   }`}
                   aria-hidden="true"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {request.status === 'Approved' ? (
+                    {request.status === LEAVE_STATUS.Approved ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     ) : (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -463,8 +525,8 @@ export default function LeaveDetailPage() {
                   </svg>
                 </div>
                 <div className="pt-1">
-                  <div className={`text-sm font-semibold ${request.status === 'Approved' ? 'text-richgreen' : 'text-crimson'}`}>
-                    {request.status}
+                  <div className={`text-sm font-semibold ${request.status === LEAVE_STATUS.Approved ? 'text-richgreen' : 'text-crimson'}`}>
+                    {LEAVE_STATUS_MAP[request.status]?.label ?? String(request.status)}
                   </div>
                   <div className="text-xs text-slate mt-0.5">{formatDateTime(request.decidedAt)}</div>
                   {request.decisionNote && (
@@ -472,7 +534,7 @@ export default function LeaveDetailPage() {
                   )}
                 </div>
               </li>
-            ) : request.status === 'Cancelled' ? (
+            ) : request.status === LEAVE_STATUS.Cancelled ? (
               <li className="flex items-start gap-4">
                 <div
                   className="w-8 h-8 rounded-full bg-lockedbg border-2 border-lockedfg text-lockedfg flex items-center justify-center flex-shrink-0 z-10"
@@ -510,14 +572,17 @@ export default function LeaveDetailPage() {
         </div>
       </div>
 
-      {/* Cancel section */}
+      {/* Cancel section — only shown when self-cancel is actually allowed.
+          Approved leaves are cancellable by the employee only while
+          today < fromDate. Pending leaves are cancellable any time the
+          request is still open. */}
       {canCancel && (
         <div className="bg-white rounded-xl shadow-sm border border-crimson/20 p-6">
           <h3 className="font-heading text-sm font-semibold text-charcoal mb-2">Cancel This Request</h3>
           <p className="text-sm text-slate mb-4">
-            {beforeStart
-              ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${request.type} leave balance (BL-019).`
-              : 'This leave has already started. Only the remaining unused days will be restored on cancellation (BL-020).'}
+            {request.status === LEAVE_STATUS.Approved
+              ? `The leave hasn't started yet (start date ${formatDate(request.fromDate)}), so you can cancel it yourself. Doing so restores your ${LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} leave balance.`
+              : 'You can withdraw a pending request at any time before approval.'}
           </p>
           <Button
             variant="destructive"
@@ -526,11 +591,9 @@ export default function LeaveDetailPage() {
           >
             Cancel Request
           </Button>
-          {beforeStart && (
-            <p className="text-xs text-slate mt-3">
-              After the leave starts, only your Manager or Admin can cancel it (partial-day restoration needs review).
-            </p>
-          )}
+          <p className="text-xs text-slate mt-3">
+            After the leave starts, only your Manager or Admin can cancel it.
+          </p>
         </div>
       )}
 

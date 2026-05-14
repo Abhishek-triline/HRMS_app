@@ -15,11 +15,12 @@ import { qk } from '@/lib/api/query-keys';
 import { showToast } from '@/components/ui/Toast';
 import type { LoginRequest } from '@nexora/contracts/auth';
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  Admin: '/admin/dashboard',
-  Manager: '/manager/dashboard',
-  Employee: '/employee/dashboard',
-  PayrollOfficer: '/payroll/dashboard',
+/** Map roleId (INT) → dashboard path. */
+const ROLE_DASHBOARD: Record<number, string> = {
+  1: '/employee/dashboard',
+  2: '/manager/dashboard',
+  3: '/payroll/dashboard',
+  4: '/admin/dashboard',
 };
 
 // ── useMe ─────────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ export function useLogin() {
     onSuccess: async (response) => {
       // Invalidate the me query so the new session is reflected everywhere
       await queryClient.invalidateQueries({ queryKey: qk.auth.me });
-      const destination = ROLE_DASHBOARD[response.data.role] ?? '/employee/dashboard';
+      const destination = ROLE_DASHBOARD[response.data.roleId] ?? '/employee/dashboard';
       router.push(destination);
     },
   });

@@ -27,7 +27,7 @@ import { Spinner } from '@/components/ui/Spinner';
 export default function AdminReviewDetailPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
 
-  const { data, isLoading, isError } = useReview(reviewId);
+  const { data, isLoading, isError } = useReview(Number(reviewId));
 
   if (isLoading) {
     return (
@@ -149,7 +149,7 @@ export default function AdminReviewDetailPage() {
             <span className="text-4xl font-bold text-mint">{review.finalRating}</span>
             <div className="text-sm text-white/80">
               <div>Locked on {review.lockedAt ? new Date(review.lockedAt).toLocaleDateString('en-IN') : '—'}</div>
-              <div className="text-xs text-white/60 mt-0.5">BL-041: Final rating locked at cycle close</div>
+              <div className="text-xs text-white/60 mt-0.5">Final rating locked at cycle close</div>
             </div>
           </div>
         </div>

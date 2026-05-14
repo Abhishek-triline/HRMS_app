@@ -1,25 +1,16 @@
 /**
- * EmployeeStatusBadge — thin wrapper mapping EmployeeStatus to StatusBadge variant.
- * Keeps status → visual mapping in one place for the employees module.
+ * EmployeeStatusBadge — maps employee status INT codes → StatusBadge.
+ * Status codes: 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited
  */
 
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import type { BadgeStatus } from '@/components/ui/StatusBadge';
-import type { EmployeeStatus } from '@nexora/contracts/common';
-
-const STATUS_MAP: Record<EmployeeStatus, BadgeStatus> = {
-  Active: 'active',
-  'On-Notice': 'on-notice',
-  Exited: 'exited',
-  'On-Leave': 'on-leave',
-  Inactive: 'inactive',
-};
 
 interface EmployeeStatusBadgeProps {
-  status: EmployeeStatus;
+  /** INT status code from the API (1–5) */
+  status: number;
   className?: string;
 }
 
 export function EmployeeStatusBadge({ status, className }: EmployeeStatusBadgeProps) {
-  return <StatusBadge status={STATUS_MAP[status]} className={className} />;
+  return <StatusBadge entity="employeeStatus" code={status} className={className} />;
 }

@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { LoginRequest } from '@nexora/contracts/auth';
 import { LoginRequestSchema } from '@nexora/contracts/auth';
 import { ApiError } from '@/lib/api/client';
@@ -36,25 +36,24 @@ const ShieldIcon = () => (
   </svg>
 );
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  Admin: '/admin/dashboard',
-  Manager: '/manager/dashboard',
-  Employee: '/employee/dashboard',
-  PayrollOfficer: '/payroll/dashboard',
-};
+import { ROLE_ID } from '@/lib/status/maps';
 
 // Demo role credentials — development convenience for TC-AUTH-006.
 // Pre-fill the form with the selected demo account and submit immediately.
-// Currently only the Admin row is wired against the seeded account
-// (admin@triline.co.in / admin@123). Manager / Employee / Payroll demo accounts
-// arrive when the Phase 1 employee seed lands; until then those chips will
-// gracefully surface INVALID_CREDENTIALS.
+// All four chips work against the seeded accounts after Phase 1.
 const DEMO_ROLES = [
   { label: 'Admin',    email: 'admin@triline.co.in',    password: 'admin@123', abbr: 'A', bg: 'bg-forest',  text: 'text-mint' },
   { label: 'Manager',  email: 'manager@triline.co.in',  password: 'admin@123', abbr: 'M', bg: 'bg-emerald', text: 'text-white' },
   { label: 'Employee', email: 'employee@triline.co.in', password: 'admin@123', abbr: 'E', bg: 'bg-mint',    text: 'text-forest' },
   { label: 'Payroll',  email: 'payroll@triline.co.in',  password: 'admin@123', abbr: 'P', bg: 'bg-umber',   text: 'text-white' },
 ] as const;
+
+const ROLE_DASHBOARD: Record<number, string> = {
+  [ROLE_ID.Admin]: '/admin/dashboard',
+  [ROLE_ID.Manager]: '/manager/dashboard',
+  [ROLE_ID.Employee]: '/employee/dashboard',
+  [ROLE_ID.PayrollOfficer]: '/payroll/dashboard',
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,7 +62,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginRequest>({
     resolver: zodResolver(LoginRequestSchema),
@@ -75,7 +73,7 @@ export default function LoginPage() {
     try {
       const response = await login(data);
       // Login response includes the role — use it directly, no extra /auth/me call needed
-      const destination = ROLE_DASHBOARD[response.data.role] ?? '/employee/dashboard';
+      const destination = ROLE_DASHBOARD[response.data.roleId] ?? '/employee/dashboard';
       router.push(destination);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -100,22 +98,6 @@ export default function LoginPage() {
     }
   };
 
-  /**
-   * Demo shortcut — pre-fills email with a known dev credential and
-   * sets a placeholder password, then programmatically submits.
-   * TC-AUTH-006: demo chips must be present.
-   */
-  const handleDemoLogin = useCallback(
-    (email: string, password: string) => {
-      setValue('email', email);
-      setValue('password', password);
-      // Submit on next tick so RHF can update its internal values first
-      setTimeout(() => {
-        document.getElementById('nx-login-submit')?.click();
-      }, 0);
-    },
-    [setValue],
-  );
 
   return (
     <div className="font-body bg-forest text-white min-h-screen flex flex-col relative overflow-hidden">
@@ -185,10 +167,10 @@ export default function LoginPage() {
       </header>
 
       {/* ===== Main grid ===== */}
-      <main className="relative z-10 flex-1 grid lg:grid-cols-2 gap-12 items-center px-8 lg:px-14 py-8 max-w-7xl w-full mx-auto">
+      <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 px-8 lg:px-14 py-8 max-w-7xl w-full mx-auto">
 
         {/* Left: brand hero */}
-        <div className="hidden lg:block" aria-hidden="true">
+        <div className="hidden lg:block lg:flex-1 lg:max-w-xl" aria-hidden="true">
           <div className="accent-bar mb-6" />
           <h1 className="font-heading text-5xl xl:text-6xl font-bold leading-[1.05] mb-8">
             Your complete<br />
@@ -196,7 +178,7 @@ export default function LoginPage() {
           </h1>
 
           {/* Modules grid */}
-          <div className="grid grid-cols-2 gap-2.5 max-w-md mb-8">
+          <div className="grid grid-cols-2 gap-2.5 max-w-md">
             {[
               {
                 icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
@@ -238,14 +220,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Stats strip */}
-          <div className="flex items-center gap-6 text-mint/70 text-xs">
-            <span>250+ Employees</span>
-            <span className="w-1 h-1 rounded-full bg-mint/40" />
-            <span>4 Roles</span>
-            <span className="w-1 h-1 rounded-full bg-mint/40" />
-            <span>100% Audit-ready</span>
-          </div>
         </div>
 
         {/* Right: floating glass sign-in card */}
@@ -336,42 +310,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-6" aria-hidden="true">
-              <div className="flex-1 h-px bg-sage/40" />
-              <span className="text-[10px] text-slate uppercase tracking-[0.15em] font-semibold">Demo as</span>
-              <div className="flex-1 h-px bg-sage/40" />
-            </div>
-
-            {/* Demo role shortcuts — TC-AUTH-006 */}
-            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Demo login shortcuts">
-              {DEMO_ROLES.map((role) => (
-                <button
-                  key={role.label}
-                  type="button"
-                  onClick={() => handleDemoLogin(role.email, role.password)}
-                  className="group flex items-center gap-2 bg-softmint border border-mint hover:border-forest hover:bg-mint rounded-lg px-3 py-2 transition-colors"
-                  aria-label={`Sign in as demo ${role.label}`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-md ${role.bg} ${role.text} flex items-center justify-center text-[10px] font-bold flex-shrink-0`}
-                    aria-hidden="true"
-                  >
-                    {role.abbr}
-                  </div>
-                  <span className="text-xs font-semibold text-forest flex-1 text-left">{role.label}</span>
-                  <svg
-                    className="w-3 h-3 text-emerald group-hover:translate-x-0.5 transition-transform flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Trust micro-line */}

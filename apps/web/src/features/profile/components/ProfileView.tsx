@@ -29,6 +29,7 @@ import { ProfileHero } from '@/components/employees/ProfileHero';
 import { AdminSelfProfileEditor } from './AdminSelfProfileEditor';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
+import { ROLE_ID, ROLE_MAP, GENDER_MAP, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
 import Link from 'next/link';
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
@@ -51,15 +52,9 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-function formatGender(g: string | null | undefined): string {
-  if (!g) return '—';
-  switch (g) {
-    case 'Male': return 'Male';
-    case 'Female': return 'Female';
-    case 'Other': return 'Non-binary';
-    case 'PreferNotToSay': return 'Prefer not to say';
-    default: return g;
-  }
+function formatGender(gId: number | null | undefined): string {
+  if (gId == null) return '—';
+  return GENDER_MAP[gId]?.label ?? String(gId);
 }
 
 // ── Read-only field row ───────────────────────────────────────────────────────
@@ -102,12 +97,12 @@ function SectionCard({
 
 // ── Quick links (Employee / Manager / Payroll) ────────────────────────────────
 
-function QuickLinksCard({ role }: { role: string }) {
+function QuickLinksCard({ roleId }: { roleId: number }) {
   // Role-specific link targets
   const basePath =
-    role === 'Manager'
+    roleId === ROLE_ID.Manager
       ? '/manager'
-      : role === 'PayrollOfficer'
+      : roleId === ROLE_ID.PayrollOfficer
         ? '/payroll'
         : '/employee';
 
@@ -216,7 +211,7 @@ function ProfileAuditCard() {
         </Link>
       </div>
       <p className="text-xs text-slate leading-relaxed">
-        All profile edits are written to the system audit log (BL-047). View the full log
+        All profile edits are written to the system audit log. View the full log
         for a record of every change made to your profile.
       </p>
       <p className="text-[10px] text-slate mt-2 italic">
@@ -230,14 +225,14 @@ function ProfileAuditCard() {
 
 interface ProfileViewProps {
   /** Override the employee ID — defaults to the authenticated user's ID */
-  employeeId?: string;
+  employeeId?: number;
 }
 
 export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {}) {
   const { data: meData, isLoading: meLoading } = useMe();
   const meUser = meData?.data?.user;
-  const employeeId = propEmployeeId ?? meUser?.id ?? '';
-  const role = meUser?.role ?? '';
+  const employeeId: number = propEmployeeId ?? meUser?.id ?? 0;
+  const roleId: number = meUser?.roleId ?? 0;
 
   const {
     data: profile,
@@ -271,7 +266,8 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
   }
 
   const salary = profile.salaryStructure;
-  const isAdmin = role === 'Admin';
+  const isAdmin = roleId === ROLE_ID.Admin;
+  const profileRoleLabel = ROLE_MAP[profile.roleId]?.label ?? String(profile.roleId);
 
   // ── Admin layout: 2/3 + 1/3 column layout matching prototype ─────────────
   if (isAdmin) {
@@ -283,7 +279,7 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
           designation={profile.designation}
           department={profile.department}
           status={profile.status}
-          role={profile.role}
+          role={profileRoleLabel}
           joinDate={profile.joinDate}
         />
 
@@ -315,7 +311,7 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
         designation={profile.designation}
         department={profile.department}
         status={profile.status}
-        role={profile.role}
+        role={profileRoleLabel}
         joinDate={profile.joinDate}
       />
 
@@ -348,8 +344,8 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
             {profile.dateOfBirth && (
               <DlRow label="Date of birth" value={formatDate(profile.dateOfBirth)} />
             )}
-            {profile.gender && (
-              <DlRow label="Gender" value={formatGender(profile.gender)} />
+            {profile.genderId && (
+              <DlRow label="Gender" value={formatGender(profile.genderId)} />
             )}
             {/* PAN — contract gap v1.1 */}
             <div className="flex justify-between gap-4">
@@ -384,10 +380,10 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
               <dt className="text-slate">Employee code</dt>
               <dd className="text-forest font-mono font-semibold">{profile.code}</dd>
             </div>
-            <DlRow label="Role" value={profile.role} />
+            <DlRow label="Role" value={profileRoleLabel} />
             <DlRow label="Department" value={profile.department ?? '—'} />
             <DlRow label="Designation" value={profile.designation ?? '—'} />
-            <DlRow label="Employment type" value={profile.employmentType} />
+            <DlRow label="Employment type" value={EMPLOYMENT_TYPE_MAP[profile.employmentTypeId]?.label ?? String(profile.employmentTypeId)} />
             <DlRow label="Reporting manager" value={profile.reportingManagerName ?? '—'} />
             <DlRow label="Date joined" value={formatDate(profile.joinDate)} />
           </dl>
@@ -406,7 +402,7 @@ export function ProfileView({ employeeId: propEmployeeId }: ProfileViewProps = {
       )}
 
       {/* Quick links */}
-      <QuickLinksCard role={role} />
+      <QuickLinksCard roleId={roleId} />
     </div>
   );
 }

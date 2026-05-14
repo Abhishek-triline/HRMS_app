@@ -45,7 +45,8 @@ import { usePayslip, useDownloadPayslipPdf } from '@/lib/hooks/usePayslips';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
-import type { Payslip, PayslipStatus } from '@nexora/contracts/payroll';
+import type { Payslip } from '@nexora/contracts/payroll';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,8 +60,12 @@ const SHORT_MONTH = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-/** Format paise as Indian rupee string, no symbol prefix in tables (just digits). */
-function fmtRupees(paise: number): string {
+/**
+ * Format paise as Indian rupee string. Renders "—" when paise is null
+ * (manager viewing a subordinate's payslip — money is redacted).
+ */
+function fmtRupees(paise: number | null): string {
+  if (paise === null) return '—';
   return new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
@@ -68,7 +73,8 @@ function fmtRupees(paise: number): string {
 }
 
 /** Format paise with ₹ symbol — used for the Net Pay card. */
-function fmtRupeesWithSymbol(paise: number): string {
+function fmtRupeesWithSymbol(paise: number | null): string {
+  if (paise === null) return '—';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -165,11 +171,11 @@ function fiscalYearLabel(month: number, year: number): string {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
-interface StatusBadgeProps { status: PayslipStatus }
+interface StatusBadgeProps { status: number }
 
 function InlineStatusBadge({ status }: StatusBadgeProps) {
   switch (status) {
-    case 'Finalised':
+    case PAYROLL_STATUS.Finalised:
       return (
         <span className="bg-greenbg text-richgreen text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -178,19 +184,19 @@ function InlineStatusBadge({ status }: StatusBadgeProps) {
           Finalised
         </span>
       );
-    case 'Reversed':
+    case PAYROLL_STATUS.Reversed:
       return (
         <span className="bg-crimsonbg text-crimson text-xs font-bold px-3 py-1 rounded-full">
           Reversed
         </span>
       );
-    case 'Review':
+    case PAYROLL_STATUS.Review:
       return (
         <span className="bg-umberbg text-umber text-xs font-bold px-3 py-1 rounded-full">
           Under Review
         </span>
       );
-    case 'Draft':
+    case PAYROLL_STATUS.Draft:
     default:
       return (
         <span className="bg-umberbg text-umber text-xs font-bold px-3 py-1 rounded-full">
@@ -262,15 +268,20 @@ interface PayslipDocumentProps {
 }
 
 function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocumentProps) {
-  const isFinalised = payslip.status === 'Finalised';
-  const isReversed = payslip.status === 'Reversed';
+  const isFinalised = payslip.status === PAYROLL_STATUS.Finalised;
+  const isReversed = payslip.status === PAYROLL_STATUS.Reversed;
   const netWorkingDays = payslip.workingDays - payslip.lopDays;
   const monthLabel = `${MONTH_NAMES[payslip.month] ?? ''} ${payslip.year}`;
   const monthLabelUpper = `${(MONTH_NAMES[payslip.month] ?? '').toUpperCase()} ${payslip.year}`;
   const fyLabel = fiscalYearLabel(payslip.month, payslip.year);
 
-  // Taxable income annual estimate — gross × 12 as a rough display figure
-  const taxableAnnualRupees = Math.floor((payslip.grossPaise / 100) * 12);
+  // Taxable income annual estimate — gross × 12 as a rough display figure.
+  // null when money is redacted (Manager viewing subordinate); UI hides the
+  // estimate row in that case.
+  const taxableAnnualRupees =
+    payslip.grossPaise === null
+      ? null
+      : Math.floor((payslip.grossPaise / 100) * 12);
 
   return (
     <>
@@ -283,7 +294,7 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
             </svg>
             <p className="text-charcoal font-semibold text-sm">
               <strong>Finalised — locked permanently.</strong>{' '}
-              This payslip is immutable. Corrections require an Admin-initiated reversal that creates a new record (BL-031 / BL-032).
+              This payslip is immutable. Corrections require an Admin-initiated reversal that creates a new record.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -491,11 +502,39 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
                     {fmtRupees(payslip.allowancesPaise)}
                   </td>
                 </tr>
+                {/* Leave encashment line — BL-LE-09 / BL-LE-11 */}
+                {payslip.encashmentDays > 0 && payslip.encashmentPaise !== null && payslip.encashmentPaise > 0 && (
+                  <tr>
+                    <td className="py-2.5 text-slate">
+                      Leave Encashment ({payslip.encashmentDays} day{payslip.encashmentDays !== 1 ? 's' : ''}{' '}
+                      @ ₹{Math.floor(payslip.encashmentPaise / (payslip.encashmentDays * 100)).toLocaleString('en-IN')}/day)
+                    </td>
+                    <td className="py-2.5 text-right text-richgreen font-medium">
+                      {fmtRupees(payslip.encashmentPaise)}
+                    </td>
+                  </tr>
+                )}
+                {/* Encashment reversal line — BL-LE-11 (negative encashmentPaise) */}
+                {payslip.encashmentPaise !== null && payslip.encashmentPaise < 0 && (
+                  <tr>
+                    <td className="py-2.5 text-slate">
+                      <div>
+                        Leave Encashment Reversal ({payslip.encashmentDays} day{payslip.encashmentDays !== 1 ? 's' : ''})
+                        <p className="text-xs text-slate/70 italic mt-0.5">
+                          Money reversed; leave days remain encashed for the year (BL-LE-11)
+                        </p>
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-right text-crimson font-medium">
+                      {fmtRupees(payslip.encashmentPaise)}
+                    </td>
+                  </tr>
+                )}
                 {/* Pro-ration row — only visible when days worked < working days (BL-036) */}
                 {payslip.daysWorked < payslip.workingDays && (
                   <tr>
                     <td className="py-2.5 text-slate text-xs italic" colSpan={2}>
-                      Pro-rated: {payslip.daysWorked}/{payslip.workingDays} days worked (BL-036)
+                      Pro-rated: {payslip.daysWorked}/{payslip.workingDays} days worked
                     </td>
                   </tr>
                 )}
@@ -528,34 +567,42 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
               <tbody className="divide-y divide-sage/10">
                 <tr>
                   <td className="py-2.5 text-slate">LOP Deduction</td>
-                  <td className={`py-2.5 text-right font-medium ${payslip.lopDeductionPaise > 0 ? 'text-charcoal' : 'text-slate'}`}>
+                  <td className={`py-2.5 text-right font-medium ${(payslip.lopDeductionPaise ?? 0) > 0 ? 'text-charcoal' : 'text-slate'}`}>
                     {fmtRupees(payslip.lopDeductionPaise)}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-2.5 text-slate">Other Deductions</td>
-                  <td className={`py-2.5 text-right font-medium ${payslip.otherDeductionsPaise > 0 ? 'text-charcoal' : 'text-slate'}`}>
+                  <td className={`py-2.5 text-right font-medium ${(payslip.otherDeductionsPaise ?? 0) > 0 ? 'text-charcoal' : 'text-slate'}`}>
                     {fmtRupees(payslip.otherDeductionsPaise)}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-2.5 text-slate">Income Tax (TDS)</td>
-                  <td className={`py-2.5 text-right font-medium ${payslip.finalTaxPaise > 0 ? 'text-charcoal' : 'text-slate'}`}>
+                  <td className={`py-2.5 text-right font-medium ${(payslip.finalTaxPaise ?? 0) > 0 ? 'text-charcoal' : 'text-slate'}`}>
                     {fmtRupees(payslip.finalTaxPaise)}
                   </td>
                 </tr>
-                {/* Taxable income annotation row — matches prototype */}
-                <tr className="bg-offwhite/60">
-                  <td className="py-2.5 px-1 text-xs text-slate italic" colSpan={2}>
-                    Taxable Income (annual est.): ₹{new Intl.NumberFormat('en-IN').format(taxableAnnualRupees)}
-                  </td>
-                </tr>
+                {/* Taxable income annotation row — hidden when redacted */}
+                {taxableAnnualRupees !== null && (
+                  <tr className="bg-offwhite/60">
+                    <td className="py-2.5 px-1 text-xs text-slate italic" colSpan={2}>
+                      Taxable Income (annual est.): ₹{new Intl.NumberFormat('en-IN').format(taxableAnnualRupees)}
+                    </td>
+                  </tr>
+                )}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-sage/40">
                   <td className="py-3 font-heading font-bold text-sm text-charcoal">Total Deductions</td>
                   <td className="py-3 text-right font-heading font-bold text-sm text-crimson">
-                    {fmtRupees(payslip.lopDeductionPaise + payslip.otherDeductionsPaise + payslip.finalTaxPaise)}
+                    {fmtRupees(
+                      payslip.lopDeductionPaise === null
+                        || payslip.otherDeductionsPaise === null
+                        || payslip.finalTaxPaise === null
+                        ? null
+                        : payslip.lopDeductionPaise + payslip.otherDeductionsPaise + payslip.finalTaxPaise,
+                    )}
                   </td>
                 </tr>
               </tfoot>
@@ -566,12 +613,18 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
         {/* d — bg-forest Net Pay box ───────────────────────────────────────── */}
         <div className="mx-8 mb-6 mt-6 bg-forest rounded-xl px-8 py-6 text-center text-white">
           <p className="text-mint text-sm font-semibold uppercase tracking-widest mb-1">Net Pay</p>
-          <p className="font-heading font-bold text-4xl text-white">
-            {fmtRupeesWithSymbol(payslip.netPayPaise)}
-          </p>
-          <p className="text-white/70 text-sm mt-2 italic">
-            {paiseToWords(payslip.netPayPaise)}
-          </p>
+          {payslip.netPayPaise === null ? (
+            <p className="font-heading font-bold text-3xl text-white">— Hidden —</p>
+          ) : (
+            <>
+              <p className="font-heading font-bold text-4xl text-white">
+                {fmtRupeesWithSymbol(payslip.netPayPaise)}
+              </p>
+              <p className="text-white/70 text-sm mt-2 italic">
+                {paiseToWords(payslip.netPayPaise)}
+              </p>
+            </>
+          )}
         </div>
 
         {/* e — Footer band ─────────────────────────────────────────────────── */}
@@ -628,16 +681,26 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
 // ── PayslipDetailView — the exported shared component ────────────────────────
 
 interface PayslipDetailViewProps {
-  /** The payslip ID from the URL param. */
-  payslipId: string;
+  /** The payslip ID from the URL param (numeric string from Next.js params). */
+  payslipId: string | number;
   /** Role-prefixed back-link, e.g. "/admin/payslips" or "/employee/payslips". */
   backHref: string;
+  /**
+   * Label shown in the breadcrumb / back-link. Defaults to "My Payslips"
+   * for the self-service drill-down; the run-context drill-downs pass
+   * something like "Payroll Run".
+   */
+  backLabel?: string;
 }
 
-export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProps) {
-  const { data: payslip, isLoading, isError } = usePayslip(payslipId);
+export function PayslipDetailView({
+  payslipId,
+  backHref,
+  backLabel = 'My Payslips',
+}: PayslipDetailViewProps) {
+  const { data: payslip, isLoading, isError } = usePayslip(Number(payslipId));
 
-  const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? payslipId);
+  const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? String(payslipId));
 
   async function handleDownload() {
     if (!payslip) return;
@@ -660,7 +723,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          My Payslips
+          {backLabel}
         </Link>
         {payslip && (
           <>
@@ -687,7 +750,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
             The payslip may not exist or you may not have permission to view it.
           </p>
           <Link href={backHref} className="text-forest underline text-sm hover:text-emerald transition-colors">
-            Back to My Payslips
+            Back to {backLabel}
           </Link>
         </div>
       )}
@@ -697,7 +760,7 @@ export function PayslipDetailView({ payslipId, backHref }: PayslipDetailViewProp
         <div className="text-center py-12">
           <p className="text-slate text-sm mb-3">Payslip not found.</p>
           <Link href={backHref} className="text-forest underline text-sm hover:text-emerald transition-colors">
-            Back to My Payslips
+            Back to {backLabel}
           </Link>
         </div>
       )}

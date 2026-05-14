@@ -24,10 +24,12 @@
 
 import { useState, useMemo } from 'react';
 import { usePayslipsList } from '@/lib/hooks/usePayslips';
+import { useMe } from '@/lib/hooks/useAuth';
 import { MyOverviewHero } from '@/features/overview/components/MyOverviewHero';
 import { PayslipCard } from './PayslipCard';
 import { Spinner } from '@/components/ui/Spinner';
 import type { PayslipSummary } from '@nexora/contracts/payroll';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +38,8 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-function formatPaise(paise: number): string {
+function formatPaise(paise: number | null): string {
+  if (paise === null) return '—';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -107,7 +110,25 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
 
   const [selectedFYStart, setSelectedFYStart] = useState(currentFYStart);
 
-  const { data, isLoading, isError } = usePayslipsList();
+  // Hero stats (FY totals, latest payslip) need the FULL payslip list, not a
+  // single page. The card grid is already FY-filtered to ~12 entries per
+  // selected FY so it doesn't need UI pagination. Bumped to the API's hard
+  // ceiling so up to ~8 years of payslips fit in one fetch.
+  // For 8+ year tenures the oldest FYs would clip silently; v1.1 backend
+  // backlog: a dedicated /payslips/stats endpoint returning aggregates so we
+  // can paginate the card grid without losing hero accuracy.
+  //
+  // employeeId scoping: the server treats Admin/PayrollOfficer as "see all"
+  // when no employeeId is passed, which would leak other employees' payslips
+  // into the "My Payslips" view. Always pass the caller's own id here so
+  // every role sees only their own slips (Employee/Manager already auto-scope
+  // server-side; passing it is a no-op for them).
+  const { data: me } = useMe();
+  const meId = me?.data?.user?.id ?? 0;
+  const { data, isLoading, isError } = usePayslipsList(
+    meId > 0 ? { employeeId: meId, limit: 100 } : { limit: 100 },
+    { enabled: meId > 0 },
+  );
   const allPayslips: PayslipSummary[] = data?.data ?? [];
 
   // Available FY options — derive from payslips + always show current FY
@@ -128,9 +149,12 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
   const allSorted = useMemo(() => sortNewestFirst(allPayslips), [allPayslips]);
   const latestPayslip = allSorted[0] ?? null;
 
-  // Hero stats — derived from the SELECTED FY subset
-  const fyGross = fyPayslips.reduce((s, p) => s + p.grossPaise, 0);
-  const fyTax = fyPayslips.reduce((s, p) => s + p.finalTaxPaise, 0);
+  // Hero stats — derived from the SELECTED FY subset.
+  // MyPayslipsView is scoped to the caller's own payslips (employeeId=self),
+  // so money fields are never redacted here — but the contract still types
+  // them as nullable. Coerce with ?? 0 for the sum.
+  const fyGross = fyPayslips.reduce((s, p) => s + (p.grossPaise ?? 0), 0);
+  const fyTax = fyPayslips.reduce((s, p) => s + (p.finalTaxPaise ?? 0), 0);
   const fyMonthCount = fyPayslips.length;
 
   // Net of the very latest payslip (could be from any FY)
@@ -138,7 +162,7 @@ export function MyPayslipsView({ basePath }: MyPayslipsViewProps) {
   const latestMonthName = latestPayslip
     ? `${MONTH_NAMES[(latestPayslip.month ?? 1) - 1]} ${latestPayslip.year}`
     : '—';
-  const latestFinalisedSubtitle = latestPayslip?.status === 'Finalised'
+  const latestFinalisedSubtitle = latestPayslip?.status === PAYROLL_STATUS.Finalised
     ? `Finalised ${latestPayslip.month ? new Date(latestPayslip.year, latestPayslip.month - 1, 30).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}`
     : latestPayslip?.status ?? '—';
 

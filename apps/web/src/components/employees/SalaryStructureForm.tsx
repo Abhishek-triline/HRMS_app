@@ -85,7 +85,7 @@ export function SalaryStructureForm({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-xs text-forest leading-relaxed">
-            <span className="font-semibold">BL-030:</span> Applies from next payroll run only — historical payslips remain unchanged.
+            <span className="font-semibold">Note:</span> Applies from next payroll run only — historical payslips remain unchanged.
           </p>
         </div>
       )}

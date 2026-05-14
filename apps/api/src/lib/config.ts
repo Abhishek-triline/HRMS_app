@@ -27,8 +27,10 @@ import type {
   AttendanceConfig,
   CarryForwardCaps,
   LeaveConfig,
+  EncashmentConfig,
   Weekday,
 } from '@nexora/contracts/configuration';
+import { LeaveTypeId } from './statusInt.js';
 
 const WEEKDAY_TOKENS: readonly Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAY_TOKEN_SET: ReadonlySet<string> = new Set(WEEKDAY_TOKENS);
@@ -77,6 +79,7 @@ const ATTENDANCE_DEFAULTS: AttendanceConfig = {
   lateThresholdTime: '10:30',
   standardDailyHours: 8,
   weeklyOffDays: ['Sat', 'Sun'],
+  undoWindowMinutes: 5,
 };
 
 /**
@@ -109,11 +112,12 @@ export async function getAttendanceConfig(): Promise<AttendanceConfig> {
   if (cached) return cached;
 
   // Read all keys in parallel
-  const [thresholdVal, hoursVal, legacyThresholdVal, weeklyOffVal] = await Promise.all([
+  const [thresholdVal, hoursVal, legacyThresholdVal, weeklyOffVal, undoWindowVal] = await Promise.all([
     readConfigKey('ATTENDANCE_LATE_THRESHOLD_TIME'),
     readConfigKey('ATTENDANCE_STANDARD_DAILY_HOURS'),
     readConfigKey('LATE_THRESHOLD'), // legacy Phase-3 alias
     readConfigKey('ATTENDANCE_WEEKLY_OFF_DAYS'),
+    readConfigKey('ATTENDANCE_UNDO_WINDOW_MINUTES'),
   ]);
 
   // Resolve lateThresholdTime: prefer new key, fall back to legacy, then default
@@ -136,7 +140,13 @@ export async function getAttendanceConfig(): Promise<AttendanceConfig> {
   const parsedWeeklyOff = parseWeeklyOffDays(weeklyOffVal);
   const weeklyOffDays: Weekday[] = parsedWeeklyOff ?? [...ATTENDANCE_DEFAULTS.weeklyOffDays];
 
-  const result: AttendanceConfig = { lateThresholdTime, standardDailyHours, weeklyOffDays };
+  // Resolve undoWindowMinutes — integer in [0, 60]. 0 disables undo.
+  let undoWindowMinutes = ATTENDANCE_DEFAULTS.undoWindowMinutes;
+  if (typeof undoWindowVal === 'number' && Number.isFinite(undoWindowVal) && undoWindowVal >= 0 && undoWindowVal <= 60) {
+    undoWindowMinutes = Math.round(undoWindowVal);
+  }
+
+  const result: AttendanceConfig = { lateThresholdTime, standardDailyHours, weeklyOffDays, undoWindowMinutes };
   cacheSet(CACHE_KEY, result);
   return result;
 }
@@ -163,14 +173,14 @@ export function weekdayTokenFromIndex(dayIndex: number): Weekday {
 
 // ── Leave config ──────────────────────────────────────────────────────────────
 
-/** Defaults (Phase 2 hard-coded constants). */
+/** Defaults (Phase 2 hard-coded constants). INT keys = LeaveTypeId values. */
 const DEFAULT_CARRY_FORWARD_CAPS: CarryForwardCaps = {
-  Annual: 10,
-  Sick: 0,
-  Casual: 5,
-  Unpaid: 0,
-  Maternity: 0,
-  Paternity: 0,
+  [LeaveTypeId.Annual]:    10,  // 1
+  [LeaveTypeId.Sick]:      0,   // 2 — BL-012
+  [LeaveTypeId.Casual]:    5,   // 3
+  [LeaveTypeId.Unpaid]:    0,   // 4
+  [LeaveTypeId.Maternity]: 0,   // 5 — event-based BL-014
+  [LeaveTypeId.Paternity]: 0,   // 6 — event-based BL-014
 };
 
 const LEAVE_DEFAULTS: LeaveConfig = {
@@ -199,17 +209,17 @@ export async function getLeaveConfig(): Promise<LeaveConfig> {
     readConfigKey('LEAVE_PATERNITY_DAYS'),
   ]);
 
-  // carryForwardCaps: merge DB value over defaults
+  // carryForwardCaps: merge DB value over defaults. DB stores INT keys (1-6).
   let carryForwardCaps: CarryForwardCaps = { ...DEFAULT_CARRY_FORWARD_CAPS };
   if (capsVal !== null && typeof capsVal === 'object' && !Array.isArray(capsVal)) {
     const raw = capsVal as Record<string, unknown>;
     carryForwardCaps = {
-      Annual:    typeof raw['Annual']    === 'number' ? raw['Annual']    : DEFAULT_CARRY_FORWARD_CAPS.Annual,
-      Sick:      0, // BL-012 — always 0
-      Casual:    typeof raw['Casual']    === 'number' ? raw['Casual']    : DEFAULT_CARRY_FORWARD_CAPS.Casual,
-      Unpaid:    0,
-      Maternity: 0, // BL-014 — event-based
-      Paternity: 0, // BL-014 — event-based
+      [LeaveTypeId.Annual]:    typeof raw[String(LeaveTypeId.Annual)]    === 'number' ? (raw[String(LeaveTypeId.Annual)] as number) : DEFAULT_CARRY_FORWARD_CAPS[LeaveTypeId.Annual],
+      [LeaveTypeId.Sick]:      0, // BL-012 — always 0
+      [LeaveTypeId.Casual]:    typeof raw[String(LeaveTypeId.Casual)]    === 'number' ? (raw[String(LeaveTypeId.Casual)] as number)    : DEFAULT_CARRY_FORWARD_CAPS[LeaveTypeId.Casual],
+      [LeaveTypeId.Unpaid]:    0,
+      [LeaveTypeId.Maternity]: 0, // BL-014 — event-based
+      [LeaveTypeId.Paternity]: 0, // BL-014 — event-based
     };
   }
 
@@ -238,6 +248,59 @@ export async function getLeaveConfig(): Promise<LeaveConfig> {
     paternityDays,
   };
 
+  cacheSet(CACHE_KEY, result);
+  return result;
+}
+
+// ── Encashment config ─────────────────────────────────────────────────────────
+
+/** Defaults (BL-LE-04). */
+const ENCASHMENT_DEFAULTS: EncashmentConfig = {
+  windowStartMonth: 12,
+  windowEndMonth: 1,
+  windowEndDay: 15,
+  maxPercent: 50,
+};
+
+/**
+ * Returns the current encashment window configuration.
+ * Reads ENCASHMENT_WINDOW_START_MONTH, _END_MONTH, _END_DAY, and
+ * ENCASHMENT_MAX_PERCENT from the configuration table.
+ * Results are cached for 30 seconds.
+ */
+export async function getEncashmentConfig(): Promise<EncashmentConfig> {
+  const CACHE_KEY = 'bucket:encashment';
+  const cached = cacheGet<EncashmentConfig>(CACHE_KEY);
+  if (cached) return cached;
+
+  const [startMonthVal, endMonthVal, endDayVal, maxPctVal] = await Promise.all([
+    readConfigKey('ENCASHMENT_WINDOW_START_MONTH'),
+    readConfigKey('ENCASHMENT_WINDOW_END_MONTH'),
+    readConfigKey('ENCASHMENT_WINDOW_END_DAY'),
+    readConfigKey('ENCASHMENT_MAX_PERCENT'),
+  ]);
+
+  const windowStartMonth =
+    typeof startMonthVal === 'number' && startMonthVal >= 1 && startMonthVal <= 12
+      ? Math.round(startMonthVal)
+      : ENCASHMENT_DEFAULTS.windowStartMonth;
+
+  const windowEndMonth =
+    typeof endMonthVal === 'number' && endMonthVal >= 1 && endMonthVal <= 12
+      ? Math.round(endMonthVal)
+      : ENCASHMENT_DEFAULTS.windowEndMonth;
+
+  const windowEndDay =
+    typeof endDayVal === 'number' && endDayVal >= 1 && endDayVal <= 31
+      ? Math.round(endDayVal)
+      : ENCASHMENT_DEFAULTS.windowEndDay;
+
+  const maxPercent =
+    typeof maxPctVal === 'number' && maxPctVal >= 1 && maxPctVal <= 100
+      ? Math.round(maxPctVal)
+      : ENCASHMENT_DEFAULTS.maxPercent;
+
+  const result: EncashmentConfig = { windowStartMonth, windowEndMonth, windowEndDay, maxPercent };
   cacheSet(CACHE_KEY, result);
   return result;
 }

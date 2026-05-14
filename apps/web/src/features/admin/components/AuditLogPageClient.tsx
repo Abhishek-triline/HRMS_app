@@ -21,6 +21,12 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import type { AuditLogEntry } from '@nexora/contracts/audit';
 import type { AuditLogFilters } from '@/lib/api/audit';
+import {
+  ROLE_ID,
+  AUDIT_ACTOR_ROLE_MAP,
+  AUDIT_TARGET_TYPE_MAP,
+  AUDIT_MODULE_MAP,
+} from '@/lib/status/maps';
 
 // ── IST datetime formatter ───────────────────────────────────────────────────
 
@@ -181,25 +187,25 @@ function humanizeAction(entry: AuditLogEntry): string {
   const parts = entry.action.split('.');
   if (parts.length >= 2) {
     const verb = parts[parts.length - 1]!.replace(/-/g, ' ');
-    return `${verb} on ${moduleLabel(entry.module).toLowerCase()}`;
+    return `${verb} on ${moduleLabel(entry.moduleName).toLowerCase()}`;
   }
   return entry.action;
 }
 
 function humanizeTarget(entry: AuditLogEntry): string {
-  if (!entry.targetType) return '';
-  const label = TARGET_LABEL[entry.targetType] ?? entry.targetType.toLowerCase();
-  return label;
+  if (!entry.targetTypeId) return '';
+  return AUDIT_TARGET_TYPE_MAP[entry.targetTypeId]?.label ?? `Type ${entry.targetTypeId}`;
 }
 
 function humanizeActor(
   entry: AuditLogEntry,
-  nameMap?: Map<string, string>,
+  nameMap?: Map<number, string>,
 ): { name: string; sub: string } {
+  const roleLabel = AUDIT_ACTOR_ROLE_MAP[entry.actorRoleId]?.label ?? `Role ${entry.actorRoleId}`;
   if (!entry.actorId) return { name: 'System', sub: 'automatic' };
   // 1. Prefer the resolved name from the directory lookup.
   const fromMap = nameMap?.get(entry.actorId);
-  if (fromMap) return { name: fromMap, sub: entry.actorRole };
+  if (fromMap) return { name: fromMap, sub: roleLabel };
   // 2. Try to pull a readable name out of the before/after blobs.
   const blob = (entry.after ?? entry.before) as Record<string, unknown> | null;
   const maybeName =
@@ -209,8 +215,8 @@ function humanizeActor(
         (blob['actorName'] as string | undefined)
       : undefined;
   return {
-    name: maybeName ?? entry.actorRole,
-    sub: entry.actorRole,
+    name: maybeName ?? roleLabel,
+    sub: roleLabel,
   };
 }
 
@@ -288,7 +294,7 @@ function looksLikeId(v: unknown): v is string {
 function formatValue(
   key: string,
   value: unknown,
-  nameMap?: Map<string, string>,
+  nameMap?: Map<number, string>,
 ): string {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
@@ -303,11 +309,10 @@ function formatValue(
       }
     } catch { /* fall through */ }
   }
-  // ULID — try to resolve to a human name from the directory lookup first.
-  if (looksLikeId(value)) {
-    const name = nameMap?.get(value);
+  // INT id — try to resolve to a human name from the directory lookup.
+  if (typeof value === 'number' && Number.isInteger(value) && nameMap) {
+    const name = nameMap.get(value);
     if (name) return name;
-    return `${value.slice(0, 8)}…`;
   }
   // Paise → rupees for any *_paise field
   if (key.endsWith('_paise') || key.endsWith('Paise')) {
@@ -326,7 +331,7 @@ interface ChangeRow { key: string; label: string; before: string; after: string;
 function summarizeDiff(
   before: unknown,
   after: unknown,
-  nameMap?: Map<string, string>,
+  nameMap?: Map<number, string>,
 ): ChangeRow[] {
   const b = (before ?? {}) as Record<string, unknown>;
   const a = (after ?? {}) as Record<string, unknown>;
@@ -395,7 +400,7 @@ function AuditRow({
   serial,
 }: {
   entry: AuditLogEntry;
-  nameMap?: Map<string, string>;
+  nameMap?: Map<number, string>;
   serial: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -421,14 +426,14 @@ function AuditRow({
         {/* User — friendly name, role on the line below; actor ID in tooltip */}
         <td className="px-4 py-3">
           <div className="text-sm font-semibold text-charcoal">{actor.name}</div>
-          <div className="text-xs text-slate" title={entry.actorId ?? 'system'}>
+          <div className="text-xs text-slate" title={entry.actorId != null ? String(entry.actorId) : 'system'}>
             {actor.sub}
           </div>
         </td>
 
         {/* Module */}
         <td className="px-4 py-3">
-          <ModuleBadge module={entry.module} />
+          <ModuleBadge module={entry.moduleName} />
         </td>
 
         {/* Action — plain-English sentence (no badge) */}
@@ -438,12 +443,12 @@ function AuditRow({
 
         {/* Target — friendly type label + truncated ID for context */}
         <td className="px-4 py-3 text-xs">
-          {entry.targetType ? (
+          {entry.targetTypeId ? (
             <>
               <div className="text-charcoal font-medium">{targetLabel}</div>
-              {entry.targetId && (
-                <div className="font-mono text-slate truncate max-w-[160px]" title={entry.targetId}>
-                  {entry.targetId.slice(0, 8)}…
+              {entry.targetId != null && (
+                <div className="font-mono text-slate truncate max-w-[160px]" title={String(entry.targetId)}>
+                  #{entry.targetId}
                 </div>
               )}
             </>
@@ -486,7 +491,7 @@ function ChangeSummary({
   nameMap,
 }: {
   entry: AuditLogEntry;
-  nameMap?: Map<string, string>;
+  nameMap?: Map<number, string>;
 }) {
   const [showRaw, setShowRaw] = useState(false);
   const hasDiff = entry.before !== null || entry.after !== null;
@@ -573,10 +578,10 @@ function ChangeSummary({
             <div className="text-[10px] font-semibold text-slate uppercase tracking-wide mb-1">
               Affected record
             </div>
-            {entry.targetType ? (
+            {entry.targetTypeId ? (
               <code className="font-mono text-forest break-all text-[11px]">
-                {entry.targetType}
-                {entry.targetId ? ` · ${entry.targetId}` : ''}
+                {AUDIT_TARGET_TYPE_MAP[entry.targetTypeId]?.label ?? `Type ${entry.targetTypeId}`}
+                {entry.targetId != null ? ` · #${entry.targetId}` : ''}
               </code>
             ) : (
               <span className="text-slate">—</span>
@@ -589,7 +594,7 @@ function ChangeSummary({
             {entry.actorId ? (
               <>
                 <div className="text-charcoal font-medium text-xs">
-                  {nameMap?.get(entry.actorId) ?? entry.actorRole}
+                  {nameMap?.get(entry.actorId) ?? AUDIT_ACTOR_ROLE_MAP[entry.actorRoleId]?.label ?? `Role ${entry.actorRoleId}`}
                 </div>
                 <code className="font-mono text-slate break-all text-[10px]">
                   {entry.actorId}
@@ -652,10 +657,10 @@ function exportToCsv(entries: AuditLogEntry[]) {
     i + 1,
     formatIST(e.createdAt),
     e.actorId ?? 'system',
-    e.actorRole,
-    e.module,
+    AUDIT_ACTOR_ROLE_MAP[e.actorRoleId]?.label ?? `Role ${e.actorRoleId}`,
+    e.moduleName,
     e.action,
-    e.targetType ?? '',
+    e.targetTypeId ? (AUDIT_TARGET_TYPE_MAP[e.targetTypeId]?.label ?? `Type ${e.targetTypeId}`) : '',
     e.targetId ?? '',
   ]);
   const csv = [headers, ...rows]
@@ -690,6 +695,20 @@ function buildPageNumbers(current: number, total: number): Array<number | 'ellip
 
 const MODULES = ['', 'auth', 'leave', 'attendance', 'payroll', 'performance', 'employees', 'configuration', 'system'] as const;
 const ROLES = ['', 'Admin', 'Manager', 'Employee', 'PayrollOfficer', 'system'] as const;
+
+/** Maps module name string (as stored in audit_log.module_name) to its INT id */
+const MODULE_NAME_TO_ID: Record<string, number> = {
+  auth: 1, employees: 2, leave: 3, payroll: 4,
+  attendance: 5, performance: 6, notifications: 7, audit: 8, configuration: 9,
+};
+/** Maps role display name to INT id */
+const ROLE_NAME_TO_ID: Record<string, number> = {
+  Employee:       ROLE_ID.Employee,
+  Manager:        ROLE_ID.Manager,
+  PayrollOfficer: ROLE_ID.PayrollOfficer,
+  Admin:          ROLE_ID.Admin,
+  system:         100,
+};
 
 export function AuditLogPageClient() {
   const [q, setQ] = useState('');
@@ -751,9 +770,9 @@ export function AuditLogPageClient() {
   function handleApply() {
     const filters: AuditLogFilters = {};
     if (q.trim()) filters.q = q.trim();
-    if (module) filters.module = module;
+    if (module && MODULE_NAME_TO_ID[module]) filters.moduleId = MODULE_NAME_TO_ID[module];
     if (action.trim()) filters.action = action.trim();
-    if (actorRole) filters.actorRole = actorRole;
+    if (actorRole && ROLE_NAME_TO_ID[actorRole]) filters.actorRoleId = ROLE_NAME_TO_ID[actorRole];
     if (from) filters.from = from;
     if (to) filters.to = to;
     setAppliedFilters(filters);
@@ -787,7 +806,7 @@ export function AuditLogPageClient() {
           <p className="text-slate text-sm leading-relaxed">
             The audit log is <strong>system-generated and append-only</strong>. Every approval, rejection, cancellation,
             finalisation, reversal, status change, and configuration change is captured against a specific user and
-            timestamp. No user — Admin included — can edit or delete an entry (BL-047 / BL-048). Coverage spans every
+            timestamp. No user — Admin included — can edit or delete an entry. Coverage spans every
             module: user / hierarchy changes, leave decisions, attendance corrections, payroll runs and reversals, and
             review-cycle actions.
           </p>
@@ -1106,7 +1125,7 @@ export function AuditLogPageClient() {
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-[11px] text-slate">{formatIST(entry.createdAt)}</span>
                     <span className="text-[10px] uppercase tracking-wide text-slate">
-                      {moduleLabel(entry.module)}
+                      {moduleLabel(entry.moduleName)}
                     </span>
                   </div>
                   <div className="text-sm font-semibold text-charcoal">{actor.name}</div>
@@ -1124,7 +1143,7 @@ export function AuditLogPageClient() {
             <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <span>Append-only · entries cannot be edited or deleted by any user, including Admin (BL-047).</span>
+            <span>Append-only · entries cannot be edited or deleted by any user, including Admin.</span>
           </div>
 
           {totalLoaded > 0 && (

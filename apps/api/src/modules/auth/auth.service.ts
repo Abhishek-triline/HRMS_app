@@ -3,16 +3,18 @@
  *
  * Covers:
  *  - Password hashing / verification (argon2id)
- *  - Lockout detection (5-strikes in 15 min, BL-005)
+ *  - Lockout detection (25-strikes in 5 min)
  *  - Session creation
  *  - Permission derivation from role
  */
 
 import argon2 from 'argon2';
+import crypto from 'crypto';
 import { prisma } from '../../lib/prisma.js';
 import type { AuthPermissionValue } from '@nexora/contracts/auth';
 import { AuthPermission } from '@nexora/contracts/auth';
-import type { Role } from '@nexora/contracts/common';
+import type { RoleIdValue } from '../../lib/statusInt.js';
+import { RoleId } from '../../lib/statusInt.js';
 
 // ── Password ─────────────────────────────────────────────────────────────────
 
@@ -42,8 +44,10 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 
 // ── Login attempt tracking ────────────────────────────────────────────────────
 
-const LOCKOUT_THRESHOLD = Number(process.env['LOGIN_LOCKOUT_THRESHOLD'] ?? 5);
-const LOCKOUT_MINUTES = Number(process.env['LOGIN_LOCKOUT_MINUTES'] ?? 15);
+// Hardcoded — env overrides removed by request. Bump the constants directly
+// if you need to tune. 25 failed attempts in a 5-minute window before lockout.
+const LOCKOUT_THRESHOLD = 25;
+const LOCKOUT_MINUTES = 5;
 
 /**
  * Record a login attempt (success or failure).
@@ -53,7 +57,7 @@ export async function recordLoginAttempt(params: {
   email: string;
   ip: string;
   success: boolean;
-  employeeId?: string | null;
+  employeeId?: number | null;
 }): Promise<void> {
   await prisma.loginAttempt.create({
     data: {
@@ -111,23 +115,25 @@ const SESSION_TTL_HOURS = Number(process.env['SESSION_TTL_HOURS'] ?? 12);
 const SESSION_REMEMBER_ME_DAYS = Number(process.env['SESSION_REMEMBER_ME_DAYS'] ?? 30);
 
 /**
- * Create a new session row and return its id.
+ * Create a new session row and return its token (for the cookie) and sessionId (INT).
  * The cookie is set by the route handler — this only writes the DB row.
  */
 export async function createSessionFor(params: {
-  employeeId: string;
+  employeeId: number;
   ip: string;
   userAgent: string | undefined;
   rememberMe: boolean;
-}): Promise<{ sessionId: string; expiresAt: Date }> {
+}): Promise<{ sessionId: number; token: string; expiresAt: Date }> {
   const ttlMs = params.rememberMe
     ? SESSION_REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000
     : SESSION_TTL_HOURS * 60 * 60 * 1000;
 
   const expiresAt = new Date(Date.now() + ttlMs);
+  const token = crypto.randomBytes(32).toString('hex');
 
   const session = await prisma.session.create({
     data: {
+      token,
       employeeId: params.employeeId,
       ip: params.ip,
       userAgent: params.userAgent ?? null,
@@ -135,25 +141,25 @@ export async function createSessionFor(params: {
     },
   });
 
-  return { sessionId: session.id, expiresAt };
+  return { sessionId: session.id, token, expiresAt };
 }
 
 // ── Permissions ───────────────────────────────────────────────────────────────
 
-const ROLE_PERMISSIONS: Record<Role, AuthPermissionValue[]> = {
-  Employee: [],
-  Manager: [
+const ROLE_PERMISSIONS: Record<RoleIdValue, AuthPermissionValue[]> = {
+  [RoleId.Employee]: [],
+  [RoleId.Manager]: [
     AuthPermission.EMPLOYEES_READ,
     AuthPermission.LEAVE_APPROVE,
     AuthPermission.ATTENDANCE_REGULARISE_APPROVE,
   ],
-  PayrollOfficer: [
+  [RoleId.PayrollOfficer]: [
     AuthPermission.EMPLOYEES_READ,
     AuthPermission.PAYROLL_RUN,
     AuthPermission.PAYROLL_FINALISE,
     // PAYROLL_REVERSE intentionally omitted — Admin-only per BL-033 / DN-12 (SEC-003).
   ],
-  Admin: [
+  [RoleId.Admin]: [
     AuthPermission.EMPLOYEES_READ,
     AuthPermission.EMPLOYEES_WRITE,
     AuthPermission.LEAVE_APPROVE,
@@ -169,16 +175,14 @@ const ROLE_PERMISSIONS: Record<Role, AuthPermissionValue[]> = {
 };
 
 /**
- * Derive the permission array for a given role.
+ * Derive the permission array for a given roleId.
  * Used by GET /auth/me to surface fine-grained frontend gating.
  */
-export function permissionsFor(role: Role): AuthPermissionValue[] {
-  return ROLE_PERMISSIONS[role] ?? [];
+export function permissionsFor(roleId: RoleIdValue): AuthPermissionValue[] {
+  return ROLE_PERMISSIONS[roleId] ?? [];
 }
 
 // ── Token utilities ───────────────────────────────────────────────────────────
-
-import crypto from 'crypto';
 
 /** Generate a cryptographically secure random token (hex). */
 export function generateToken(): string {

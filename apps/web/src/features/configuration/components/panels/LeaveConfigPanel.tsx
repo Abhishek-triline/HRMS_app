@@ -1,20 +1,13 @@
 'use client';
 
 /**
- * LeaveConfigPanel — 3-card prototype layout (prototype/admin/config.html
- * lines 180-278). Each row has an inline per-row Save button so Admin can
- * change one knob at a time without batch-saving.
+ * LeaveConfigPanel — 3-card prototype layout + Encashment subsection.
  *
  * Cards (in order):
  *   1. Carry-Forward & Reset Rules
- *      · Annual cap (number 0-30, default 10)
- *      · Casual cap (number 0-20, default 5)
- *      · Sick — locked, fixed reset rule
  *   2. Entitlement Limits
- *      · Maternity (weeks, 1-52, default 26 — stored as days = weeks*7)
- *      · Paternity (working days, 1-60, default 10)
  *   3. Escalation Settings
- *      · Escalation period (1-14 working days, default 5)
+ *   4. Encashment Window (new — BL-LE-04)
  */
 
 import { useEffect, useState } from 'react';
@@ -24,6 +17,8 @@ import {
   useLeaveConfigSettings,
   useUpdateLeaveConfigSettings,
 } from '@/features/admin/hooks/useLeaveConfigSettings';
+import { LEAVE_TYPE_ID } from '@/lib/status/maps';
+import { useEncashmentConfigSettings, useUpdateEncashmentConfigSettings } from '@/features/admin/hooks/useEncashmentConfigSettings';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
@@ -164,8 +159,8 @@ export default function LeaveConfigPanel() {
   // Hydrate from server
   useEffect(() => {
     if (data) {
-      setAnnualCapDraft(String(data.carryForwardCaps.Annual));
-      setCasualCapDraft(String(data.carryForwardCaps.Casual));
+      setAnnualCapDraft(String(data.carryForwardCaps[LEAVE_TYPE_ID.Annual]));
+      setCasualCapDraft(String(data.carryForwardCaps[LEAVE_TYPE_ID.Casual]));
       setMaternityWeeksDraft(String(Math.round(data.maternityDays / 7)));
       setPaternityDaysDraft(String(data.paternityDays));
       setEscalationDraft(String(data.escalationPeriodDays));
@@ -173,8 +168,8 @@ export default function LeaveConfigPanel() {
   }, [data]);
 
   // ── Dirty flags ───────────────────────────────────────────────────────────
-  const annualDirty = data !== undefined && Number(annualCapDraft) !== data.carryForwardCaps.Annual;
-  const casualDirty = data !== undefined && Number(casualCapDraft) !== data.carryForwardCaps.Casual;
+  const annualDirty = data !== undefined && Number(annualCapDraft) !== data.carryForwardCaps[LEAVE_TYPE_ID.Annual];
+  const casualDirty = data !== undefined && Number(casualCapDraft) !== data.carryForwardCaps[LEAVE_TYPE_ID.Casual];
   const maternityDirty =
     data !== undefined && Number(maternityWeeksDraft) * 7 !== data.maternityDays;
   const paternityDirty =
@@ -201,7 +196,7 @@ export default function LeaveConfigPanel() {
     if (!data) return;
     void save(
       {
-        carryForwardCaps: { ...data.carryForwardCaps, Annual: n },
+        carryForwardCaps: { ...data.carryForwardCaps, [LEAVE_TYPE_ID.Annual]: n },
       },
       'Annual carry-forward cap',
     );
@@ -216,7 +211,7 @@ export default function LeaveConfigPanel() {
     if (!data) return;
     void save(
       {
-        carryForwardCaps: { ...data.carryForwardCaps, Casual: n },
+        carryForwardCaps: { ...data.carryForwardCaps, [LEAVE_TYPE_ID.Casual]: n },
       },
       'Casual carry-forward cap',
     );
@@ -371,6 +366,235 @@ export default function LeaveConfigPanel() {
           isLast
         />
       </div>
+
+      {/* ── Card 4: Encashment Window ─────────────────────────────────────── */}
+      <EncashmentConfigSection />
+    </div>
+  );
+}
+
+// ── Encashment subsection ─────────────────────────────────────────────────────
+
+function EncashmentConfigSection() {
+  const { data, isLoading, isError } = useEncashmentConfigSettings();
+  const mutation = useUpdateEncashmentConfigSettings();
+
+  const [startMonthDraft, setStartMonthDraft] = useState('12');
+  const [endMonthDraft, setEndMonthDraft] = useState('1');
+  const [endDayDraft, setEndDayDraft] = useState('15');
+  const [maxPercentDraft, setMaxPercentDraft] = useState('50');
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setStartMonthDraft(String(data.windowStartMonth));
+      setEndMonthDraft(String(data.windowEndMonth));
+      setEndDayDraft(String(data.windowEndDay));
+      setMaxPercentDraft(String(data.maxPercent));
+    }
+  }, [data]);
+
+  const startMonthDirty = data !== undefined && Number(startMonthDraft) !== data.windowStartMonth;
+  const endMonthDirty = data !== undefined && Number(endMonthDraft) !== data.windowEndMonth;
+  const endDayDirty = data !== undefined && Number(endDayDraft) !== data.windowEndDay;
+  const maxPercentDirty = data !== undefined && Number(maxPercentDraft) !== data.maxPercent;
+
+  function validate(key: string, val: number): string | null {
+    switch (key) {
+      case 'startMonth':
+        if (!Number.isInteger(val) || val < 1 || val > 12) return 'Month must be 1-12.';
+        break;
+      case 'endMonth':
+        if (!Number.isInteger(val) || val < 1 || val > 12) return 'Month must be 1-12.';
+        if (data && val === data.windowStartMonth) return 'End month must differ from start month.';
+        break;
+      case 'endDay':
+        if (!Number.isInteger(val) || val < 1 || val > 31) return 'Day must be 1-31.';
+        break;
+      case 'maxPercent':
+        if (!Number.isInteger(val) || val < 1 || val > 100) return 'Percent must be 1-100.';
+        break;
+    }
+    return null;
+  }
+
+  async function saveKey(key: string, val: number, label: string) {
+    const err = validate(key, val);
+    if (err) { showToast({ type: 'error', title: 'Invalid value', message: err }); return; }
+    try {
+      await mutation.mutateAsync(
+        key === 'startMonth' ? { windowStartMonth: val }
+        : key === 'endMonth' ? { windowEndMonth: val }
+        : key === 'endDay' ? { windowEndDay: val }
+        : { maxPercent: val },
+      );
+      showToast({ type: 'success', title: `${label} saved`, message: 'Settings updated.' });
+    } catch (err2) {
+      showToast({ type: 'error', title: 'Save failed', message: err2 instanceof ApiError ? err2.message : 'Please try again.' });
+    }
+  }
+
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-sage/30">
+      {/* Collapsed header */}
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-offwhite/50 transition-colors rounded-xl"
+        aria-expanded={expanded}
+      >
+        <div>
+          <h3 className="font-heading text-base font-semibold text-charcoal">Encashment Window</h3>
+          <p className="text-xs text-slate mt-0.5">
+            Configure the annual leave encashment request window and maximum percentage (BL-LE-04)
+          </p>
+        </div>
+        <svg
+          className={`w-5 h-5 text-slate transition-transform ${expanded ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="px-6 pb-6 space-y-1 border-t border-sage/15">
+          {isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Spinner size="sm" aria-label="Loading encashment config" />
+            </div>
+          )}
+          {isError && (
+            <div className="bg-crimsonbg border border-crimson/20 rounded-xl px-4 py-3 text-sm text-crimson mt-4" role="alert">
+              Could not load encashment configuration. Please refresh.
+            </div>
+          )}
+          {!isLoading && !isError && data && (
+            <div className="pt-2 space-y-1">
+              {/* Window open month */}
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm">Window Start Month</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Month in which employees can start submitting encashment requests · default December (12)
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <select
+                    value={startMonthDraft}
+                    onChange={(e) => setStartMonthDraft(e.target.value)}
+                    aria-label="Window start month"
+                    className="border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
+                  >
+                    {MONTH_NAMES.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>{m} ({i + 1})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => saveKey('startMonth', Number(startMonthDraft), 'Window start month')}
+                    disabled={!startMonthDirty || mutation.isPending}
+                    className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {mutation.isPending ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Window end month */}
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm">Window End Month</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Month in which the window closes · must differ from start · default January (1)
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <select
+                    value={endMonthDraft}
+                    onChange={(e) => setEndMonthDraft(e.target.value)}
+                    aria-label="Window end month"
+                    className="border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
+                  >
+                    {MONTH_NAMES.map((m, i) => (
+                      <option key={i + 1} value={i + 1}>{m} ({i + 1})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => saveKey('endMonth', Number(endMonthDraft), 'Window end month')}
+                    disabled={!endMonthDirty || mutation.isPending}
+                    className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {mutation.isPending ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Window end day */}
+              <div className="flex items-center justify-between gap-4 py-4 border-b border-sage/15">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm">Window End Day</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Day of the end month at which the window closes · default 15
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={endDayDraft}
+                    onChange={(e) => setEndDayDraft(e.target.value)}
+                    aria-label="Window end day"
+                    className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => saveKey('endDay', Number(endDayDraft), 'Window end day')}
+                    disabled={!endDayDirty || mutation.isPending}
+                    className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {mutation.isPending ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Max percent */}
+              <div className="flex items-center justify-between gap-4 py-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm">Maximum Encashable Percent</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Maximum % of Annual balance an employee can encash per year · default 50 · server clamps approved days
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={maxPercentDraft}
+                    onChange={(e) => setMaxPercentDraft(e.target.value)}
+                    aria-label="Maximum encashable percent"
+                    className="w-20 border border-sage/50 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
+                  />
+                  <span className="text-xs text-slate">%</span>
+                  <button
+                    type="button"
+                    onClick={() => saveKey('maxPercent', Number(maxPercentDraft), 'Max encashable percent')}
+                    disabled={!maxPercentDirty || mutation.isPending}
+                    className="bg-forest text-white hover:bg-emerald px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {mutation.isPending ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

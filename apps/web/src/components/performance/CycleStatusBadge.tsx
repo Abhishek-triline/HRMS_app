@@ -1,20 +1,16 @@
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import type { BadgeStatus } from '@/components/ui/StatusBadge';
-import type { CycleStatus } from '@nexora/contracts/performance';
+/**
+ * CycleStatusBadge — maps performance cycle status INT codes → StatusBadge.
+ * Status codes: 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed
+ */
 
-const cycleStatusMap: Record<CycleStatus, { status: BadgeStatus; label: string }> = {
-  Open: { status: 'active', label: 'Open' },
-  'Self-Review': { status: 'review', label: 'Self-Review' },
-  'Manager-Review': { status: 'processing', label: 'Mgr Review' },
-  Closed: { status: 'locked', label: 'Closed' },
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
 
 interface CycleStatusBadgeProps {
-  status: CycleStatus;
+  /** INT status code from the API (1–4) */
+  status: number;
   className?: string;
 }
 
 export function CycleStatusBadge({ status, className }: CycleStatusBadgeProps) {
-  const config = cycleStatusMap[status];
-  return <StatusBadge status={config.status} label={config.label} className={className} />;
+  return <StatusBadge entity="cycleStatus" code={status} className={className} />;
 }

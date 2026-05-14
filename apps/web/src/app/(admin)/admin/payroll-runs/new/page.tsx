@@ -259,15 +259,15 @@ export default function NewPayrollRunPage() {
                 },
                 {
                   text: 'Show reference tax (v1: PayrollOfficer enters final value)',
-                  sub: 'Standard formula: gross × flat reference rate. Slab engine deferred to v2 (BL-036a).',
+                  sub: 'Standard formula: gross × flat reference rate. Slab engine deferred to v2.',
                 },
                 {
                   text: 'Auto-calculate LOP from unpaid leaves',
-                  sub: 'Formula: (Basic + Allowances) ÷ working days × LOP days (BL-035)',
+                  sub: 'Formula: (Basic + Allowances) ÷ working days × LOP days',
                 },
                 {
                   text: 'Pro-rate mid-month joiners and exits',
-                  sub: 'Days actually worked used for proration (BL-036)',
+                  sub: 'Days actually worked used for proration',
                 },
               ].map((item, i) => (
                 <label key={i} className="flex items-start gap-3 cursor-default">

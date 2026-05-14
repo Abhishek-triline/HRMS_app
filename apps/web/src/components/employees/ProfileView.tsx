@@ -8,6 +8,8 @@
  * Calls useProfile(id) and renders a rich profile card matching
  * prototype/manager/profile.html and prototype/employee/profile.html visual language.
  * The top card now uses <ProfileHero> matching the forest-gradient design exactly.
+ *
+ * v2: employeeId is a number; role/gender/employmentType are resolved from INT codes.
  */
 
 import { useProfile } from '@/lib/hooks/useEmployees';
@@ -15,6 +17,7 @@ import { ProfileHero } from './ProfileHero';
 import { EmployeeStatusBadge } from './EmployeeStatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
+import { ROLE_MAP, EMPLOYMENT_TYPE_MAP, GENDER_MAP } from '@/lib/status/maps';
 
 const fmtInr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 function formatRupees(paise: number) {
@@ -35,7 +38,7 @@ function formatDate(iso: string | null | undefined) {
 }
 
 interface ProfileViewProps {
-  employeeId: string;
+  employeeId: number;
   /** Whether to show the salary section (Admin or SELF) */
   showSalary?: boolean;
 }
@@ -65,6 +68,9 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
   }
 
   const salary = profile.salaryStructure;
+  const roleLabel = ROLE_MAP[profile.roleId]?.label ?? `Role ${profile.roleId}`;
+  const employmentTypeLabel = EMPLOYMENT_TYPE_MAP[profile.employmentTypeId]?.label ?? `Type ${profile.employmentTypeId}`;
+  const genderLabel = profile.genderId != null ? (GENDER_MAP[profile.genderId]?.label ?? null) : null;
 
   return (
     <div className="space-y-5">
@@ -75,7 +81,7 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
         designation={profile.designation}
         department={profile.department}
         status={profile.status}
-        role={profile.role}
+        role={roleLabel}
         joinDate={profile.joinDate}
       />
 
@@ -135,6 +141,12 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
                   <dt className="text-slate">Designation</dt>
                   <dd className="text-charcoal font-medium text-right">{profile.designation ?? '—'}</dd>
                 </div>
+                {genderLabel && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate">Gender</dt>
+                    <dd className="text-charcoal font-medium text-right">{genderLabel}</dd>
+                  </div>
+                )}
               </dl>
             </div>
 
@@ -164,7 +176,7 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate">Role</dt>
-                  <dd className="text-charcoal font-medium">{profile.role}</dd>
+                  <dd className="text-charcoal font-medium">{roleLabel}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate">Department</dt>
@@ -172,7 +184,7 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate">Employment type</dt>
-                  <dd className="text-charcoal font-medium">{profile.employmentType}</dd>
+                  <dd className="text-charcoal font-medium">{employmentTypeLabel}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate">Reporting manager</dt>
@@ -230,7 +242,7 @@ export function ProfileView({ employeeId, showSalary = true }: ProfileViewProps)
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate">Employment</span>
-                <span className="font-medium text-charcoal">{profile.employmentType}</span>
+                <span className="font-medium text-charcoal">{employmentTypeLabel}</span>
               </div>
               <div className="border-t border-sage/20 pt-2 flex justify-between text-xs">
                 <span className="text-slate">Last updated</span>

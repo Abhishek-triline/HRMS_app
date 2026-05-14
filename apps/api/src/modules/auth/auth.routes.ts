@@ -10,7 +10,7 @@
  *   GET  /me                        —
  *
  * Business rules enforced:
- *   BL-005 (5-strikes lockout, 15 min)
+ *   BL-005 (lockout — relaxed to 25 strikes / 5 min)
  *   BL-047 (audit every auth event)
  *   UC-FL-01 (first login → must set password)
  *   UC-FL-02 (forgot/reset password flow, no enumeration leak)
@@ -32,6 +32,12 @@ import { sendMail } from '../../lib/mailer.js';
 import { prisma } from '../../lib/prisma.js';
 import { logger } from '../../lib/logger.js';
 import {
+  EmployeeStatus,
+  TokenPurpose,
+  type RoleIdValue,
+  type AuditActorRoleValue,
+} from '../../lib/statusInt.js';
+import {
   hashPassword,
   verifyPassword,
   recordLoginAttempt,
@@ -47,6 +53,11 @@ import {
 const router = Router();
 
 const COOKIE_NAME = process.env['SESSION_COOKIE_NAME'] ?? 'nx_session';
+// SESSION_COOKIE_DOMAIN — set to the parent registrable domain in production
+// (e.g. ".tlitech.net") when the web and API live on different subdomains so
+// the cookie is shared across both. Leave empty in dev (localhost) — the
+// browser will scope the cookie to the host automatically.
+const COOKIE_DOMAIN = process.env['SESSION_COOKIE_DOMAIN'] ?? '';
 const SESSION_TTL_HOURS = Number(process.env['SESSION_TTL_HOURS'] ?? 12);
 const SESSION_REMEMBER_ME_DAYS = Number(process.env['SESSION_REMEMBER_ME_DAYS'] ?? 30);
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env['PASSWORD_RESET_TTL_MINUTES'] ?? 30);
@@ -69,28 +80,13 @@ function clientIp(req: Request): string {
 }
 
 /**
- * Map DB EmployeeStatus enum (PascalCase) to the contract enum (hyphenated).
- * The DB stores "OnNotice" and "OnLeave"; the API surfaces "On-Notice" / "On-Leave".
- */
-function mapStatus(dbStatus: string): 'Active' | 'On-Notice' | 'Exited' | 'On-Leave' | 'Inactive' {
-  const map: Record<string, 'Active' | 'On-Notice' | 'Exited' | 'On-Leave' | 'Inactive'> = {
-    Active: 'Active',
-    OnNotice: 'On-Notice',
-    Exited: 'Exited',
-    OnLeave: 'On-Leave',
-    Inactive: 'Inactive',
-  };
-  return map[dbStatus] ?? 'Inactive';
-}
-
-/**
  * Set the session cookie using cookie-parser's signed cookie support.
  * The cookie value is signed with SESSION_SECRET (set in cookieParser(SECRET) in index.ts).
  * HttpOnly + Secure + SameSite=Lax (BL-003 / SRS § 9.2).
  */
 function setSessionCookie(
   res: Response,
-  sessionId: string,
+  token: string,
   rememberMe: boolean,
 ): void {
   const maxAge = rememberMe
@@ -98,13 +94,14 @@ function setSessionCookie(
     : SESSION_TTL_HOURS * 60 * 60;
 
   // res.cookie with `signed: true` uses the secret passed to cookieParser()
-  res.cookie(COOKIE_NAME, sessionId, {
+  res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env['NODE_ENV'] === 'production',
     sameSite: 'lax',
     maxAge: maxAge * 1000, // express expects ms
     path: '/',
     signed: true,
+    ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
   });
 }
 
@@ -163,7 +160,7 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
       await recordLoginAttempt({ email, ip, success: false, employeeId: employee?.id ?? null });
       await audit({
         actorId: employee?.id ?? null,
-        actorRole: employee?.role ?? 'unknown',
+        actorRole: (employee?.roleId ?? 'unknown') as AuditActorRoleValue | 'unknown',
         actorIp: ip,
         action: 'auth.login.failure',
         targetType: 'Employee',
@@ -181,11 +178,11 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
     // way out of Inactive is the first-login flow, which uses its own
     // dedicated endpoint. We surface a generic INVALID_CREDENTIALS to avoid
     // leaking the account-status detail to a brute-forcer.
-    if (employee.status === 'Exited' || employee.status === 'Inactive') {
+    if (employee.status === EmployeeStatus.Exited || employee.status === EmployeeStatus.Inactive) {
       await recordLoginAttempt({ email, ip, success: false, employeeId: employee.id });
       await audit({
         actorId: employee.id,
-        actorRole: employee.role,
+        actorRole: employee.roleId as AuditActorRoleValue,
         actorIp: ip,
         action: 'auth.login.blocked-status',
         targetType: 'Employee',
@@ -202,18 +199,18 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
     // Success — record, create session, set cookie
     await recordLoginAttempt({ email, ip, success: true, employeeId: employee.id });
 
-    const { sessionId } = await createSessionFor({
+    const { token } = await createSessionFor({
       employeeId: employee.id,
       ip,
       userAgent,
       rememberMe: rememberMe ?? false,
     });
 
-    setSessionCookie(res, sessionId, rememberMe ?? false);
+    setSessionCookie(res, token, rememberMe ?? false);
 
     await audit({
       actorId: employee.id,
-      actorRole: employee.role,
+      actorRole: employee.roleId as AuditActorRoleValue,
       actorIp: ip,
       action: 'auth.login.success',
       targetType: 'Employee',
@@ -228,14 +225,14 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
           code: employee.code,
           email: employee.email,
           name: employee.name,
-          role: employee.role,
-          status: mapStatus(employee.status),
-          department: employee.department ?? null,
-          designation: employee.designation ?? null,
+          roleId: employee.roleId,
+          status: employee.status,
+          departmentId: employee.departmentId ?? null,
+          designationId: employee.designationId ?? null,
           reportingManagerId: employee.reportingManagerId ?? null,
           mustResetPassword: employee.mustResetPassword,
         },
-        role: employee.role,
+        roleId: employee.roleId,
       },
     });
   } catch (err: unknown) {
@@ -253,14 +250,14 @@ router.post('/logout', requireSession(), async (req: Request, res: Response) => 
   const ip = clientIp(req);
 
   try {
-    // Delete session row
+    // Delete session row by INT id
     if (user.sessionId) {
       await prisma.session.delete({ where: { id: user.sessionId } }).catch(() => undefined);
     }
 
     await audit({
       actorId: user.id,
-      actorRole: user.role,
+      actorRole: user.roleId as RoleIdValue,
       actorIp: ip,
       action: 'auth.logout',
       targetType: 'Employee',
@@ -268,7 +265,7 @@ router.post('/logout', requireSession(), async (req: Request, res: Response) => 
       module: 'auth',
     });
 
-    res.clearCookie(COOKIE_NAME, { path: '/' }).status(200).json({ data: { success: true } });
+    res.clearCookie(COOKIE_NAME, { path: '/', ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}) }).status(200).json({ data: { success: true } });
   } catch (err: unknown) {
     logger.error({ err }, 'auth.logout.error');
     res
@@ -296,7 +293,10 @@ router.post(
 
       // SEC-P8-008: OnNotice employees may also request a password reset —
       // they still have active employment and should be able to recover access.
-      if (employee && ['Active', 'OnNotice'].includes(employee.status)) {
+      if (
+        employee &&
+        [EmployeeStatus.Active, EmployeeStatus.OnNotice].includes(employee.status as typeof EmployeeStatus.Active)
+      ) {
         const rawToken = generateToken();
         const tokenHash = hashToken(rawToken);
         const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
@@ -305,7 +305,7 @@ router.post(
           data: {
             employeeId: employee.id,
             tokenHash,
-            purpose: 'ResetPassword',
+            purposeId: TokenPurpose.ResetPassword,
             expiresAt,
           },
         });
@@ -321,7 +321,7 @@ router.post(
 
         await audit({
           actorId: employee.id,
-          actorRole: employee.role,
+          actorRole: employee.roleId as AuditActorRoleValue,
           actorIp: ip,
           action: 'auth.password.reset.requested',
           targetType: 'Employee',
@@ -367,7 +367,7 @@ router.post(
         include: { employee: true },
       });
 
-      if (!tokenRow || tokenRow.purpose !== 'ResetPassword') {
+      if (!tokenRow || tokenRow.purposeId !== TokenPurpose.ResetPassword) {
         res.status(400).json(errorEnvelope(ErrorCode.TOKEN_INVALID, 'Invalid or unknown token.'));
         return;
       }
@@ -405,7 +405,7 @@ router.post(
         await audit({
           tx,
           actorId: tokenRow.employeeId,
-          actorRole: tokenRow.employee.role,
+          actorRole: tokenRow.employee.roleId as AuditActorRoleValue,
           actorIp: ip,
           action: 'auth.password.reset',
           targetType: 'Employee',
@@ -416,7 +416,7 @@ router.post(
         });
       });
 
-      res.clearCookie(COOKIE_NAME, { path: '/' }).status(200).json({ data: { success: true } });
+      res.clearCookie(COOKIE_NAME, { path: '/', ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}) }).status(200).json({ data: { success: true } });
     } catch (err: unknown) {
       logger.error({ err }, 'auth.reset-password.error');
       res
@@ -449,7 +449,7 @@ router.post(
         include: { employee: true },
       });
 
-      if (!tokenRow || tokenRow.purpose !== 'FirstLogin') {
+      if (!tokenRow || tokenRow.purposeId !== TokenPurpose.FirstLogin) {
         res
           .status(400)
           .json(errorEnvelope(ErrorCode.TOKEN_INVALID, 'Invalid or unknown first-login token.'));
@@ -488,7 +488,7 @@ router.post(
           data: {
             passwordHash,
             mustResetPassword: false,
-            status: 'Active',
+            status: EmployeeStatus.Active,
             updatedAt: new Date(),
           },
         });
@@ -507,28 +507,28 @@ router.post(
         await audit({
           tx,
           actorId: tokenRow.employeeId,
-          actorRole: tokenRow.employee.role,
+          actorRole: tokenRow.employee.roleId as AuditActorRoleValue,
           actorIp: ip,
           action: 'auth.first-login.complete',
           targetType: 'Employee',
           targetId: tokenRow.employeeId,
           module: 'auth',
           before: { mustResetPassword: true, status: tokenRow.employee.status },
-          after: { mustResetPassword: false, status: 'Active' },
+          after: { mustResetPassword: false, status: EmployeeStatus.Active },
         });
 
         return emp;
       });
 
       // Create session after password is set
-      const { sessionId } = await createSessionFor({
+      const { token } = await createSessionFor({
         employeeId: tokenRow.employeeId,
         ip,
         userAgent,
         rememberMe: false,
       });
 
-      setSessionCookie(res, sessionId, false);
+      setSessionCookie(res, token, false);
 
       const emp = updatedEmployee;
       res.status(200).json({
@@ -538,14 +538,14 @@ router.post(
             code: emp.code,
             email: emp.email,
             name: emp.name,
-            role: emp.role,
-            status: mapStatus(emp.status),
-            department: emp.department ?? null,
-            designation: emp.designation ?? null,
+            roleId: emp.roleId,
+            status: emp.status,
+            departmentId: emp.departmentId ?? null,
+            designationId: emp.designationId ?? null,
             reportingManagerId: emp.reportingManagerId ?? null,
             mustResetPassword: emp.mustResetPassword,
           },
-          role: emp.role,
+          roleId: emp.roleId,
         },
       });
     } catch (err: unknown) {
@@ -574,15 +574,15 @@ router.get('/me', requireSession(), (req: Request, res: Response) => {
         code: user.code,
         email: user.email,
         name: user.name,
-        role: user.role,
+        roleId: user.roleId,
         status: user.status,
         department: user.department ?? null,
         designation: user.designation ?? null,
         reportingManagerId: user.reportingManagerId ?? null,
         mustResetPassword: user.mustResetPassword,
       },
-      role: user.role,
-      permissions: permissionsFor(user.role),
+      roleId: user.roleId,
+      permissions: permissionsFor(user.roleId as RoleIdValue),
     },
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Audit Log routes — Phase 7.
+ * Audit Log routes — v2 schema (INT IDs, master table FKs).
  *
  * Mounted at /api/v1/audit-logs.
  *
@@ -9,19 +9,11 @@
  * Endpoints:
  *   GET /api/v1/audit-logs   Admin only. Cursor-paginated list with filters.
  *
- * Filters (all optional):
- *   actorId, actorRole, module, action (substring), targetType, targetId,
- *   from (ISO datetime), to (ISO datetime), q (free-text substring on action).
- *
- * Pagination: keyset cursor — field `id` (ULID = lexicographically ordered by
- * creation time). Default sort is createdAt DESC, id DESC.
- * The cursor value is the `id` of the last item returned.
- * On the next page: WHERE id < :cursor (DESC ordering).
- *
- * Indexes backing this query (created in Phase 7 migration):
- *   idx_audit_log_created_at_id   (created_at DESC, id DESC)
- *   idx_audit_log_module_created_at (module, created_at DESC)
- *   idx_audit_log_actor_created_at  (actor_id, created_at DESC)
+ * v2 schema notes:
+ *   - AuditLog.actorRoleId: INT FK (not string actorRole)
+ *   - AuditLog.moduleId: INT FK to AuditModule.id
+ *   - AuditLog.targetTypeId: INT FK to AuditTargetType.id
+ *   - Filters by module/targetType/actorRole use name→id lookups on master tables
  */
 
 import { Router } from 'express';
@@ -34,6 +26,7 @@ import { errorEnvelope, ErrorCode } from '@nexora/contracts/errors';
 import { AuditLogListQuerySchema } from '@nexora/contracts/audit';
 import { logger } from '../../lib/logger.js';
 import type { Prisma } from '@prisma/client';
+import { RoleId } from '../../lib/statusInt.js';
 
 export const auditRouter = Router();
 
@@ -42,46 +35,52 @@ export const auditRouter = Router();
 auditRouter.get(
   '/',
   requireSession(),
-  requireRole('Admin'),
+  requireRole(RoleId.Admin),
   validateQuery(AuditLogListQuerySchema),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const query = req.query as unknown as {
-        cursor?: string;
-        limit: number;
-        actorId?: string;
-        actorRole?: string;
-        module?: string;
-        action?: string;
-        targetType?: string;
-        targetId?: string;
-        from?: string;
-        to?: string;
-        q?: string;
+      // After validateQuery(AuditLogListQuerySchema) zod coerces numeric params
+      // to actual numbers — but the local coercion below is a defence-in-depth
+      // belt-and-braces (also helps in unit tests that mock the validator).
+      const raw = req.query as Record<string, string | number | undefined>;
+      const toInt = (v: unknown): number | undefined => {
+        if (v === undefined || v === null || v === '') return undefined;
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n : undefined;
+      };
+      const query = {
+        cursor: raw['cursor'] as string | undefined,
+        limit: toInt(raw['limit']) ?? 20,
+        actorId: toInt(raw['actorId']),
+        actorRoleId: toInt(raw['actorRoleId']),
+        moduleId: toInt(raw['moduleId']),
+        targetTypeId: toInt(raw['targetTypeId']),
+        targetId: toInt(raw['targetId']),
+        action: raw['action'] as string | undefined,
+        from: raw['from'] as string | undefined,
+        to: raw['to'] as string | undefined,
+        q: raw['q'] as string | undefined,
       };
 
-      const limit = Math.min(Number(query.limit) || 20, 100);
+      const limit = Math.min(query.limit, 100);
 
-      // Build Prisma where clause from query filters
+      // Build Prisma where clause from query filters. All filter values are
+      // INT codes per HRMS_Schema_v2_Plan §3 — no name→id lookup needed.
       const where: Prisma.AuditLogWhereInput = {};
 
-      if (query.actorId) {
+      if (query.actorId !== undefined) {
         where.actorId = query.actorId;
       }
-
-      if (query.actorRole) {
-        where.actorRole = query.actorRole;
+      if (query.actorRoleId !== undefined) {
+        where.actorRoleId = query.actorRoleId;
       }
-
-      if (query.module) {
-        where.module = query.module;
+      if (query.moduleId !== undefined) {
+        where.moduleId = query.moduleId;
       }
-
-      if (query.targetType) {
-        where.targetType = query.targetType;
+      if (query.targetTypeId !== undefined) {
+        where.targetTypeId = query.targetTypeId;
       }
-
-      if (query.targetId) {
+      if (query.targetId !== undefined) {
         where.targetId = query.targetId;
       }
 
@@ -102,67 +101,53 @@ auditRouter.get(
         }
       }
 
-      // Keyset cursor — id is a ULID (lexicographically monotonic)
-      // DESC ordering: cursor = last id seen → next page has id < cursor
+      // Keyset cursor — id is an INT (auto-increment), DESC ordering
       if (query.cursor) {
-        // Combine with any existing createdAt filter safely
-        const cursorRow = await prisma.auditLog.findUnique({
-          where: { id: query.cursor },
-          select: { id: true, createdAt: true },
-        });
-
-        if (!cursorRow) {
+        const cursorId = Number(query.cursor);
+        if (isNaN(cursorId)) {
           res.status(400).json(
-            errorEnvelope(ErrorCode.VALIDATION_FAILED, 'Invalid cursor — row not found.'),
+            errorEnvelope(ErrorCode.VALIDATION_FAILED, 'Invalid cursor.'),
           );
           return;
         }
 
-        // For DESC ordering by (createdAt, id): next page items have
-        // createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
-        const cursorCondition: Prisma.AuditLogWhereInput = {
-          OR: [
-            { createdAt: { lt: cursorRow.createdAt } },
-            {
-              createdAt: { equals: cursorRow.createdAt },
-              id: { lt: cursorRow.id },
-            },
-          ],
-        };
-
-        // Merge with existing where using AND
+        // Merge cursor condition with existing where
         const existingWhere = { ...where };
-        where.AND = [existingWhere, cursorCondition];
-
-        // Clear the top-level fields that we moved into AND
+        // Clear top-level fields moved into AND
         delete where.actorId;
-        delete where.actorRole;
-        delete where.module;
-        delete where.targetType;
+        delete where.actorRoleId;
+        delete where.moduleId;
+        delete where.targetTypeId;
         delete where.targetId;
         delete where.action;
         delete where.createdAt;
+
+        where.AND = [existingWhere, { id: { lt: cursorId } }];
       }
 
       const rows = await prisma.auditLog.findMany({
         where,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        take: limit + 1, // fetch one extra to determine if there's a next page
+        take: limit + 1,
+        include: {
+          module: { select: { name: true } },
+        },
       });
 
       const hasMore = rows.length > limit;
       const items = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? (items[items.length - 1]?.id ?? null) : null;
+      const nextCursor = hasMore ? String(items[items.length - 1]?.id ?? null) : null;
 
       res.status(200).json({
         data: items.map((row) => ({
           id: row.id,
           actorId: row.actorId,
-          actorRole: row.actorRole,
+          actorRoleId: row.actorRoleId,
           actorIp: row.actorIp,
           action: row.action,
-          module: row.module,
-          targetType: row.targetType,
+          moduleId: row.moduleId,
+          moduleName: row.module.name,
+          targetTypeId: row.targetTypeId,
           targetId: row.targetId,
           before: row.before,
           after: row.after,

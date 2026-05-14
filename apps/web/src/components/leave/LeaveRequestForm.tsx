@@ -24,7 +24,8 @@ import { ConflictErrorBlock } from './ConflictErrorBlock';
 import { BalanceImpactPreview } from './BalanceImpactPreview';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
-import { CreateLeaveRequestSchema, type LeaveType } from '@nexora/contracts/leave';
+import { CreateLeaveRequestSchema } from '@nexora/contracts/leave';
+import { LEAVE_TYPE_ID } from '@/lib/status/maps';
 import type { LeaveBalance, LeaveBalancesResponse, LeaveTypeCatalogItem } from '@nexora/contracts/leave';
 import { useToast } from '@/lib/hooks/useToast';
 import { useCreateLeave } from '@/lib/hooks/useLeave';
@@ -81,10 +82,13 @@ export function LeaveRequestForm({
     },
   });
 
-  const selectedType = watch('type') as LeaveType | undefined;
+  const selectedTypeId = watch('leaveTypeId') as number | undefined;
   const fromDate = watch('fromDate');
   const toDate = watch('toDate');
   const dayCount = calendarDays(fromDate ?? '', toDate ?? '');
+
+  // Resolve selected type name for display
+  const selectedTypeName = leaveTypes.find((lt) => lt.id === selectedTypeId)?.name ?? null;
 
   const conflictError =
     createLeave.error instanceof ApiError &&
@@ -94,15 +98,16 @@ export function LeaveRequestForm({
       ? createLeave.error
       : null;
 
+  // Event-based leave routes directly to Admin (Maternity=5, Paternity=6)
   const isAdminRoute =
-    selectedType === 'Maternity' || selectedType === 'Paternity';
+    selectedTypeId === LEAVE_TYPE_ID.Maternity || selectedTypeId === LEAVE_TYPE_ID.Paternity;
 
   async function onSubmit(values: FormValues) {
     try {
       const result = await createLeave.mutateAsync(values);
       toast.success(
         'Leave request submitted',
-        `Request ${result.leaveRequest.code} is now ${result.leaveRequest.status.toLowerCase()}.`,
+        `Request ${result.leaveRequest.code} submitted successfully.`,
       );
       router.push(successPath);
     } catch (err) {
@@ -139,36 +144,38 @@ export function LeaveRequestForm({
           >
             {/* Leave type */}
             <div>
-              <Label htmlFor="type" required>
+              <Label htmlFor="leaveTypeId" required>
                 Leave Type
               </Label>
               <Controller
-                name="type"
+                name="leaveTypeId"
                 control={control}
                 render={({ field }) => (
                   <select
                     {...field}
-                    id="type"
-                    aria-describedby={errors.type ? 'type-error' : undefined}
+                    id="leaveTypeId"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                    aria-describedby={errors.leaveTypeId ? 'leaveTypeId-error' : undefined}
                     aria-required="true"
                     className={clsx(
                       'w-full border rounded-lg px-3 py-2.5 text-sm text-charcoal bg-white',
                       'focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-colors',
-                      errors.type ? 'border-crimson' : 'border-sage',
+                      errors.leaveTypeId ? 'border-crimson' : 'border-sage',
                     )}
                   >
                     <option value="">Select leave type</option>
                     {leaveTypes.map((lt) => (
-                      <option key={lt.type} value={lt.type}>
-                        {lt.type} Leave
+                      <option key={lt.id} value={lt.id}>
+                        {lt.name} Leave
                         {lt.isEventBased ? ' (event-based)' : ''}
                       </option>
                     ))}
                   </select>
                 )}
               />
-              {errors.type && (
-                <FieldError id="type-error" message={errors.type.message ?? 'Required'} />
+              {errors.leaveTypeId && (
+                <FieldError id="leaveTypeId-error" message={errors.leaveTypeId.message ?? 'Required'} />
               )}
             </div>
 
@@ -190,8 +197,8 @@ export function LeaveRequestForm({
                   />
                 </svg>
                 <p className="text-sm text-forest">
-                  <span className="font-semibold">{selectedType} leave</span> is event-based and
-                  goes directly to Admin for approval — your manager is bypassed (BL-015/016).
+                  <span className="font-semibold">{selectedTypeName} leave</span> is event-based and
+                  goes directly to Admin for approval — your manager is bypassed.
                 </p>
               </div>
             )}
@@ -347,11 +354,11 @@ export function LeaveRequestForm({
             {[
               {
                 label: 'No half-day leave',
-                text: '— leave is taken in full-day units only (BL-011).',
+                text: '— leave is taken in full-day units only.',
               },
               {
                 label: 'No date overlap',
-                text: '— two leave requests cannot overlap in dates (BL-009).',
+                text: '— two leave requests cannot overlap in dates.',
               },
               {
                 label: 'Maternity & Paternity leave',
@@ -359,7 +366,7 @@ export function LeaveRequestForm({
               },
               {
                 label: 'Cancellation:',
-                text: 'before start date = full balance restored; after start = only remaining days restored (BL-019/020).',
+                text: 'before start date = full balance restored; after start = only remaining days restored.',
               },
             ].map(({ label, text }) => (
               <li key={label} className="flex items-start gap-3 text-sm text-slate">
@@ -377,7 +384,8 @@ export function LeaveRequestForm({
       <div className="space-y-5">
         <BalanceImpactPreview
           balances={balances}
-          selectedType={selectedType ?? null}
+          selectedTypeId={selectedTypeId ?? null}
+          selectedTypeName={selectedTypeName}
           requestedDays={dayCount}
         />
 
@@ -412,14 +420,14 @@ export function LeaveRequestForm({
                 Maternity / Paternity (event-based)
               </div>
               <div className="text-xs text-slate">
-                Admin only — both bypass the manager (BL-015/016).
+                Admin only — both bypass the manager.
               </div>
             </div>
           </div>
           <div className="mt-3 bg-umberbg rounded-lg p-3">
             <div className="text-xs text-umber">
               <span className="font-semibold">Escalation:</span> If your manager does not act
-              within 5 working days, the request is automatically escalated to Admin (BL-018).
+              within 5 working days, the request is automatically escalated to Admin.
             </div>
           </div>
         </div>

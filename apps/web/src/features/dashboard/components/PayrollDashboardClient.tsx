@@ -14,20 +14,22 @@ import { useMe } from '@/lib/hooks/useAuth';
 import { usePayrollDashboard } from '@/features/dashboard/hooks/usePayrollDashboard';
 import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 
+// v2: IDs are number, status is INT
 type PayrollRun = {
-  id: string;
+  id: number;
   code: string;
   month: number;
   year: number;
-  status: string;
+  status: number;
   employeeCount: number;
   totalGrossPaise: number;
   totalNetPaise: number;
 };
 
 type ReversalRun = {
-  reversalRunId: string;
+  reversalRunId: number;
   reversalRunCode: string;
   originalRunCode: string;
   reversedAt: string;
@@ -46,22 +48,22 @@ function formatMoney(paise?: number | null): string {
   return `₹${rupees.toLocaleString('en-IN')}`;
 }
 
-function statusPill(status?: string) {
-  if (status === 'Finalised') {
+function statusPill(status?: number) {
+  if (status === PAYROLL_STATUS.Finalised) {
     return (
       <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-1 rounded">
         Finalised
       </span>
     );
   }
-  if (status === 'Review') {
+  if (status === PAYROLL_STATUS.Review) {
     return (
       <span className="bg-softmint text-forest text-xs font-bold px-2 py-1 rounded">
         Review
       </span>
     );
   }
-  if (status === 'Reversed') {
+  if (status === PAYROLL_STATUS.Reversed) {
     return (
       <span className="bg-crimsonbg text-crimson text-xs font-bold px-2 py-1 rounded">
         Reversed
@@ -108,63 +110,27 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
 
   const now = new Date();
   const currentMonthLabel = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-  const currentRun = dash.currentRun as PayrollRun | null;
+  const currentRun = dash.currentRun as unknown as PayrollRun | null;
 
   return (
     <div>
       {/* ── 1. Hero ─────────────────────────────────────────────────────────── */}
-      <div
-        data-nx-hero
-        data-tod="day"
-        className="relative rounded-2xl overflow-hidden mb-6 shadow-lg shadow-forest/10"
-        aria-label="Payroll dashboard hero"
-      >
-        {/* Dot grid */}
-        <svg
-          className="nx-dotgrid absolute inset-0 w-full h-full opacity-[0.10] pointer-events-none"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <pattern id="payDotsProd" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.4" fill="#FFFFFF" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#payDotsProd)" />
-        </svg>
-        <div className="nx-b1 absolute -top-16 -left-12 w-[18rem] h-[18rem] rounded-full bg-emerald/40 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="nx-b2 absolute -bottom-20 -right-16 w-[20rem] h-[20rem] rounded-full bg-mint/25 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="nx-sun absolute -top-6 -right-6 pointer-events-none" aria-hidden="true">
-          <svg width="160" height="160" viewBox="0 0 220 220" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="nx-celestial">
-            <circle cx="110" cy="110" r="40" fill="currentColor" fillOpacity="0.30" />
-            <circle cx="110" cy="110" r="55" strokeOpacity="0.4" />
-            <circle cx="110" cy="110" r="74" strokeOpacity="0.18" />
-            <g strokeOpacity="0.35">
-              <line x1="110" y1="20" x2="110" y2="40" /><line x1="110" y1="180" x2="110" y2="200" />
-              <line x1="20" y1="110" x2="40" y2="110" /><line x1="180" y1="110" x2="200" y2="110" />
-              <line x1="46" y1="46" x2="60" y2="60" /><line x1="160" y1="160" x2="174" y2="174" />
-              <line x1="160" y1="60" x2="174" y2="46" /><line x1="46" y1="174" x2="60" y2="160" />
-            </g>
-          </svg>
-        </div>
-        <div className="relative px-6 py-6 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="font-heading text-2xl font-bold text-white">
-              {currentMonthLabel} Payroll
-            </h2>
-            <p className="text-sm text-mint/80 mt-0.5">{subtitle}</p>
-          </div>
+      <TimeOfDayHero
+        firstName={firstName}
+        subtitle={subtitle}
+        customTitle={`${currentMonthLabel} Payroll`}
+        action={
           <Link
             href="/payroll/payroll-runs/new"
-            className="bg-mint text-forest hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 min-h-[44px]"
+            className="bg-amber-300 text-forest hover:bg-amber-200 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 min-h-[44px] shadow-lg shadow-amber-500/40"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             Initiate run
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── 2. KPI strip ────────────────────────────────────────────────────── */}
       <div
@@ -198,8 +164,8 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
               <div className="flex items-center gap-2 mt-2">
                 {statusPill(currentRun.status)}
                 <span className="text-xs text-slate">
-                  {currentRun.status === 'Draft' ? 'Awaiting finalise' :
-                   currentRun.status === 'Review' ? 'Under review' : ''}
+                  {currentRun.status === PAYROLL_STATUS.Draft ? 'Awaiting finalise' :
+                   currentRun.status === PAYROLL_STATUS.Review ? 'Under review' : ''}
                 </span>
               </div>
             </>
@@ -292,7 +258,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage/10">
-                {(dash.recentRuns as PayrollRun[]).map((run) => (
+                {(dash.recentRuns as unknown as PayrollRun[]).map((run) => (
                   <tr key={run.id} className="hover:bg-offwhite/50 transition-colors">
                     <td className="px-5 py-3 text-sm font-semibold text-charcoal">
                       {monthName(run.month, run.year)}
@@ -305,7 +271,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
                         href={`/payroll/payroll-runs/${run.id}`}
                         className="text-xs text-emerald font-semibold hover:underline"
                       >
-                        {run.status === 'Draft' || run.status === 'Review' ? 'Continue →' : 'View →'}
+                        {run.status === PAYROLL_STATUS.Draft || run.status === PAYROLL_STATUS.Review ? 'Continue →' : 'View →'}
                       </Link>
                     </td>
                   </tr>
@@ -345,7 +311,7 @@ export function PayrollDashboardClient({ firstName: firstNameProp }: PayrollDash
             </div>
           ) : (
             <div className="space-y-4">
-              {(dash.recentReversals as ReversalRun[]).map((rev) => (
+              {(dash.recentReversals as unknown as ReversalRun[]).map((rev) => (
                 <div key={rev.reversalRunId} className="flex items-start gap-3">
                   <div className="w-5 h-5 rounded-full bg-crimsonbg flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
                     <svg className="w-3 h-3 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -13,15 +13,18 @@
  *   5. Actions cell: Approve + Reject stacked buttons + audit italic subtext
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
-import type { RegStatus } from '@nexora/contracts/attendance';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
+import { REG_STATUS } from '@/lib/status/maps';
+import type { RegStatusValue } from '@nexora/contracts/attendance';
 
-type FilterStatus = 'all' | RegStatus;
+type FilterStatus = 'all' | RegStatusValue;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -56,31 +59,50 @@ function KpiTile({ label, count, icon, iconBg }: KpiTileProps) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function AdminRegularisationQueuePage() {
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('Pending');
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>(REG_STATUS.Pending);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({
-    status: 'Pending' as FilterStatus,
+    status: REG_STATUS.Pending as FilterStatus,
     employee: '',
     fromDate: '',
     toDate: '',
   });
 
+  // Server-side cursor pagination. Auto-resets when filtersKey changes.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+  });
+
   // Build query from applied filters
   const query = {
-    routedTo: 'Admin' as const,
-    ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatus } : {}),
+    routedToId: 2 as const,
+    ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
   };
 
   const { data, isLoading, isError, error, refetch } = useRegularisations(query);
 
-  // All rows from the query (unfiltered by employee name)
+  // Cache nextCursor for the next-page click as soon as a response lands.
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
+
+  // Rows from the current page only (server already orders newest-first via
+  // the (approverId, status) index — server-side pending-first ordering is
+  // a backend concern; we no longer client-sort because that would reorder
+  // only the visible page, not the dataset).
   const allRows = data?.data ?? [];
 
-  // Client-side employee name search
+  // Client-side employee name search — page-local only. Note: with server
+  // pagination this filters only the current 20 rows. A true cross-page
+  // search needs a backend `q`/`employeeName` query param (not yet in
+  // RegularisationListQuerySchema).
   const filteredRows = useMemo(() => {
     const q = appliedFilters.employee.toLowerCase().trim();
     if (!q) return allRows;
@@ -92,19 +114,24 @@ export default function AdminRegularisationQueuePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, appliedFilters.employee]);
 
-  // Pending-first sort
+  // Pending-first within the current page (server already orders so but
+  // we re-sort defensively for the displayed slice).
   const sorted = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
-      if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-      if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+      if (a.status === REG_STATUS.Pending && b.status !== REG_STATUS.Pending) return -1;
+      if (a.status !== REG_STATUS.Pending && b.status === REG_STATUS.Pending) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [filteredRows]);
 
-  // KPI counts — always from full unfiltered rows of that query
-  const pendingCount = allRows.filter((r) => r.status === 'Pending').length;
-  const approvedCount = allRows.filter((r) => r.status === 'Approved').length;
-  const rejectedCount = allRows.filter((r) => r.status === 'Rejected').length;
+  // KPI counts — current page only. With cursor pagination these reflect
+  // the loaded page (max 20 rows); a true org-wide count needs a separate
+  // count endpoint or cursor-walk helper (see useEmployeesCount pattern).
+  // For now the "+" suffix on the total in the paginator below tells the
+  // user that more rows exist beyond these counts.
+  const pendingCount = allRows.filter((r) => r.status === REG_STATUS.Pending).length;
+  const approvedCount = allRows.filter((r) => r.status === REG_STATUS.Approved).length;
+  const rejectedCount = allRows.filter((r) => r.status === REG_STATUS.Rejected).length;
 
   const handleApply = () => {
     setAppliedFilters({
@@ -125,8 +152,8 @@ export default function AdminRegularisationQueuePage() {
         </svg>
         <p className="text-sm text-umber">
           <span className="font-bold">Admin Review Required:</span>{' '}
-          Records older than 7 days require Admin approval per BL-029. Regularisation requests that
-          are 7 days or fewer are handled directly by the employee's reporting manager.
+          Records older than 7 days require Admin approval. Regularisation requests that are 7 days
+          or fewer are handled directly by the employee's reporting manager.
         </p>
       </div>
 
@@ -171,13 +198,13 @@ export default function AdminRegularisationQueuePage() {
           <select
             id="reg-status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+            onChange={(e) => setStatusFilter(e.target.value === 'all' ? 'all' : Number(e.target.value) as RegStatusValue)}
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-charcoal bg-white focus:outline-none focus:ring-2 focus:ring-forest/30"
           >
-            <option value="Pending">Pending</option>
+            <option value={REG_STATUS.Pending}>Pending</option>
             <option value="all">All</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value={REG_STATUS.Approved}>Approved</option>
+            <option value={REG_STATUS.Rejected}>Rejected</option>
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -269,7 +296,7 @@ export default function AdminRegularisationQueuePage() {
                 ) : (
                   sorted.map((r) => {
                     const initials = r.employeeName.slice(0, 2).toUpperCase();
-                    const isPending = r.status === 'Pending';
+                    const isPending = r.status === REG_STATUS.Pending;
                     // Original record info is not in summary — show "view detail for context"
                     // proposedCheckIn/Out are in detail not summary, so we surface what we have
                     return (
@@ -277,7 +304,7 @@ export default function AdminRegularisationQueuePage() {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
                             <div
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isPending ? 'bg-forest/10 text-forest' : r.status === 'Approved' ? 'bg-greenbg text-richgreen' : 'bg-crimsonbg text-crimson'}`}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isPending ? 'bg-forest/10 text-forest' : r.status === REG_STATUS.Approved ? 'bg-greenbg text-richgreen' : 'bg-crimsonbg text-crimson'}`}
                               aria-hidden="true"
                             >
                               {initials}
@@ -315,7 +342,7 @@ export default function AdminRegularisationQueuePage() {
                           </Link>
                         </td>
                         <td className="px-4 py-4">
-                          <RegularisationStatusBadge status={r.status} routedTo={r.routedTo} />
+                          <RegularisationStatusBadge status={r.status} routedToId={r.routedToId} />
                         </td>
                         <td className="px-4 py-4">
                           {isPending ? (
@@ -326,7 +353,7 @@ export default function AdminRegularisationQueuePage() {
                                 onDecision={() => refetch()}
                               />
                               <p className="text-xs text-slate italic">
-                                Audit: Original record preserved per BL-007.
+                                Audit: Original record preserved.
                               </p>
                             </div>
                           ) : (
@@ -344,6 +371,16 @@ export default function AdminRegularisationQueuePage() {
                 )}
               </tbody>
             </table>
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={allRows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+            />
           </div>
         )}
       </div>

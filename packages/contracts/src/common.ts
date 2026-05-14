@@ -1,34 +1,51 @@
 /**
- * Cross-cutting schemas: roles, statuses, success envelopes, pagination, version.
- * These power every domain module — keep stable.
+ * Cross-cutting schemas: IDs, status codes, success envelopes, pagination.
+ *
+ * v2 changes (HRMS_Schema_v2_Plan):
+ *  - IDs are positive integers (INT AUTO_INCREMENT). Use `IdSchema` everywhere.
+ *  - Status/role/type fields are positive integers — frozen INT→label maps
+ *    are owned by the frontend (apps/web/src/lib/statusMaps.ts).
+ *  - The contracts never describe a string-enum for a status; the wire format
+ *    is always an integer code. See HRMS_Schema_v2_Plan.md §3 for the canonical
+ *    code↔label table per entity. Never re-number existing codes; only append.
  */
 
 import { z } from 'zod';
 
-// ── Roles & statuses ────────────────────────────────────────────────────────
+// ── IDs ─────────────────────────────────────────────────────────────────────
 
-export const RoleSchema = z.enum(['Employee', 'Manager', 'PayrollOfficer', 'Admin']);
-export type Role = z.infer<typeof RoleSchema>;
+/** Canonical primary-key shape — INT AUTO_INCREMENT. */
+export const IdSchema = z.number().int().positive();
+export type Id = z.infer<typeof IdSchema>;
 
 /**
- * Employee status (BL-006). On-Leave is system-set automatically while an
- * approved leave is in progress and reverts to Active when the leave ends.
- * Active / On-Notice / Exited are Admin-controlled.
- * Inactive is the pre-first-login state.
+ * Permissive ID coercion for URL/query-string params (e.g. `:id`, `?employeeId=`).
+ * Accepts a number or a numeric string; rejects anything else.
  */
-export const EmployeeStatusSchema = z.enum([
-  'Active',
-  'On-Notice',
-  'Exited',
-  'On-Leave',
-  'Inactive',
-]);
-export type EmployeeStatus = z.infer<typeof EmployeeStatusSchema>;
+export const IdParamSchema = z.coerce.number().int().positive();
+export type IdParam = z.infer<typeof IdParamSchema>;
 
-export const EmploymentTypeSchema = z.enum(['Permanent', 'Contract', 'Intern', 'Probation']);
-export type EmploymentType = z.infer<typeof EmploymentTypeSchema>;
+// ── Status codes (INT) ─────────────────────────────────────────────────────
+//
+// All status/role/type fields are stored as INT in the DB and on the wire.
+// The labels below are documentation only — never sent over the wire.
 
-// ── Success envelopes ───────────────────────────────────────────────────────
+/** §3.1 employee.status_id: 1=Active, 2=OnNotice, 3=OnLeave, 4=Inactive, 5=Exited. */
+export const EmployeeStatusSchema = z.number().int().min(1).max(5);
+
+/** Master roles.id: 1=Employee, 2=Manager, 3=PayrollOfficer, 4=Admin. */
+export const RoleIdSchema = z.number().int().min(1);
+
+/** Master employment_types.id: 1=Permanent, 2=Contract, 3=Probation, 4=Intern. */
+export const EmploymentTypeIdSchema = z.number().int().min(1);
+
+/** Master genders.id: 1=Male, 2=Female, 3=Other, 4=PreferNotToSay. */
+export const GenderIdSchema = z.number().int().min(1);
+
+/** §3.2 leave_request.routed_to_id / §3.3 / §3.4: 1=Manager, 2=Admin. */
+export const RoutedToIdSchema = z.number().int().min(1).max(2);
+
+// ── Success / list / pagination envelopes ──────────────────────────────────
 
 export const SuccessSchema = <T extends z.ZodTypeAny>(data: T) => z.object({ data });
 
@@ -39,8 +56,6 @@ export const PaginatedSchema = <T extends z.ZodTypeAny>(item: T) =>
   });
 
 export type Paginated<T> = { data: T[]; nextCursor: string | null };
-
-// ── Pagination input ────────────────────────────────────────────────────────
 
 export const PaginationQuerySchema = z.object({
   cursor: z.string().optional(),
@@ -53,15 +68,14 @@ export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
 
 export const VersionSchema = z.number().int().nonnegative();
 
-// ── ID conventions ──────────────────────────────────────────────────────────
+// ── Public business codes ──────────────────────────────────────────────────
 
+/** BL-008 employee code — EMP-YYYY-NNNN, never reused. */
 export const EmployeeCodeSchema = z
   .string()
   .regex(/^EMP-\d{4}-\d{4}$/, 'Must match EMP-YYYY-NNNN');
 
-export const ULIDSchema = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, 'Invalid ULID');
-
-// ── ISO date helpers ────────────────────────────────────────────────────────
+// ── ISO date helpers ───────────────────────────────────────────────────────
 
 export const ISODateSchema = z.string().datetime({ offset: true });
 export const ISODateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');

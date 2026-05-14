@@ -6,35 +6,58 @@
  */
 
 import { clsx } from 'clsx';
-import type { LeaveBalance, LeaveType } from '@nexora/contracts/leave';
+import type { LeaveBalance, LeaveTypeCatalogItem } from '@nexora/contracts/leave';
+import { LEAVE_TYPE_ID } from '@/lib/status/maps';
 
-const typeBarColors: Record<string, string> = {
-  Annual: 'bg-richgreen',
-  Sick: 'bg-emerald',
-  Casual: 'bg-forest',
-  Unpaid: 'bg-slate/40',
-  Maternity: 'bg-mint',
-  Paternity: 'bg-mint',
+const typeBarColors: Record<number, string> = {
+  [LEAVE_TYPE_ID.Annual]: 'bg-richgreen',
+  [LEAVE_TYPE_ID.Sick]: 'bg-emerald',
+  [LEAVE_TYPE_ID.Casual]: 'bg-forest',
+  [LEAVE_TYPE_ID.Unpaid]: 'bg-slate/40',
+  [LEAVE_TYPE_ID.Maternity]: 'bg-mint',
+  [LEAVE_TYPE_ID.Paternity]: 'bg-mint',
 };
 
 interface BalanceImpactPreviewProps {
   balances: LeaveBalance[];
-  selectedType: LeaveType | null;
+  /** All leave type catalog items (for name lookup) */
+  leaveTypes?: LeaveTypeCatalogItem[];
+  selectedTypeId: number | null;
+  selectedTypeName: string | null;
   /** Number of days being applied for */
   requestedDays: number;
 }
 
 export function BalanceImpactPreview({
   balances,
-  selectedType,
+  leaveTypes,
+  selectedTypeId,
+  selectedTypeName,
   requestedDays,
 }: BalanceImpactPreviewProps) {
+  // Accrual-based: exclude Maternity and Paternity from the progress bars
   const accrualBalances = balances.filter(
-    (b) => b.type !== 'Maternity' && b.type !== 'Paternity',
+    (b) => b.leaveTypeId !== LEAVE_TYPE_ID.Maternity && b.leaveTypeId !== LEAVE_TYPE_ID.Paternity,
   );
 
-  const selectedBalance = selectedType
-    ? balances.find((b) => b.type === selectedType)
+  // Resolve name for a balance row — use catalog if provided, otherwise fall back to ID
+  function getTypeName(leaveTypeId: number): string {
+    if (leaveTypes) {
+      return leaveTypes.find((lt) => lt.id === leaveTypeId)?.name ?? `Type ${leaveTypeId}`;
+    }
+    const byId: Record<number, string> = {
+      [LEAVE_TYPE_ID.Annual]: 'Annual',
+      [LEAVE_TYPE_ID.Sick]: 'Sick',
+      [LEAVE_TYPE_ID.Casual]: 'Casual',
+      [LEAVE_TYPE_ID.Unpaid]: 'Unpaid',
+      [LEAVE_TYPE_ID.Maternity]: 'Maternity',
+      [LEAVE_TYPE_ID.Paternity]: 'Paternity',
+    };
+    return byId[leaveTypeId] ?? `Type ${leaveTypeId}`;
+  }
+
+  const selectedBalance = selectedTypeId
+    ? balances.find((b) => b.leaveTypeId === selectedTypeId)
     : null;
 
   const previewRemaining =
@@ -55,11 +78,12 @@ export function BalanceImpactPreview({
               b.total && b.remaining !== null
                 ? Math.min(100, Math.round((b.remaining / b.total) * 100))
                 : 0;
-            const bar = typeBarColors[b.type] ?? 'bg-forest';
+            const bar = typeBarColors[b.leaveTypeId] ?? 'bg-forest';
+            const name = getTypeName(b.leaveTypeId);
             return (
-              <div key={b.type}>
+              <div key={b.leaveTypeId}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate">{b.type}</span>
+                  <span className="text-sm text-slate">{name}</span>
                   <div className="text-right">
                     {b.remaining !== null ? (
                       <>
@@ -85,13 +109,13 @@ export function BalanceImpactPreview({
         </div>
 
         {/* After-request preview */}
-        {selectedType && selectedBalance && requestedDays > 0 && previewRemaining !== null && (
+        {selectedTypeId && selectedBalance && requestedDays > 0 && previewRemaining !== null && (
           <div className="mt-4 pt-4 border-t border-sage/20">
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">
               After This Request (preview)
             </div>
             <div className="bg-softmint rounded-lg p-3">
-              <div className="text-xs text-slate mb-1">{selectedType} Leave would become:</div>
+              <div className="text-xs text-slate mb-1">{selectedTypeName ?? getTypeName(selectedTypeId)} Leave would become:</div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-heading font-bold text-charcoal">
                   {previewRemaining}

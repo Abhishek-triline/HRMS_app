@@ -15,7 +15,6 @@ import type {
   MarkReadRequest,
   MarkReadResponse,
   UnreadCountResponse,
-  NotificationCategory,
 } from '@nexora/contracts/notifications';
 
 const BASE = '/api/v1/notifications';
@@ -23,7 +22,8 @@ const BASE = '/api/v1/notifications';
 // ── Query params builder ─────────────────────────────────────────────────────
 
 export interface NotificationFilters {
-  category?: NotificationCategory | NotificationCategory[];
+  /** Filter by category ID code(s) — INT, matches §3.7. */
+  categoryId?: number | number[];
   unread?: boolean;
   since?: string;
   cursor?: string;
@@ -33,9 +33,9 @@ export interface NotificationFilters {
 function buildParams(filters: NotificationFilters): string {
   const params = new URLSearchParams();
 
-  if (filters.category) {
-    const cats = Array.isArray(filters.category) ? filters.category : [filters.category];
-    cats.forEach((c) => params.append('category', c));
+  if (filters.categoryId != null) {
+    const cats = Array.isArray(filters.categoryId) ? filters.categoryId : [filters.categoryId];
+    cats.forEach((c) => params.append('categoryId', String(c)));
   }
   if (filters.unread !== undefined) {
     params.set('unread', String(filters.unread));

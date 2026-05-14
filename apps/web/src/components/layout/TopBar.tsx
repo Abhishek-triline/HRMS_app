@@ -17,17 +17,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { AuthUser } from '@nexora/contracts/auth';
-import type { Role } from '@nexora/contracts/common';
+import { roleIdToKey } from './roleNavConfig';
 import { NotificationBell } from './NotificationBell';
 import { PAGE_META, resolvePageMeta } from './pageMeta';
 
-// ── Profile href per role ─────────────────────────────────────────────────────
+// ── Profile href per roleId ────────────────────────────────────────────────────
 
-const PROFILE_HREFS: Record<Role, string> = {
-  Admin:          '/admin/profile',
-  Manager:        '/manager/profile',
-  Employee:       '/employee/profile',
-  PayrollOfficer: '/payroll/profile',
+const PROFILE_HREFS: Record<number, string> = {
+  1: '/employee/profile',
+  2: '/manager/profile',
+  3: '/payroll/profile',
+  4: '/admin/profile',
 };
 
 // ── Date formatter ────────────────────────────────────────────────────────────
@@ -68,7 +68,8 @@ interface TopBarProps {
 
 export function TopBar({ user, children, notificationsHref, burgerSlot }: TopBarProps) {
   const initials = getInitials(user.name);
-  const profileHref = PROFILE_HREFS[user.role as Role] ?? '/profile';
+  const profileHref = PROFILE_HREFS[user.roleId] ?? '/profile';
+  void roleIdToKey; // imported for type consistency — used in Sidebar/RoleLayout
 
   // Compute the date string client-side to avoid SSR/CSR hydration mismatch.
   // useState initialiser runs only on the client after hydration.

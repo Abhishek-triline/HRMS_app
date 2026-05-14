@@ -23,17 +23,19 @@ import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 import type { SelfRatingRequest } from '@nexora/contracts/performance';
 
 export default function EmployeeSelfRatingPage() {
   const { reviewId } = useParams<{ reviewId: string }>();
 
-  const { data, isLoading, isError } = useReview(reviewId);
+  const reviewIdNum = Number(reviewId);
+  const { data, isLoading, isError } = useReview(reviewIdNum);
   // Fetch cycle to get deadline dates (not on the review directly).
-  const cycleId = data?.cycleId ?? '';
+  const cycleId = data?.cycleId ?? 0;
   const { data: cycleData } = useCycle(cycleId);
-  const { mutateAsync: submitSelfRating, isPending: isSubmitting } = useSubmitSelfRating(reviewId);
-  const { mutateAsync: proposeGoal } = useProposeGoal(reviewId);
+  const { mutateAsync: submitSelfRating, isPending: isSubmitting } = useSubmitSelfRating(reviewIdNum);
+  const { mutateAsync: proposeGoal } = useProposeGoal(reviewIdNum);
 
   async function handleSelfRating(ratingData: SelfRatingRequest) {
     try {
@@ -88,7 +90,7 @@ export default function EmployeeSelfRatingPage() {
   const review = data;
   const selfReviewDeadline = cycleData?.cycle.selfReviewDeadline ?? '';
   // Employee can propose goals during the Self-Review window only (BL-038).
-  const inSelfReviewWindow = review.cycleStatus === 'Self-Review';
+  const inSelfReviewWindow = review.cycleStatus === CYCLE_STATUS.SelfReview;
   const selfReviewDeadlinePassed = selfReviewDeadline ? new Date(selfReviewDeadline) < new Date() : false;
   const canProposeGoal = inSelfReviewWindow && !selfReviewDeadlinePassed && !review.isMidCycleJoiner && !review.lockedAt;
 
@@ -138,7 +140,7 @@ export default function EmployeeSelfRatingPage() {
         />
         {canProposeGoal && (
           <p className="text-xs text-slate mt-3">
-            You can propose additional goals during the self-review window (BL-038). Proposals are
+            You can propose additional goals during the self-review window. Proposals are
             subject to your manager&apos;s approval.
           </p>
         )}
@@ -179,7 +181,7 @@ export default function EmployeeSelfRatingPage() {
           <div className="flex items-center gap-4">
             <span className="text-4xl font-bold text-mint">{review.finalRating}</span>
             <p className="text-sm text-white/80">
-              Cycle closed and final rating locked (BL-041).
+              Cycle closed and final rating locked.
               {review.lockedAt && (
                 <span className="block text-xs text-white/60 mt-0.5">
                   Locked on {new Date(review.lockedAt).toLocaleDateString('en-IN')}

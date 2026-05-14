@@ -15,8 +15,8 @@
  *     Intern = 0 → em-dash + disabled in edit.
  *   - Unpaid: render "Unlimited" in all columns; Edit button hidden.
  *
- * Edit flow: per-row inline editor. Save commits per-employment-type via
- * useUpdateLeaveQuota(type) in series. Cancel discards.
+ * v2: LeaveTypeCatalogItem uses `id: number`, `name: string`, and quotas use
+ *     `employmentTypeId: number` (not `employmentType: string`).
  */
 
 import { useMemo, useState } from 'react';
@@ -26,104 +26,92 @@ import {
   useUpdateLeaveQuota,
 } from '@/lib/hooks/useLeave';
 import { useToast } from '@/lib/hooks/useToast';
-import type {
-  LeaveTypeCatalogItem,
-  LeaveType,
-} from '@nexora/contracts/leave';
+import { LEAVE_TYPE_ID, EMPLOYMENT_TYPE_MAP } from '@/lib/status/maps';
+import type { LeaveTypeCatalogItem } from '@nexora/contracts/leave';
 
-const EMPLOYMENT_TYPES = ['Permanent', 'Contract', 'Intern', 'Probation'] as const;
-type ET = (typeof EMPLOYMENT_TYPES)[number];
+// Employment type IDs in display order: 1=Permanent, 2=Contract, 4=Intern, 3=Probation
+const EMPLOYMENT_TYPE_IDS = [1, 2, 4, 3] as const;
+type ETId = (typeof EMPLOYMENT_TYPE_IDS)[number];
+
+// Ordered leave type IDs for table rows
+const ROW_ORDER_IDS = [
+  LEAVE_TYPE_ID.Annual,
+  LEAVE_TYPE_ID.Sick,
+  LEAVE_TYPE_ID.Casual,
+  LEAVE_TYPE_ID.Maternity,
+  LEAVE_TYPE_ID.Paternity,
+  LEAVE_TYPE_ID.Unpaid,
+] as const;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function quotaFor(item: LeaveTypeCatalogItem, et: ET): number {
-  const q = item.quotas.find((x) => x.employmentType === et);
+function quotaFor(item: LeaveTypeCatalogItem, etId: ETId): number {
+  const q = item.quotas.find((x) => x.employmentTypeId === etId);
   return q?.daysPerYear ?? 0;
 }
 
 /** Maternity/Paternity slots that are NOT available for that employment type. */
-function isUnsupported(type: LeaveType, et: ET): boolean {
-  if (type === 'Maternity') return et === 'Intern' || et === 'Probation';
-  if (type === 'Paternity') return et === 'Intern';
+function isUnsupported(leaveTypeId: number, etId: ETId): boolean {
+  if (leaveTypeId === LEAVE_TYPE_ID.Maternity) return etId === 4 || etId === 3; // Intern or Probation
+  if (leaveTypeId === LEAVE_TYPE_ID.Paternity) return etId === 4; // Intern only
   return false;
 }
 
-function displayCell(item: LeaveTypeCatalogItem, et: ET): {
+function displayCell(item: LeaveTypeCatalogItem, etId: ETId): {
   text: string;
   muted: boolean;
 } {
-  if (item.type === 'Unpaid') return { text: 'Unlimited', muted: true };
-  if (isUnsupported(item.type, et)) return { text: '—', muted: true };
+  if (item.id === LEAVE_TYPE_ID.Unpaid) return { text: 'Unlimited', muted: true };
+  if (isUnsupported(item.id, etId)) return { text: '—', muted: true };
 
-  const days = quotaFor(item, et);
-  if (item.type === 'Maternity') {
+  const days = quotaFor(item, etId);
+  if (item.id === LEAVE_TYPE_ID.Maternity) {
     const wks = Math.round(days / 7);
     return { text: `${wks} wks`, muted: false };
   }
-  if (item.type === 'Paternity') {
+  if (item.id === LEAVE_TYPE_ID.Paternity) {
     return { text: `${days} work days`, muted: false };
   }
   return { text: String(days), muted: false };
 }
 
 /** Convert a user-entered editor value back into days for the API. */
-function editorToDays(item: LeaveTypeCatalogItem, raw: string): number {
+function editorToDays(leaveTypeId: number, raw: string): number {
   const n = parseInt(raw, 10);
   if (isNaN(n) || n < 0) return -1;
-  if (item.type === 'Maternity') return n * 7; // input is weeks
+  if (leaveTypeId === LEAVE_TYPE_ID.Maternity) return n * 7; // input is weeks
   return n; // Paternity + accrual types: input is days
 }
 
 /** The initial editor value for a given cell — weeks for Maternity, days for others. */
-function daysToEditor(item: LeaveTypeCatalogItem, et: ET): string {
-  const days = quotaFor(item, et);
-  if (item.type === 'Maternity') return String(Math.round(days / 7));
+function daysToEditor(item: LeaveTypeCatalogItem, etId: ETId): string {
+  const days = quotaFor(item, etId);
+  if (item.id === LEAVE_TYPE_ID.Maternity) return String(Math.round(days / 7));
   return String(days);
 }
-
-const ROW_ORDER: LeaveType[] = [
-  'Annual',
-  'Sick',
-  'Casual',
-  'Maternity',
-  'Paternity',
-  'Unpaid',
-];
-
-const LEAVE_LABEL: Record<LeaveType, string> = {
-  Annual: 'Annual Leave',
-  Sick: 'Sick Leave',
-  Casual: 'Casual Leave',
-  Maternity: 'Maternity',
-  Paternity: 'Paternity',
-  Unpaid: 'Unpaid Leave',
-};
 
 // ── Row ──────────────────────────────────────────────────────────────────────
 
 function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
   const toast = useToast();
-  const updateQuota = useUpdateLeaveQuota(item.type);
+  const updateQuota = useUpdateLeaveQuota(item.id);
 
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<ET, string>>(() => ({
-    Permanent: '',
-    Contract: '',
-    Intern: '',
-    Probation: '',
+  const [draft, setDraft] = useState<Record<ETId, string>>(() => ({
+    1: '', 2: '', 3: '', 4: '',
   }));
   const [error, setError] = useState<string>('');
 
-  const isEventBased = item.type === 'Maternity' || item.type === 'Paternity';
-  const isUnpaid = item.type === 'Unpaid';
+  const isEventBased = item.isEventBased;
+  const isUnpaid = item.id === LEAVE_TYPE_ID.Unpaid;
   const editable = !isUnpaid;
 
   function startEdit(): void {
-    const next: Record<ET, string> = {
-      Permanent: daysToEditor(item, 'Permanent'),
-      Contract: daysToEditor(item, 'Contract'),
-      Intern: daysToEditor(item, 'Intern'),
-      Probation: daysToEditor(item, 'Probation'),
+    const next: Record<ETId, string> = {
+      1: daysToEditor(item, 1),
+      2: daysToEditor(item, 2),
+      3: daysToEditor(item, 3),
+      4: daysToEditor(item, 4),
     };
     setDraft(next);
     setError('');
@@ -136,20 +124,19 @@ function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
   }
 
   async function saveEdit(): Promise<void> {
-    // Validate every editable cell
     const errs: string[] = [];
-    const updates: Array<{ et: ET; days: number }> = [];
+    const updates: Array<{ etId: ETId; days: number }> = [];
 
-    for (const et of EMPLOYMENT_TYPES) {
-      if (isUnsupported(item.type, et)) continue;
-      const raw = draft[et];
-      const days = editorToDays(item, raw);
+    for (const etId of EMPLOYMENT_TYPE_IDS) {
+      if (isUnsupported(item.id, etId)) continue;
+      const raw = draft[etId];
+      const days = editorToDays(item.id, raw);
       if (days < 0) {
-        errs.push(`${et} must be a non-negative integer`);
+        errs.push(`${EMPLOYMENT_TYPE_MAP[etId]?.label ?? etId} must be a non-negative integer`);
         continue;
       }
-      const currentDays = quotaFor(item, et);
-      if (days !== currentDays) updates.push({ et, days });
+      const currentDays = quotaFor(item, etId);
+      if (days !== currentDays) updates.push({ etId, days });
     }
 
     if (errs.length > 0) {
@@ -164,14 +151,13 @@ function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
 
     setError('');
     try {
-      // Commit per-employment-type changes in series (single hook per call).
       for (const u of updates) {
         await updateQuota.mutateAsync({
-          employmentType: u.et,
+          employmentTypeId: u.etId,
           daysPerYear: u.days,
         });
       }
-      toast.success('Quotas saved', `${LEAVE_LABEL[item.type]} updated.`);
+      toast.success('Quotas saved', `${item.name} quotas updated.`);
       setEditing(false);
     } catch (err) {
       toast.error(
@@ -189,38 +175,38 @@ function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
       <td className="px-5 py-3.5">
         {isEventBased ? (
           <>
-            <span className="font-semibold text-charcoal">{item.type}</span>{' '}
+            <span className="font-semibold text-charcoal">{item.name}</span>{' '}
             <span className="text-xs text-slate">(event-based)</span>
           </>
         ) : (
-          <span className="font-semibold text-charcoal">{LEAVE_LABEL[item.type]}</span>
+          <span className="font-semibold text-charcoal">{item.name}</span>
         )}
       </td>
 
       {/* Employment-type cells */}
-      {EMPLOYMENT_TYPES.map((et) => {
-        const cell = displayCell(item, et);
-        const isCellSupported = !isUnsupported(item.type, et) && !isUnpaid;
+      {EMPLOYMENT_TYPE_IDS.map((etId) => {
+        const cell = displayCell(item, etId);
+        const isCellSupported = !isUnsupported(item.id, etId) && !isUnpaid;
 
         if (editing && isCellSupported) {
           return (
-            <td key={et} className="px-4 py-3.5 text-center">
+            <td key={etId} className="px-4 py-3.5 text-center">
               <div className="inline-flex items-center gap-1">
                 <input
                   type="number"
                   min={0}
-                  value={draft[et]}
+                  value={draft[etId]}
                   onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, [et]: e.target.value }))
+                    setDraft((prev) => ({ ...prev, [etId]: e.target.value }))
                   }
                   disabled={pending}
-                  aria-label={`${LEAVE_LABEL[item.type]} quota for ${et}`}
+                  aria-label={`${item.name} quota for ${EMPLOYMENT_TYPE_MAP[etId]?.label ?? etId}`}
                   className="w-16 border border-forest rounded px-1.5 py-1 text-sm text-center font-semibold focus:outline-none focus:ring-1 focus:ring-forest/40"
                 />
-                {item.type === 'Maternity' && (
+                {item.id === LEAVE_TYPE_ID.Maternity && (
                   <span className="text-xs text-slate">wks</span>
                 )}
-                {item.type === 'Paternity' && (
+                {item.id === LEAVE_TYPE_ID.Paternity && (
                   <span className="text-xs text-slate">d</span>
                 )}
               </div>
@@ -231,7 +217,7 @@ function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
         if (isUnpaid) {
           return (
             <td
-              key={et}
+              key={etId}
               className="px-4 py-3.5 text-center text-slate text-xs font-medium"
             >
               {cell.text}
@@ -241,7 +227,7 @@ function QuotaRow({ item }: { item: LeaveTypeCatalogItem }) {
 
         return (
           <td
-            key={et}
+            key={etId}
             className={
               cell.muted
                 ? 'px-4 py-3.5 text-center text-slate'
@@ -301,8 +287,8 @@ export default function LeaveQuotasPanel() {
 
   const orderedTypes = useMemo(() => {
     if (!types) return null;
-    const byType = new Map(types.map((t) => [t.type, t]));
-    return ROW_ORDER.map((t) => byType.get(t)).filter(
+    const byId = new Map(types.map((t) => [t.id, t]));
+    return ROW_ORDER_IDS.map((id) => byId.get(id)).filter(
       (x): x is LeaveTypeCatalogItem => Boolean(x),
     );
   }, [types]);
@@ -348,13 +334,13 @@ export default function LeaveQuotasPanel() {
               >
                 Leave Type
               </th>
-              {EMPLOYMENT_TYPES.map((et) => (
+              {EMPLOYMENT_TYPE_IDS.map((etId) => (
                 <th
-                  key={et}
+                  key={etId}
                   scope="col"
                   className="text-center px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide"
                 >
-                  {et}
+                  {EMPLOYMENT_TYPE_MAP[etId]?.label ?? etId}
                 </th>
               ))}
               <th
@@ -367,7 +353,7 @@ export default function LeaveQuotasPanel() {
           </thead>
           <tbody className="divide-y divide-sage/10">
             {orderedTypes.map((item) => (
-              <QuotaRow key={item.type} item={item} />
+              <QuotaRow key={item.id} item={item} />
             ))}
           </tbody>
         </table>

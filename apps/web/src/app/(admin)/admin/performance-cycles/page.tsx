@@ -14,7 +14,6 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useCycles, useCloseCycle } from '@/lib/hooks/usePerformance';
-import { useReviews } from '@/lib/hooks/usePerformance';
 import { CycleStatusBadge } from '@/components/performance/CycleStatusBadge';
 import { CloseCycleModal } from '@/components/performance/CloseCycleModal';
 import { Button } from '@/components/ui/Button';
@@ -22,7 +21,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import { ErrorCode } from '@nexora/contracts/errors';
-import type { CycleStatus, PerformanceCycleSummary } from '@nexora/contracts/performance';
+import type { PerformanceCycleSummary } from '@nexora/contracts/performance';
+import { CYCLE_STATUS } from '@/lib/status/maps';
 
 // ── Edit Dates modal (simple inline modal) ───────────────────────────────────
 
@@ -90,17 +90,14 @@ function ActiveCycleCard({ cycle }: { cycle: PerformanceCycleSummary }) {
   const [editDatesOpen, setEditDatesOpen] = useState(false);
   const { mutateAsync: closeCycle, isPending: isClosing } = useCloseCycle(cycle.id);
 
-  // Fetch reviews to compute self + manager submission counts
-  const { data: reviewsData } = useReviews({ cycleId: cycle.id, limit: 500 });
-  const reviews = reviewsData?.data ?? [];
-
-  const selfSubmitted = reviews.filter((r) => r.selfRating !== null).length;
-  const mgrSubmitted = reviews.filter((r) => r.managerRating !== null).length;
+  // Stats come from the list endpoint as part of PerformanceCycleSummary.
+  const selfSubmitted = cycle.selfSubmitted;
+  const mgrSubmitted = cycle.managerSubmitted;
   const total = cycle.participants;
   const selfPct = total > 0 ? Math.round((selfSubmitted / total) * 100) : 0;
   const mgrPct = total > 0 ? Math.round((mgrSubmitted / total) * 100) : 0;
 
-  async function handleClose(cycleId: string, version: number) {
+  async function handleClose(cycleId: number, version: number) {
     try {
       await closeCycle({ confirm: 'CLOSE', version });
       showToast({ type: 'success', title: 'Cycle closed', message: 'All final ratings are now locked.' });
@@ -210,8 +207,8 @@ export default function PerformanceCyclesPage() {
   const { data, isLoading, isError } = useCycles({});
 
   const cycles = data?.data ?? [];
-  const activeCycle = cycles.find((c) => c.status !== 'Closed');
-  const pastCycles = cycles.filter((c) => c.status === 'Closed');
+  const activeCycle = cycles.find((c) => c.status !== CYCLE_STATUS.Closed);
+  const pastCycles = cycles.filter((c) => c.status === CYCLE_STATUS.Closed);
 
   return (
     <>
@@ -304,13 +301,8 @@ export default function PerformanceCyclesPage() {
 // ── Past cycle row — fetches its reviews to compute Reviewed + Avg Rating ────
 
 function PastCycleRow({ cycle }: { cycle: PerformanceCycleSummary }) {
-  const { data: reviewsData } = useReviews({ cycleId: cycle.id, limit: 500 });
-  const reviews = reviewsData?.data ?? [];
-
-  const rated = reviews.filter((r) => r.finalRating !== null);
-  const avgRating = rated.length > 0
-    ? (rated.reduce((acc, r) => acc + (r.finalRating ?? 0), 0) / rated.length).toFixed(1)
-    : '—';
+  const finalised = cycle.finalised;
+  const avgRating = cycle.avgFinalRating !== null ? cycle.avgFinalRating.toFixed(1) : '—';
 
   const startFmt = new Date(cycle.fyStart).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
   const endFmt = new Date(cycle.fyEnd).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
@@ -320,7 +312,7 @@ function PastCycleRow({ cycle }: { cycle: PerformanceCycleSummary }) {
       <td className="px-5 py-3 font-semibold text-charcoal">{cycle.code}</td>
       <td className="px-4 py-3 text-slate">{startFmt} – {endFmt}</td>
       <td className="px-4 py-3 text-slate">{cycle.participants}</td>
-      <td className="px-4 py-3 text-slate">{rated.length} / {cycle.participants}</td>
+      <td className="px-4 py-3 text-slate">{finalised} / {cycle.participants}</td>
       <td className="px-4 py-3 font-semibold text-charcoal">{avgRating !== '—' ? `${avgRating} / 5` : '—'}</td>
       <td className="px-4 py-3">
         <CycleStatusBadge status={cycle.status} />

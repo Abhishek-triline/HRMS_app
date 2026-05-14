@@ -16,6 +16,7 @@ import { AttendanceStatusBadge } from '@/components/attendance/AttendanceStatusB
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisation } from '@/lib/hooks/useRegularisations';
+import { REG_STATUS, ROUTED_TO } from '@/lib/status/maps';
 
 function formatHHMM(iso: string | null): string {
   if (!iso) return '—';
@@ -26,7 +27,7 @@ function formatHHMM(iso: string | null): string {
 export default function ManagerRegularisationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: reg, isLoading, isError, error } = useRegularisation(id);
+  const { data: reg, isLoading, isError, error } = useRegularisation(Number(id));
 
   if (isLoading) {
     return (
@@ -52,7 +53,7 @@ export default function ManagerRegularisationDetailPage() {
 
   if (!reg) return null;
 
-  const canDecide = reg.status === 'Pending' && reg.routedTo === 'Manager';
+  const canDecide = reg.status === REG_STATUS.Pending && reg.routedToId === ROUTED_TO.Manager;
 
   return (
     <div>
@@ -72,7 +73,7 @@ export default function ManagerRegularisationDetailPage() {
         <div>
           <h1 className="font-heading text-xl font-semibold text-charcoal">{reg.code}</h1>
           <div className="flex items-center gap-2 mt-2">
-            <RegularisationStatusBadge status={reg.status} routedTo={reg.routedTo} />
+            <RegularisationStatusBadge status={reg.status} routedToId={reg.routedToId} />
             <span className="text-xs text-slate">Submitted {new Date(reg.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
         </div>
@@ -110,7 +111,7 @@ export default function ManagerRegularisationDetailPage() {
             </div>
             <div>
               <div className="text-xs text-slate mb-0.5">Routed To</div>
-              <div className="font-semibold text-charcoal">{reg.routedTo}</div>
+              <div className="font-semibold text-charcoal">{reg.routedToId === ROUTED_TO.Admin ? 'Admin' : 'Manager'}</div>
             </div>
             <div>
               <div className="text-xs text-slate mb-0.5">Approver</div>

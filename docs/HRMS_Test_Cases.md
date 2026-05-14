@@ -59,7 +59,7 @@ Every test run starts from a **deterministic seed** with:
 | `TC-AUTH-003` | − | High | Wrong password | — | Enter wrong password | Generic "Email or password is incorrect" — never says which. Counter increments. | — |
 | `TC-AUTH-004` | S | High | 5 wrong attempts → lockout | — | Submit wrong password 5 times within 5 min | 6th attempt returns `423 LOCKED`. UI shows "Try again in 15 min." Audit entry written. | — |
 | `TC-AUTH-005` | + | High | Lockout clears after 15 min | After TC-AUTH-004 | Wait 15 min, retry valid creds | Login succeeds, counter reset. | — |
-| `TC-AUTH-006` | + | Crit | Demo "Sign in as Admin" link | — | Click `Demo as → Admin` chip | Lands on `/admin/dashboard.html`. | index.html demo dock |
+| `TC-AUTH-006` | + | Low | ~~Demo "Sign in as Admin" chip~~ — **retired on `main`**; chips only exist on the `demo_signin` branch | `demo_signin` branch checkout | Click `Demo as → Admin` chip | Lands on `/admin/dashboard`. | demo_signin only |
 | `TC-AUTH-007` | + | Crit | Forgot password — happy | Active account | 1. Click Forgot? 2. Enter email 3. Open reset link from email 4. Set new password | Old password invalidated; all active sessions for that user invalidated. | UC-FL-02 |
 | `TC-AUTH-008` | S | Crit | Forgot password — unknown email | — | Enter random email | Page shows "If an account exists, an email was sent." No 4xx. **No enumeration leak.** | UC-FL-02 |
 | `TC-AUTH-009` | − | High | Forgot password — expired token | — | Wait 31 min after request, then click link | "Link expired — request a new one." | UC-FL-02 |
@@ -346,25 +346,24 @@ A 20-minute pass before each release. Run in this order:
 | Order | TC ID | What it covers |
 |---|---|---|
 | 1 | `TC-AUTH-001` | Login |
-| 2 | `TC-AUTH-006` | Demo shortcuts |
-| 3 | `TC-EMP-001` | Create employee |
-| 4 | `TC-LEAVE-001` | Submit leave |
-| 5 | `TC-LEAVE-010` | Manager approve |
-| 6 | `TC-LEAVE-003` | Overlap rejection |
-| 7 | `TC-ATT-006` | On-time check-in |
-| 8 | `TC-ATT-008` | Late mark deduction |
-| 9 | `TC-REG-001` | Regularisation routing |
-| 10 | `TC-PAY-001` | Initiate run |
-| 11 | `TC-PAY-005` | Two-step finalise |
-| 12 | `TC-PAY-006` | Concurrent guard |
-| 13 | `TC-PAY-007` | Immutable payslip |
-| 14 | `TC-PERF-001` | Create cycle |
-| 15 | `TC-PERF-009` | Close cycle locks ratings |
-| 16 | `TC-NOT-002` | Approval notification |
-| 17 | `TC-AUD-007` | Audit immutability |
-| 18 | `TC-CFG-001` | Late threshold edit |
-| 19 | `TC-UI-002` | Check-in sidebar entry |
-| 20 | `TC-UI-007` | Time-of-day demo dock |
+| 2 | `TC-EMP-001` | Create employee |
+| 3 | `TC-LEAVE-001` | Submit leave |
+| 4 | `TC-LEAVE-010` | Manager approve |
+| 5 | `TC-LEAVE-003` | Overlap rejection |
+| 6 | `TC-ATT-006` | On-time check-in |
+| 7 | `TC-ATT-008` | Late mark deduction |
+| 8 | `TC-REG-001` | Regularisation routing |
+| 9 | `TC-PAY-001` | Initiate run |
+| 10 | `TC-PAY-005` | Two-step finalise |
+| 11 | `TC-PAY-006` | Concurrent guard |
+| 12 | `TC-PAY-007` | Immutable payslip |
+| 13 | `TC-PERF-001` | Create cycle |
+| 14 | `TC-PERF-009` | Close cycle locks ratings |
+| 15 | `TC-NOT-002` | Approval notification |
+| 16 | `TC-AUD-007` | Audit immutability |
+| 17 | `TC-CFG-001` | Late threshold edit |
+| 18 | `TC-UI-002` | Check-in sidebar entry |
+| 19 | `TC-UI-007` | Time-of-day demo dock |
 
 If any of these fails → **block release**.
 
@@ -415,6 +414,30 @@ A condensed mapping: every BL rule must have at least one test case.
 | BL-042 (mgr change retains both) | TC-PERF-011/012 |
 | BL-047 (audit immutability) | TC-AUD-001/007/008 |
 | BL-048 (audit coverage) | TC-AUD-002..006/011/012, TC-XCUT-007 |
+| BL-LE-01..14 (leave encashment) | TC-LE-01..14 |
+
+---
+
+## § 10  Leave Encashment Test Cases (TC-LE-01..14)
+
+All cases in `apps/api/src/modules/leave/__tests__/leave-encashment.test.ts` (Vitest unit tests).
+
+| TC ID | BL Rule | Description | Expected result |
+|-------|---------|-------------|-----------------|
+| TC-LE-01 | BL-LE-01, BL-LE-04, BL-LE-05 | Employee submits Annual encashment inside window, has balance, Manager is Active | `201 Pending`; approverId = Manager; audit row written |
+| TC-LE-02 | BL-LE-02 | Admin finalises with `daysApproved=10` but balance is 12 → max 50% = 6 | `daysApproved` clamped to 6 |
+| TC-LE-03 | BL-LE-03 | Employee submits again for same year when `AdminFinalised` encashment already exists | `409 ENCASHMENT_ALREADY_USED` with `conflictId` |
+| TC-LE-04 | BL-LE-04 | Submit request on February 15 (outside Dec-Jan window) | `409 ENCASHMENT_OUT_OF_WINDOW` |
+| TC-LE-05 | BL-LE-05 | Submit when reporting Manager is `Exited` | approverId = Admin (fallback routing) |
+| TC-LE-06 | BL-LE-14 | `escalateStaleEncashments` called with `Pending` row older than 5 working days | Status flips to `Escalated`; Admin notified |
+| TC-LE-07 | BL-LE-06 | `adminFinaliseEncashment` | `LeaveBalance.daysRemaining` decremented; `daysEncashed` incremented inside same tx |
+| TC-LE-08 | BL-LE-06 | Admin cancels an `AdminFinalised` encashment | Balance restored in same transaction |
+| TC-LE-09 | BL-LE-09 | `findUnpaidAdminFinalisedForEmployee` | Returns `AdminFinalised` row for `year - 1`; returns null when none |
+| TC-LE-10 | BL-LE-09, BL-LE-10 | `markEncashmentPaid` | Status → `Paid`; `paidInPayslipId` set; audit row `leave.encashment.pay` written |
+| TC-LE-11 | BL-LE-07 | `adminFinaliseEncashment` when `daPaise` is null | Uses `basicPaise` only; no crash; rate = `basicPaise ÷ 26` |
+| TC-LE-12 | BL-LE-11 | `markEncashmentReversed` | Audit row `leave.encashment.payment.reverse` written; balance NOT updated |
+| TC-LE-13 | BL-LE-13 | `submitEncashmentRequest` for an `Exited` employee | `409 VALIDATION_FAILED` with `ruleId BL-LE-13` |
+| TC-LE-14 | BL-LE-03 | Reject does not touch `LeaveBalance` | Balance unchanged; status → `Rejected` |
 
 ---
 

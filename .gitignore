@@ -35,6 +35,14 @@ Thumbs.db
 # tooling
 .eslintcache
 
+# Playwright — local runtime artefacts (HTML reports, trace.zip /
+# video / screenshot output, .last-run.json, and the storageState
+# snapshots produced by the auth fixture). All regenerated on every
+# run; never commit.
+playwright-report/
+test-results/
+apps/web/e2e/.auth/
+
 # Prisma
 apps/api/prisma/migrations/.tmp/
 
@@ -50,3 +58,6 @@ apps/api/logs/
 .claude/agents.log
 .claude/agents.txt
 .claude/settings.local.json
+
+# Schema v2 refactor — legacy migrations kept locally for reference only
+apps/api/prisma/migrations.legacy_v1/

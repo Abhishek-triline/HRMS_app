@@ -6,31 +6,36 @@
  *
  * Props drive the role-specific back/forward paths; the underlying components
  * and API hooks are identical for all roles (BL-004 — every role is an employee).
+ *
+ * v2: employeeId is a number; status filter uses INT constants.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { LeaveBalanceGrid } from './LeaveBalanceGrid';
 import { LeaveRequestRow, LeaveRequestCard } from './LeaveRequestRow';
 import { CancelLeaveModal } from './CancelLeaveModal';
 import { useLeaveBalances, useLeaveList, useCancelLeave, useLeave } from '@/lib/hooks/useLeave';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
 import { useToast } from '@/lib/hooks/useToast';
 import { qk } from '@/lib/api/query-keys';
-import type { LeaveRequestSummary, LeaveStatus } from '@nexora/contracts/leave';
+import { LEAVE_STATUS } from '@/lib/status/maps';
+import type { LeaveRequestSummary } from '@nexora/contracts/leave';
 import type { LeaveRequest } from '@nexora/contracts/leave';
 
 type TabKey = 'all' | 'pending' | 'approved' | 'rejected';
 
-const tabs: { key: TabKey; label: string; status?: LeaveStatus }[] = [
+const tabs: { key: TabKey; label: string; status?: number }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending', status: 'Pending' },
-  { key: 'approved', label: 'Approved', status: 'Approved' },
-  { key: 'rejected', label: 'Rejected', status: 'Rejected' },
+  { key: 'pending', label: 'Pending', status: LEAVE_STATUS.Pending },
+  { key: 'approved', label: 'Approved', status: LEAVE_STATUS.Approved },
+  { key: 'rejected', label: 'Rejected', status: LEAVE_STATUS.Rejected },
 ];
 
 function CancelWrapper({
@@ -38,7 +43,7 @@ function CancelWrapper({
   isOpen,
   onClose,
 }: {
-  summaryId: string;
+  summaryId: number;
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -87,8 +92,8 @@ function CancelWrapper({
 }
 
 interface MyLeaveShellProps {
-  /** Current authenticated user's employee ID */
-  employeeId: string;
+  /** Current authenticated user's employee ID (INT) */
+  employeeId: number;
   /** Role-aware base path, e.g. "/manager/leave" */
   basePath: string;
   /** Page title shown in header section */
@@ -100,16 +105,33 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
   const activeStatus = tabs.find((t) => t.key === activeTab)?.status;
-  const listQuery = useLeaveList(activeStatus ? { status: activeStatus } : {});
+  // Server-side cursor pagination — resets to page 1 when the tab changes.
+  // Filters key also captures employeeId so the cursor map resets when the
+  // user prop changes (e.g. role-switching demo logins).
+  const pager = useCursorPagination({
+    pageSize: 10,
+    filtersKey: `${employeeId}|${activeTab}`,
+  });
+  // Always pass employeeId so Admin/PayrollOfficer (who otherwise see all
+  // requests) get a self-scoped list on their "My Leave" page.
+  const listQuery = useLeaveList({
+    employeeId,
+    ...(activeStatus !== undefined ? { status: activeStatus } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
+  });
+  useEffect(() => {
+    if (listQuery.data) pager.cacheNextCursor(listQuery.data.nextCursor);
+  }, [listQuery.data, pager]);
 
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   function isCancellable(req: LeaveRequestSummary): boolean {
-    if (req.status === 'Pending') return true;
-    if (req.status === 'Approved') {
+    if (req.status === LEAVE_STATUS.Pending) return true;
+    if (req.status === LEAVE_STATUS.Approved) {
       const start = new Date(req.fromDate + 'T00:00:00');
       return start > today;
     }
@@ -117,7 +139,6 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
   }
 
   // ── FY subtitle ──────────────────────────────────────────────────────────
-  // Format: "FY 2026-27 — as of May 11, 2026"
   const todayDate = new Date();
   const fiscalYear = todayDate.getMonth() >= 3 ? todayDate.getFullYear() : todayDate.getFullYear() - 1;
   const fiscalYearLabel = `FY ${fiscalYear}-${String(fiscalYear + 1).slice(-2)}`;
@@ -245,6 +266,17 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
                   />
                 ))}
               </div>
+
+              <CursorPaginator
+                currentPage={pager.currentPage}
+                pageSize={pager.pageSize}
+                currentPageCount={listQuery.data.data.length}
+                hasMore={pager.hasMore}
+                highestReachablePage={pager.highestReachablePage}
+                onPageChange={pager.goToPage}
+                onPrev={pager.goPrev}
+                onNext={pager.goNext}
+              />
             </>
           )}
         </div>
@@ -260,10 +292,10 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
         </p>
       </div>
 
-      {cancelTarget && (
+      {cancelTarget !== null && (
         <CancelWrapper
           summaryId={cancelTarget}
-          isOpen={Boolean(cancelTarget)}
+          isOpen={cancelTarget !== null}
           onClose={() => setCancelTarget(null)}
         />
       )}

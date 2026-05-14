@@ -48,11 +48,11 @@ export function usePayrollRuns(query: Partial<PayrollRunListQuery> = {}) {
   });
 }
 
-export function usePayrollRun(id: string) {
+export function usePayrollRun(id: number) {
   return useQuery({
     queryKey: qk.payroll.run(id),
     queryFn: () => getPayrollRun(id),
-    enabled: !!id,
+    enabled: id > 0,
     staleTime: 20_000,
   });
 }
@@ -84,7 +84,7 @@ export function useCreatePayrollRun() {
   });
 }
 
-export function useFinaliseRun(id: string) {
+export function useFinaliseRun(id: number) {
   const queryClient = useQueryClient();
   const idempotencyKeyRef = useRef<string>(generateKey());
 
@@ -106,7 +106,7 @@ export function useFinaliseRun(id: string) {
   });
 }
 
-export function useReverseRun(id: string) {
+export function useReverseRun(id: number) {
   const queryClient = useQueryClient();
   const idempotencyKeyRef = useRef<string>(generateKey());
 

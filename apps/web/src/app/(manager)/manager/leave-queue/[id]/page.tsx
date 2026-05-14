@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { LeaveStatusBadge } from '@/components/leave/LeaveStatusBadge';
 import { LeaveApprovalActions } from '@/components/leave/LeaveApprovalActions';
 import { useLeave } from '@/lib/hooks/useLeave';
+import { LEAVE_STATUS, LEAVE_TYPE_MAP, ROUTED_TO } from '@/lib/status/maps';
 
 function formatDate(iso: string): string {
   try {
@@ -43,6 +44,10 @@ function formatDateTime(iso: string): string {
 export default function ManagerLeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  // Pass the URL param through as-is — useLeave accepts both numeric ids
+  // and L-YYYY-NNNN codes. Wrapping in Number() forced "L-2026-0018" to
+  // NaN and surfaced "Could not load leave request" on notification
+  // deep-links. Mirrors the fix on /employee/leave/[id]/page.tsx.
   const { data: request, isLoading, error } = useLeave(id);
 
   if (isLoading) {
@@ -68,7 +73,7 @@ export default function ManagerLeaveDetailPage() {
     );
   }
 
-  const isPending = request.status === 'Pending' || request.status === 'Escalated';
+  const isPending = request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated;
 
   return (
     <>
@@ -88,15 +93,15 @@ export default function ManagerLeaveDetailPage() {
 
       {/* Status banner */}
       <div className={`border rounded-xl px-6 py-4 mb-6 flex items-center gap-3 ${
-        request.status === 'Pending' || request.status === 'Escalated'
+        request.status === LEAVE_STATUS.Pending || request.status === LEAVE_STATUS.Escalated
           ? 'bg-umberbg border-umber/20'
-          : request.status === 'Approved'
+          : request.status === LEAVE_STATUS.Approved
           ? 'bg-greenbg border-richgreen/20'
           : 'bg-crimsonbg border-crimson/20'
       }`}>
         <LeaveStatusBadge status={request.status} />
         <span className="text-sm text-charcoal font-medium ml-2">
-          {request.employeeName} — {request.type} Leave
+          {request.employeeName} — {LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave
         </span>
         <span className="ml-auto text-xs text-slate">{request.code}</span>
       </div>
@@ -114,7 +119,7 @@ export default function ManagerLeaveDetailPage() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Leave Type</div>
-            <div className="text-sm font-semibold text-charcoal">{request.type} Leave</div>
+            <div className="text-sm font-semibold text-charcoal">{LEAVE_TYPE_MAP[request.leaveTypeId]?.label ?? request.leaveTypeName} Leave</div>
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Duration</div>
@@ -136,7 +141,7 @@ export default function ManagerLeaveDetailPage() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Routing</div>
-            <div className="text-sm font-semibold text-charcoal">{request.routedTo}</div>
+            <div className="text-sm font-semibold text-charcoal">{request.routedToId === ROUTED_TO.Admin ? 'Admin' : 'Manager'}</div>
           </div>
           <div className="sm:col-span-2">
             <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-1">Reason</div>
@@ -155,7 +160,7 @@ export default function ManagerLeaveDetailPage() {
       {request.escalatedAt && (
         <div className="bg-umberbg border border-umber/20 rounded-xl p-4 mb-5 text-sm text-umber">
           <span className="font-semibold">Escalated:</span> This request was escalated to Admin on{' '}
-          {formatDateTime(request.escalatedAt)} because it was not actioned within 5 working days (BL-018).
+          {formatDateTime(request.escalatedAt)} because it was not actioned within 5 working days.
         </div>
       )}
 

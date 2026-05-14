@@ -1,5 +1,10 @@
 /**
- * Leave Management contract — Phase 2.
+ * Leave Management contract.
+ *
+ * v2: All IDs and status/type fields are INT. Leave types are master rows
+ * (leave_types) with frozen IDs (1=Annual, 2=Sick, 3=Casual, 4=Unpaid,
+ * 5=Maternity, 6=Paternity — see HRMS_Schema_v2_Plan §2). Routing is INT
+ * (1=Manager, 2=Admin). The frontend owns label/colour maps.
  *
  * Endpoints (docs/HRMS_API.md § 6):
  *   POST   /leave/requests                          UC-005   Employee
@@ -34,76 +39,71 @@
 
 import { z } from 'zod';
 import {
-  EmploymentTypeSchema,
+  EmployeeCodeSchema,
+  EmploymentTypeIdSchema,
+  IdParamSchema,
+  IdSchema,
   ISODateOnlySchema,
   ISODateSchema,
   PaginationQuerySchema,
+  RoutedToIdSchema,
   VersionSchema,
 } from './common.js';
 
-// ── Leave types & status ────────────────────────────────────────────────────
+// ── Leave type IDs (frozen — HRMS_Schema_v2_Plan §2) ───────────────────────
 
-/**
- * Six leave types — fixed by SRS § Module 2. The system never invents new
- * types at runtime; quotas + carry-forward caps are configurable per type.
- */
-export const LeaveTypeSchema = z.enum([
-  'Annual',
-  'Sick',
-  'Casual',
-  'Unpaid',
-  'Maternity',
-  'Paternity',
-]);
-export type LeaveType = z.infer<typeof LeaveTypeSchema>;
+/** Frozen ID constants. Never re-number — only append new types. */
+export const LeaveTypeId = {
+  Annual: 1,
+  Sick: 2,
+  Casual: 3,
+  Unpaid: 4,
+  Maternity: 5,
+  Paternity: 6,
+} as const;
+export type LeaveTypeIdValue = (typeof LeaveTypeId)[keyof typeof LeaveTypeId];
+
+/** Any leave_types.id (>=1). Servers MUST validate against the master table. */
+export const LeaveTypeIdSchema = z.number().int().min(1);
 
 /** Maternity + Paternity are event-based; the rest accrue annually. */
-export const isEventBasedLeave = (type: LeaveType): boolean =>
-  type === 'Maternity' || type === 'Paternity';
+export const isEventBasedLeave = (typeId: number): boolean =>
+  typeId === LeaveTypeId.Maternity || typeId === LeaveTypeId.Paternity;
 
-export const LeaveStatusSchema = z.enum([
-  'Pending',
-  'Approved',
-  'Rejected',
-  'Cancelled',
-  'Escalated',
-]);
-export type LeaveStatus = z.infer<typeof LeaveStatusSchema>;
+// ── Leave request status (§3.2) ────────────────────────────────────────────
 
-/** Routing tag stamped at submit time so the queue UI can filter quickly. */
-export const RoutedToSchema = z.enum(['Manager', 'Admin']);
-export type RoutedTo = z.infer<typeof RoutedToSchema>;
+/** 1=Pending, 2=Approved, 3=Rejected, 4=Cancelled, 5=Escalated. */
+export const LeaveStatusSchema = z.number().int().min(1).max(5);
 
 // ── Leave balances ──────────────────────────────────────────────────────────
 
 /**
  * Balance shape returned by GET /leave/balances/{employeeId}.
  *
- * - `annual` / `sick` / `casual` carry an integer day count for the current
- *   calendar year (BL-011 — never fractional).
- * - `maternity` and `paternity` are event-based (BL-014) — no annual balance,
- *   only an `eligible` flag that the server computes from prior usage windows.
- *   `remainingDays` is the unconsumed portion of the current event's allocation
- *   (0 if the employee has never claimed, or if the most recent event is
- *   already fully consumed).
- * - `unpaid` is unbounded — included so the client can render a uniform card
- *   (`total = null`).
+ * For accrual types (Annual/Sick/Casual): `remaining` is an integer day count
+ * for the current calendar year (BL-011 — never fractional). `total` is the
+ * year's quota for the employee's employment type.
+ *
+ * For event-based types (Maternity/Paternity): `total` and `remaining` are
+ * null. `eligible` reflects gender / employment / prior-window rules.
+ *
+ * For Unpaid: `total` is null (unbounded); `remaining` is null too.
  */
 export const LeaveBalanceSchema = z.object({
-  type: LeaveTypeSchema,
-  /** Days remaining for accrual-based types; null for unpaid. */
+  leaveTypeId: LeaveTypeIdSchema,
+  /** Days remaining for accrual-based types; null for event-based / unpaid. */
   remaining: z.number().int().min(0).nullable(),
   /** Total quota for this employment type for the current year; null for event-based / unpaid. */
   total: z.number().int().min(0).nullable(),
   carryForwardCap: z.number().int().min(0).nullable(),
-  /** Event-based types only — e.g. female employees are eligible for Maternity. */
+  /** Event-based types only — eligibility computed by the server. */
   eligible: z.boolean().nullable(),
 });
 export type LeaveBalance = z.infer<typeof LeaveBalanceSchema>;
 
 export const LeaveBalancesResponseSchema = z.object({
   data: z.object({
-    employeeId: z.string(),
+    employeeId: IdSchema,
     year: z.number().int().min(1900).max(2999),
     balances: z.array(LeaveBalanceSchema),
   }),
@@ -113,12 +113,13 @@ export type LeaveBalancesResponse = z.infer<typeof LeaveBalancesResponseSchema>;
 // ── Leave types catalogue (read-only) ───────────────────────────────────────
 
 export const LeaveTypeQuotaSchema = z.object({
-  employmentType: EmploymentTypeSchema,
+  employmentTypeId: EmploymentTypeIdSchema,
   daysPerYear: z.number().int().min(0),
 });
 
 export const LeaveTypeCatalogItemSchema = z.object({
-  type: LeaveTypeSchema,
+  id: IdSchema,
+  name: z.string(),
   isEventBased: z.boolean(),
   requiresAdminApproval: z.boolean(),
   carryForwardCap: z.number().int().min(0).nullable(),
@@ -134,31 +135,42 @@ export type LeaveTypesResponse = z.infer<typeof LeaveTypesResponseSchema>;
 
 // ── Leave request — full + summary ──────────────────────────────────────────
 
+/**
+ * `cancelledByRoleId` (§3.2): 1=Self (employee cancelled their own), 2=Manager,
+ * 3=Admin. Null when never cancelled.
+ */
+export const CancelledByRoleIdSchema = z.number().int().min(1).max(3);
+
 export const LeaveRequestSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: z.string(), // L-YYYY-NNNN
-  employeeId: z.string(),
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
-  type: LeaveTypeSchema,
+  employeeCode: EmployeeCodeSchema,
+  leaveTypeId: LeaveTypeIdSchema,
+  leaveTypeName: z.string(),
   fromDate: ISODateOnlySchema,
   toDate: ISODateOnlySchema,
   /** Computed by server — full days only (BL-011). */
   days: z.number().int().min(1),
   reason: z.string(),
   status: LeaveStatusSchema,
-  routedTo: RoutedToSchema,
+  routedToId: RoutedToIdSchema,
   /** Employee whose queue currently owns the request — Manager (or Admin on escalation/event-based). */
-  approverId: z.string().nullable(),
+  approverId: IdSchema.nullable(),
   approverName: z.string().nullable(),
   decidedAt: ISODateSchema.nullable(),
-  decidedBy: z.string().nullable(),
+  decidedBy: IdSchema.nullable(),
   decisionNote: z.string().nullable(),
   /** Set when the 5-working-day SLA elapses and the request escalates (BL-018). */
   escalatedAt: ISODateSchema.nullable(),
   /** Cancellation provenance — null if never cancelled. */
   cancelledAt: ISODateSchema.nullable(),
-  cancelledBy: z.string().nullable(),
+  cancelledBy: IdSchema.nullable(),
+  /** Full name of the person who cancelled — null if never cancelled. */
+  cancelledByName: z.string().nullable(),
+  /** §3.2: 1=Self, 2=Manager, 3=Admin; null when never cancelled. */
+  cancelledByRoleId: CancelledByRoleIdSchema.nullable(),
   /** True if the cancel happened after `fromDate` — BL-020 partial restore branch. */
   cancelledAfterStart: z.boolean(),
   /** Effective deduction recorded on approval (BL-021); null when not yet approved. */
@@ -178,13 +190,14 @@ export const LeaveRequestSummarySchema = LeaveRequestSchema.pick({
   employeeId: true,
   employeeName: true,
   employeeCode: true,
-  type: true,
+  leaveTypeId: true,
+  leaveTypeName: true,
   fromDate: true,
   toDate: true,
   days: true,
   reason: true,
   status: true,
-  routedTo: true,
+  routedToId: true,
   approverName: true,
   escalatedAt: true,
   createdAt: true,
@@ -206,7 +219,7 @@ export type LeaveRequestSummary = z.infer<typeof LeaveRequestSummarySchema>;
  */
 export const CreateLeaveRequestSchema = z
   .object({
-    type: LeaveTypeSchema,
+    leaveTypeId: LeaveTypeIdSchema,
     fromDate: ISODateOnlySchema,
     toDate: ISODateOnlySchema,
     reason: z.string().min(3).max(1000),
@@ -226,14 +239,14 @@ export type CreateLeaveResponse = z.infer<typeof CreateLeaveResponseSchema>;
 // ── GET /leave/requests ─────────────────────────────────────────────────────
 
 export const LeaveListQuerySchema = PaginationQuerySchema.extend({
-  status: LeaveStatusSchema.optional(),
-  type: LeaveTypeSchema.optional(),
+  status: z.coerce.number().int().min(1).max(5).optional(),
+  leaveTypeId: z.coerce.number().int().positive().optional(),
   fromDate: ISODateOnlySchema.optional(),
   toDate: ISODateOnlySchema.optional(),
   /** Manager / Admin filter — restrict to a specific employee. */
-  employeeId: z.string().optional(),
+  employeeId: IdParamSchema.optional(),
   /** Admin-only — restrict to escalated / event-based queue. */
-  routedTo: RoutedToSchema.optional(),
+  routedToId: z.coerce.number().int().min(1).max(2).optional(),
   sort: z.string().optional(),
 });
 export type LeaveListQuery = z.infer<typeof LeaveListQuerySchema>;
@@ -297,14 +310,17 @@ export type CancelLeaveResponse = z.infer<typeof CancelLeaveResponseSchema>;
  * Carried in `error.details` when LEAVE_OVERLAP or LEAVE_REG_CONFLICT fires.
  * The frontend uses this to render a named conflict block (DN-19 — never a
  * generic error).
+ *
+ * `conflictTypeId`: 1=Leave, 2=Regularisation.
  */
 export const LeaveConflictDetailsSchema = z.object({
-  conflictType: z.enum(['Leave', 'Regularisation']),
-  conflictId: z.string(),
+  conflictTypeId: z.number().int().min(1).max(2),
+  conflictId: IdSchema,
   conflictCode: z.string(),
   conflictFrom: ISODateOnlySchema,
   conflictTo: ISODateOnlySchema.nullable(),
-  conflictStatus: z.string(),
+  /** Snapshot of the conflicting record's status. */
+  conflictStatus: z.number().int(),
 });
 export type LeaveConflictDetails = z.infer<typeof LeaveConflictDetailsSchema>;
 
@@ -316,8 +332,8 @@ export type LeaveConflictDetails = z.infer<typeof LeaveConflictDetailsSchema>;
  * granted manually outside the standard flow. Always audit-logged.
  */
 export const AdjustBalanceRequestSchema = z.object({
-  employeeId: z.string(),
-  type: LeaveTypeSchema,
+  employeeId: IdSchema,
+  leaveTypeId: LeaveTypeIdSchema,
   /** Positive = grant; negative = deduct. Integer days only (BL-011). */
   delta: z.number().int().refine((v) => v !== 0, 'delta must not be zero'),
   reason: z.string().min(5).max(500),
@@ -342,7 +358,7 @@ export type UpdateLeaveTypeRequest = z.infer<typeof UpdateLeaveTypeRequestSchema
 
 /** Update the per-employment-type quota for a leave type. */
 export const UpdateLeaveQuotaRequestSchema = z.object({
-  employmentType: EmploymentTypeSchema,
+  employmentTypeId: EmploymentTypeIdSchema,
   daysPerYear: z.number().int().min(0).max(365),
 });
 export type UpdateLeaveQuotaRequest = z.infer<typeof UpdateLeaveQuotaRequestSchema>;

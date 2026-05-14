@@ -1,5 +1,9 @@
 /**
- * Performance Reviews contract — Phase 5.
+ * Performance Reviews contract.
+ *
+ * v2: All IDs are INT; status / outcome fields are INT codes.
+ * §3.6 performance_cycle.status_id: 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed.
+ * §3.6 goals.outcome_id: 1=Pending, 2=Met, 3=Partial, 4=Missed.
  *
  * Endpoints (docs/HRMS_API.md § 9):
  *   POST  /performance/cycles                            A-20   Admin
@@ -20,7 +24,7 @@
  *   BL-037  Mid-cycle joiners — skipped for that cycle; included from the next.
  *   BL-038  Goals: Manager creates 3–5 at cycle start. Employee may propose
  *           additional goals during the self-review window. Each goal is
- *           Met / Partially Met / Missed / Pending until rated.
+ *           Met / Partial / Missed / Pending until rated.
  *   BL-039  Self-rating editable until self-review deadline. Locked after.
  *   BL-040  Manager-rating editable until manager-review deadline. The
  *           system surfaces a "Manager-Changed" tag when manager rating
@@ -31,38 +35,54 @@
  *           both previous and current managers retained on the review for
  *           audit (BL-022a).
  *
- *   Option B admin self-review (Implementation Plan § 9):
- *     When a cycle is created, Admins (employees with role=Admin) get a
- *     review row whose `managerId` is a PEER ADMIN (not their own
- *     reportingManagerId, which is null). The cycle creator picks the
- *     peer-reviewer pairing per cycle. If no peer Admin is available the
- *     review is created with managerId=null and surfaces in the missing-
- *     reviews report.
+ *   Option B admin self-review: when a cycle is created, Admins get a review
+ *   row whose `managerId` is a PEER ADMIN. If no peer Admin is available the
+ *   review is created with managerId=null and surfaces in the missing-reviews
+ *   report.
  */
 
 import { z } from 'zod';
 import {
+  EmployeeCodeSchema,
+  IdParamSchema,
+  IdSchema,
   ISODateOnlySchema,
   ISODateSchema,
   PaginationQuerySchema,
   VersionSchema,
 } from './common.js';
 
-// ── Cycle status ────────────────────────────────────────────────────────────
+// ── Cycle status (§3.6) ─────────────────────────────────────────────────────
 
-export const CycleStatusSchema = z.enum(['Open', 'Self-Review', 'Manager-Review', 'Closed']);
-export type CycleStatus = z.infer<typeof CycleStatusSchema>;
+/** 1=Open, 2=SelfReview, 3=ManagerReview, 4=Closed. */
+export const CycleStatusSchema = z.number().int().min(1).max(4);
 
-// ── Goal ────────────────────────────────────────────────────────────────────
+export const CycleStatus = {
+  Open: 1,
+  SelfReview: 2,
+  ManagerReview: 3,
+  Closed: 4,
+} as const;
+export type CycleStatusValue = (typeof CycleStatus)[keyof typeof CycleStatus];
 
-export const GoalOutcomeSchema = z.enum(['Met', 'Partial', 'Missed', 'Pending']);
-export type GoalOutcome = z.infer<typeof GoalOutcomeSchema>;
+// ── Goal (§3.6) ─────────────────────────────────────────────────────────────
+
+/** 1=Pending, 2=Met, 3=Partial, 4=Missed. */
+export const GoalOutcomeIdSchema = z.number().int().min(1).max(4);
+
+export const GoalOutcomeId = {
+  Pending: 1,
+  Met: 2,
+  Partial: 3,
+  Missed: 4,
+} as const;
+export type GoalOutcomeIdValue = (typeof GoalOutcomeId)[keyof typeof GoalOutcomeId];
 
 export const GoalSchema = z.object({
-  id: z.string(),
-  reviewId: z.string(),
+  id: IdSchema,
+  reviewId: IdSchema,
   text: z.string(),
-  outcome: GoalOutcomeSchema,
+  outcomeId: GoalOutcomeIdSchema,
   /** Set true when the employee proposes a goal during self-review (BL-038). */
   proposedByEmployee: z.boolean(),
   createdAt: ISODateSchema,
@@ -73,7 +93,7 @@ export type Goal = z.infer<typeof GoalSchema>;
 // ── Performance cycle ───────────────────────────────────────────────────────
 
 export const PerformanceCycleSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: z.string(), // C-YYYY-H1 or C-YYYY-H2
   fyStart: ISODateOnlySchema,
   fyEnd: ISODateOnlySchema,
@@ -81,9 +101,9 @@ export const PerformanceCycleSchema = z.object({
   selfReviewDeadline: ISODateOnlySchema,
   managerReviewDeadline: ISODateOnlySchema,
   closedAt: ISODateSchema.nullable(),
-  closedBy: z.string().nullable(),
+  closedBy: IdSchema.nullable(),
   closedByName: z.string().nullable(),
-  createdBy: z.string(),
+  createdBy: IdSchema,
   createdByName: z.string(),
   /** Active employees at cycle start, EXCLUDING mid-cycle joiners (BL-037). */
   participants: z.number().int().min(0),
@@ -103,24 +123,33 @@ export const PerformanceCycleSummarySchema = PerformanceCycleSchema.pick({
   managerReviewDeadline: true,
   participants: true,
   closedAt: true,
+}).extend({
+  /** Count of reviews with selfRating set (BL-039). */
+  selfSubmitted: z.number().int().min(0),
+  /** Count of reviews with managerRating set (BL-040). */
+  managerSubmitted: z.number().int().min(0),
+  /** Count of reviews with finalRating locked (cycle Closed implies all). */
+  finalised: z.number().int().min(0),
+  /** Mean of finalRating over rated reviews; null when none rated. */
+  avgFinalRating: z.number().min(1).max(5).nullable(),
 });
 export type PerformanceCycleSummary = z.infer<typeof PerformanceCycleSummarySchema>;
 
 // ── Review ──────────────────────────────────────────────────────────────────
 
 export const PerformanceReviewSchema = z.object({
-  id: z.string(),
-  cycleId: z.string(),
+  id: IdSchema,
+  cycleId: IdSchema,
   cycleCode: z.string(),
   cycleStatus: CycleStatusSchema,
-  employeeId: z.string(),
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
+  employeeCode: EmployeeCodeSchema,
   /** The current owner of the manager-rating slot. May change mid-cycle (BL-042). */
-  managerId: z.string().nullable(),
+  managerId: IdSchema.nullable(),
   managerName: z.string().nullable(),
   /** Previous managerId — set on reassignment so the audit shows both. */
-  previousManagerId: z.string().nullable(),
+  previousManagerId: IdSchema.nullable(),
   previousManagerName: z.string().nullable(),
   goals: z.array(GoalSchema),
   selfRating: z.number().int().min(1).max(5).nullable(),
@@ -171,17 +200,18 @@ export type PerformanceReviewSummary = z.infer<typeof PerformanceReviewSummarySc
  * inside the cycle window. The Indian fiscal calendar (April–March) is
  * fixed; cycles align to either H1 (April–September) or H2 (October–March).
  *
- * `adminPeerReviewers`: Option B admin self-review (Implementation Plan § 9).
- * Map of `{ adminEmployeeId → peerAdminEmployeeId }`. The cycle creator
- * pairs admins so each gets a peer-Admin reviewer. Admins not listed in
- * the map are surfaced in the missing-reviews report with a null managerId.
+ * `adminPeerReviewers`: map of `{ adminEmployeeId → peerAdminEmployeeId }`
+ * (both INT). The cycle creator pairs admins so each gets a peer-Admin
+ * reviewer. Admins not listed in the map are surfaced in the missing-
+ * reviews report with a null managerId.
  */
 export const CreateCycleRequestSchema = z.object({
   fyStart: ISODateOnlySchema,
   fyEnd: ISODateOnlySchema,
   selfReviewDeadline: ISODateOnlySchema,
   managerReviewDeadline: ISODateOnlySchema,
-  adminPeerReviewers: z.record(z.string(), z.string()).optional(),
+  /** Keys + values are INT employee IDs serialised through z.record. */
+  adminPeerReviewers: z.record(z.string().regex(/^\d+$/), IdSchema).optional(),
 });
 export type CreateCycleRequest = z.infer<typeof CreateCycleRequestSchema>;
 
@@ -191,9 +221,10 @@ export const CreateCycleResponseSchema = z.object({
     reviewCount: z.number().int().min(0),
     skipped: z.array(
       z.object({
-        employeeId: z.string(),
+        employeeId: IdSchema,
         employeeName: z.string(),
-        reason: z.literal('MidCycleJoiner'),
+        /** reason_id: 1=MidCycleJoiner (currently the only skip reason). */
+        reasonId: z.literal(1),
       }),
     ),
   }),
@@ -203,7 +234,7 @@ export type CreateCycleResponse = z.infer<typeof CreateCycleResponseSchema>;
 // ── GET /performance/cycles ─────────────────────────────────────────────────
 
 export const CycleListQuerySchema = PaginationQuerySchema.extend({
-  status: CycleStatusSchema.optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
   fyStartFrom: ISODateOnlySchema.optional(),
   fyStartTo: ISODateOnlySchema.optional(),
 });
@@ -261,7 +292,7 @@ export type DistributionBucket = z.infer<typeof DistributionBucketSchema>;
 
 export const DistributionReportResponseSchema = z.object({
   data: z.object({
-    cycleId: z.string(),
+    cycleId: IdSchema,
     cycleCode: z.string(),
     buckets: z.array(DistributionBucketSchema),
   }),
@@ -270,13 +301,13 @@ export type DistributionReportResponse = z.infer<typeof DistributionReportRespon
 
 /** A-23 — employees with no submitted manager rating in the current cycle. */
 export const MissingReviewItemSchema = z.object({
-  reviewId: z.string(),
-  employeeId: z.string(),
+  reviewId: IdSchema,
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
+  employeeCode: EmployeeCodeSchema,
   department: z.string().nullable(),
   designation: z.string().nullable(),
-  managerId: z.string().nullable(),
+  managerId: IdSchema.nullable(),
   managerName: z.string().nullable(),
   selfSubmitted: z.boolean(),
   managerSubmitted: z.boolean(),
@@ -285,7 +316,7 @@ export type MissingReviewItem = z.infer<typeof MissingReviewItemSchema>;
 
 export const MissingReviewsResponseSchema = z.object({
   data: z.object({
-    cycleId: z.string(),
+    cycleId: IdSchema,
     cycleCode: z.string(),
     items: z.array(MissingReviewItemSchema),
   }),
@@ -295,9 +326,9 @@ export type MissingReviewsResponse = z.infer<typeof MissingReviewsResponseSchema
 // ── GET /performance/reviews ────────────────────────────────────────────────
 
 export const ReviewListQuerySchema = PaginationQuerySchema.extend({
-  cycleId: z.string().optional(),
-  employeeId: z.string().optional(),
-  managerId: z.string().optional(),
+  cycleId: IdParamSchema.optional(),
+  employeeId: IdParamSchema.optional(),
+  managerId: IdParamSchema.optional(),
 });
 export type ReviewListQuery = z.infer<typeof ReviewListQuerySchema>;
 
@@ -335,7 +366,7 @@ export type CreateGoalResponse = z.infer<typeof CreateGoalResponseSchema>;
 
 /**
  * Employee may propose additional goals during the self-review window only
- * (BL-038). Outcome stays Pending until the manager rates it.
+ * (BL-038). Outcome stays Pending (outcomeId=1) until the manager rates it.
  */
 export const ProposeGoalRequestSchema = z.object({
   text: z.string().min(3).max(500),
@@ -370,8 +401,8 @@ export const ManagerRatingRequestSchema = z.object({
   goals: z
     .array(
       z.object({
-        id: z.string(),
-        outcome: GoalOutcomeSchema,
+        id: IdSchema,
+        outcomeId: GoalOutcomeIdSchema,
       }),
     )
     .optional(),

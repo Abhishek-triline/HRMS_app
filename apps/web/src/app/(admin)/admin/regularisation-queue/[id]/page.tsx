@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisation } from '@/lib/hooks/useRegularisations';
+import { REG_STATUS } from '@/lib/status/maps';
 
 function formatHHMM(iso: string | null): string {
   if (!iso) return '—';
@@ -21,7 +22,7 @@ function formatHHMM(iso: string | null): string {
 export default function AdminRegularisationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: reg, isLoading, isError, error } = useRegularisation(id);
+  const { data: reg, isLoading, isError, error } = useRegularisation(Number(id));
 
   if (isLoading) {
     return (
@@ -47,7 +48,7 @@ export default function AdminRegularisationDetailPage() {
 
   if (!reg) return null;
 
-  const canDecide = reg.status === 'Pending';
+  const canDecide = reg.status === REG_STATUS.Pending;
 
   return (
     <div>
@@ -70,7 +71,7 @@ export default function AdminRegularisationDetailPage() {
             <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">Admin</span>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <RegularisationStatusBadge status={reg.status} routedTo={reg.routedTo} />
+            <RegularisationStatusBadge status={reg.status} routedToId={reg.routedToId} />
             <span className="text-xs text-slate">
               Submitted {new Date(reg.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
             </span>

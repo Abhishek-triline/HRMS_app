@@ -4,8 +4,10 @@
  * EmployeeForm — RHF form for create + edit modes.
  *
  * Create mode (mode='create'): all fields including salary section.
- * Edit mode (mode='edit'):  name/role/dept/designation/employment-type/joinDate.
+ * Edit mode (mode='edit'):  name/roleId/departmentId/designationId/employmentTypeId/joinDate.
  *                           salary and status have dedicated modals.
+ *
+ * v2: all FK fields are INT IDs. Dropdowns populated from master data via useMasters.
  *
  * Surfaces server-side 409 CIRCULAR_REPORTING against the manager field.
  * Surfaces 409 VERSION_MISMATCH as a toast.
@@ -23,8 +25,10 @@ import { Button } from '@/components/ui/Button';
 import { HierarchyPicker } from './HierarchyPicker';
 import { SalaryStructureForm } from './SalaryStructureForm';
 import { useCreateEmployee, useUpdateEmployee } from '@/lib/hooks/useEmployees';
+import { useRoles, useDepartments, useDesignations, useEmploymentTypes, useGenders } from '@/lib/hooks/useMasters';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
+import { ROLE_ID } from '@/lib/status/maps';
 import {
   CreateEmployeeRequestSchema,
   UpdateEmployeeRequestSchema,
@@ -33,49 +37,28 @@ import type { EmployeeDetail } from '@nexora/contracts/employees';
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
-// Create form adds salary structure
 const CreateFormSchema = CreateEmployeeRequestSchema;
-
-// Edit form — partial fields (no salary, no email, version required)
 const EditFormSchema = UpdateEmployeeRequestSchema;
 
 type CreateFormValues = z.infer<typeof CreateFormSchema>;
 type EditFormValues = z.infer<typeof EditFormSchema>;
 
-// Gender options for the select (matches prototype label set; 'Other' → "Non-binary")
-const GENDER_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Male', label: 'Male' },
-  { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Non-binary' },
-  { value: 'PreferNotToSay', label: 'Prefer not to say' },
-];
-
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EmployeeFormCreateProps {
   mode: 'create';
-  onSuccess?: (employeeId: string, email: string) => void;
+  onSuccess?: (employeeId: number, email: string) => void;
 }
 
 interface EmployeeFormEditProps {
   mode: 'edit';
   employee: EmployeeDetail;
-  onSuccess?: (employeeId: string) => void;
+  onSuccess?: (employeeId: number) => void;
 }
 
 type EmployeeFormProps = EmployeeFormCreateProps | EmployeeFormEditProps;
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const DEPARTMENTS = ['Engineering', 'Design', 'HR', 'Finance', 'Operations', 'Product', 'Sales'];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return (parts[0]?.[0] ?? '').toUpperCase();
-  return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
-}
 
 const fmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
@@ -85,11 +68,24 @@ function formatRupees(paise: number) {
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
+// Coerce select value to number | null (empty string → undefined, '0' → undefined)
+function toIntOrUndefined(val: string | number): number | undefined {
+  const n = Number(val);
+  return n > 0 ? n : undefined;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function EmployeeForm(props: EmployeeFormProps) {
   const router = useRouter();
   const isCreate = props.mode === 'create';
+
+  // Master data for dropdowns
+  const { data: roles } = useRoles();
+  const { data: departments } = useDepartments();
+  const { data: designations } = useDesignations();
+  const { data: employmentTypes } = useEmploymentTypes();
+  const { data: genders } = useGenders();
 
   // Track the selected manager name for the preview card (create mode only)
   const [previewManagerName, setPreviewManagerName] = useState<string | null>(null);
@@ -103,11 +99,11 @@ export function EmployeeForm(props: EmployeeFormProps) {
           email: '',
           phone: null,
           dateOfBirth: null,
-          gender: null,
-          role: 'Employee',
-          department: '',
-          designation: '',
-          employmentType: 'Permanent',
+          genderId: null,
+          roleId: ROLE_ID.Employee,
+          departmentId: 0 as unknown as number,
+          designationId: 0 as unknown as number,
+          employmentTypeId: 1,
           reportingManagerId: null,
           joinDate: TODAY,
           salaryStructure: {
@@ -130,11 +126,11 @@ export function EmployeeForm(props: EmployeeFormProps) {
           name: (props as EmployeeFormEditProps).employee.name,
           phone: (props as EmployeeFormEditProps).employee.phone ?? null,
           dateOfBirth: (props as EmployeeFormEditProps).employee.dateOfBirth ?? null,
-          gender: (props as EmployeeFormEditProps).employee.gender ?? null,
-          role: (props as EmployeeFormEditProps).employee.role,
-          department: (props as EmployeeFormEditProps).employee.department ?? '',
-          designation: (props as EmployeeFormEditProps).employee.designation ?? '',
-          employmentType: (props as EmployeeFormEditProps).employee.employmentType,
+          genderId: (props as EmployeeFormEditProps).employee.genderId ?? null,
+          roleId: (props as EmployeeFormEditProps).employee.roleId,
+          departmentId: (props as EmployeeFormEditProps).employee.departmentId ?? undefined,
+          designationId: (props as EmployeeFormEditProps).employee.designationId ?? undefined,
+          employmentTypeId: (props as EmployeeFormEditProps).employee.employmentTypeId,
           joinDate: (props as EmployeeFormEditProps).employee.joinDate,
           version: (props as EmployeeFormEditProps).employee.version,
         }
@@ -143,7 +139,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
 
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee(
-    !isCreate ? (props as EmployeeFormEditProps).employee.id : '',
+    !isCreate ? (props as EmployeeFormEditProps).employee.id : 0,
   );
 
   // Re-populate edit form when employee prop changes
@@ -154,11 +150,11 @@ export function EmployeeForm(props: EmployeeFormProps) {
         name: emp.name,
         phone: emp.phone ?? null,
         dateOfBirth: emp.dateOfBirth ?? null,
-        gender: emp.gender ?? null,
-        role: emp.role,
-        department: emp.department ?? '',
-        designation: emp.designation ?? '',
-        employmentType: emp.employmentType,
+        genderId: emp.genderId ?? null,
+        roleId: emp.roleId,
+        departmentId: emp.departmentId ?? undefined,
+        designationId: emp.designationId ?? undefined,
+        employmentTypeId: emp.employmentTypeId,
         joinDate: emp.joinDate,
         version: emp.version,
       });
@@ -181,7 +177,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
       if (err instanceof ApiError) {
         if (err.code === 'CIRCULAR_REPORTING') {
           createForm.setError('reportingManagerId', {
-            message: `BL-005: Circular reporting detected. ${(err.details as { path?: string })?.path ?? ''}`,
+            message: `Circular reporting detected. ${(err.details as { path?: string })?.path ?? ''}`,
           });
         } else if (err.code === 'EMAIL_ALREADY_EXISTS') {
           createForm.setError('email', { message: 'This email is already in use.' });
@@ -216,18 +212,19 @@ export function EmployeeForm(props: EmployeeFormProps) {
 
   // ── Watch values for create preview ───────────────────────────────────────
   const watchedName = isCreate ? createForm.watch('name') : '';
-  const watchedDept = isCreate ? createForm.watch('department') : '';
-  const watchedDesignation = isCreate ? createForm.watch('designation') : '';
-  const watchedEmpType = isCreate ? createForm.watch('employmentType') : '';
+  const watchedDesignationId = isCreate ? createForm.watch('designationId') : 0;
+  const watchedDeptId = isCreate ? createForm.watch('departmentId') : 0;
+  const watchedEmpTypeId = isCreate ? createForm.watch('employmentTypeId') : 0;
   const watchedJoinDate = isCreate ? createForm.watch('joinDate') : '';
-  const watchedPhone = isCreate ? createForm.watch('phone') : null;
-  const watchedDob = isCreate ? createForm.watch('dateOfBirth') : null;
-  const watchedGender = isCreate ? createForm.watch('gender') : null;
   const watchedBasicPaise = isCreate ? (createForm.watch('salaryStructure.basic_paise') ?? 0) : 0;
   const watchedHraPaise = isCreate ? (createForm.watch('salaryStructure.hra_paise') ?? 0) : 0;
   const watchedTransportPaise = isCreate ? (createForm.watch('salaryStructure.transport_paise') ?? 0) : 0;
   const watchedOtherPaise = isCreate ? (createForm.watch('salaryStructure.other_paise') ?? 0) : 0;
   const grossPaise = watchedBasicPaise + watchedHraPaise + watchedTransportPaise + watchedOtherPaise;
+
+  const watchedDesignationLabel = designations?.find((d) => d.id === watchedDesignationId)?.name ?? '';
+  const watchedDeptLabel = departments?.find((d) => d.id === watchedDeptId)?.name ?? '';
+  const watchedEmpTypeLabel = employmentTypes?.find((e) => e.id === watchedEmpTypeId)?.name ?? '';
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -240,6 +237,10 @@ export function EmployeeForm(props: EmployeeFormProps) {
       formState: { errors },
       handleSubmit,
     } = createForm;
+
+    // Determine eligible roles for manager picker
+    const watchedRoleId = watch('roleId');
+    const isAdminRole = watchedRoleId === ROLE_ID.Admin;
 
     return (
       <form onSubmit={handleSubmit(handleCreateSubmit)} noValidate>
@@ -256,7 +257,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 Personal Information
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                {/* Full Name — spans both columns */}
                 <div className="col-span-2">
                   <Input
                     {...register('name')}
@@ -267,7 +267,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     maxLength={200}
                   />
                 </div>
-                {/* Work Email */}
                 <div>
                   <Input
                     {...register('email')}
@@ -278,7 +277,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     error={errors.email?.message}
                   />
                 </div>
-                {/* Phone Number */}
                 <div>
                   <Input
                     {...register('phone')}
@@ -289,7 +287,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     maxLength={20}
                   />
                 </div>
-                {/* Date of Birth */}
                 <div>
                   <Label htmlFor="dob">Date of Birth</Label>
                   <input
@@ -300,20 +297,26 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   />
                   <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
                 </div>
-                {/* Gender — select (matches prototype) */}
                 <div>
-                  <Label htmlFor="gender">Gender</Label>
-                  <select
-                    id="gender"
-                    {...register('gender')}
-                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-                  >
-                    <option value="">Select gender</option>
-                    {GENDER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  <FieldError id="gender-error" message={errors.gender?.message} />
+                  <Label htmlFor="genderId">Gender</Label>
+                  <Controller
+                    name="genderId"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="genderId"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                      >
+                        <option value="">Select gender</option>
+                        {(genders ?? []).map((g) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <FieldError id="genderId-error" message={errors.genderId?.message} />
                 </div>
               </div>
             </div>
@@ -328,46 +331,86 @@ export function EmployeeForm(props: EmployeeFormProps) {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="role" required>System Role</Label>
-                  <select
-                    id="role"
-                    {...register('role')}
-                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Admin">Admin</option>
-                    <option value="PayrollOfficer">Payroll Officer</option>
-                  </select>
-                  <FieldError id="role-error" message={errors.role?.message} />
+                  <Label htmlFor="roleId" required>System Role</Label>
+                  <Controller
+                    name="roleId"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="roleId"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                      >
+                        {(roles ?? []).map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <FieldError id="roleId-error" message={errors.roleId?.message} />
                 </div>
                 <div>
-                  <Label htmlFor="department" required>Department</Label>
-                  <select
-                    id="department"
-                    {...register('department')}
-                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-                  >
-                    <option value="">Select department</option>
-                    {DEPARTMENTS.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                  <FieldError id="department-error" message={errors.department?.message} />
+                  <Label htmlFor="departmentId" required>Department</Label>
+                  <Controller
+                    name="departmentId"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="departmentId"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(toIntOrUndefined(e.target.value) ?? 0)}
+                        className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                      >
+                        <option value="">Select department</option>
+                        {(departments ?? []).map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <FieldError id="departmentId-error" message={errors.departmentId?.message} />
                 </div>
                 <div>
-                  <Label htmlFor="employment-type" required>Employment Type</Label>
-                  <select
-                    id="employment-type"
-                    {...register('employmentType')}
-                    className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-                  >
-                    <option value="Permanent">Permanent</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Intern">Intern</option>
-                    <option value="Probation">Probation</option>
-                  </select>
-                  <FieldError id="employment-type-error" message={errors.employmentType?.message} />
+                  <Label htmlFor="designationId" required>Designation / Job Title</Label>
+                  <Controller
+                    name="designationId"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="designationId"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(toIntOrUndefined(e.target.value) ?? 0)}
+                        className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                      >
+                        <option value="">Select designation</option>
+                        {(designations ?? []).map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <FieldError id="designationId-error" message={errors.designationId?.message} />
+                </div>
+                <div>
+                  <Label htmlFor="employmentTypeId" required>Employment Type</Label>
+                  <Controller
+                    name="employmentTypeId"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        id="employmentTypeId"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                      >
+                        {(employmentTypes ?? []).map((et) => (
+                          <option key={et.id} value={et.id}>{et.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
+                  <FieldError id="employmentTypeId-error" message={errors.employmentTypeId?.message} />
                 </div>
                 <div>
                   <Label htmlFor="join-date" required>Date of Joining</Label>
@@ -378,16 +421,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
                   />
                   <FieldError id="join-date-error" message={errors.joinDate?.message} />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    {...register('designation')}
-                    label="Designation / Job Title"
-                    placeholder="e.g. Senior Software Engineer"
-                    required
-                    error={errors.designation?.message}
-                    maxLength={150}
-                  />
                 </div>
               </div>
             </div>
@@ -403,17 +436,22 @@ export function EmployeeForm(props: EmployeeFormProps) {
               <Controller
                 name="reportingManagerId"
                 control={control}
-                render={({ field }) => (
-                  <HierarchyPicker
-                    value={field.value}
-                    onChange={(managerId, managerName) => {
-                      field.onChange(managerId);
-                      setPreviewManagerName(managerName ?? null);
-                    }}
-                    label="Reporting Manager"
-                    error={errors.reportingManagerId?.message}
-                  />
-                )}
+                render={({ field }) => {
+                  // Admins may only report to another Admin (BL-017)
+                  const eligibleRoles = isAdminRole ? 'Admin' : 'Manager,Admin';
+                  return (
+                    <HierarchyPicker
+                      value={field.value}
+                      onChange={(managerId, managerName) => {
+                        field.onChange(managerId);
+                        setPreviewManagerName(managerName ?? null);
+                      }}
+                      label="Reporting Manager"
+                      error={errors.reportingManagerId?.message}
+                      eligibleRoles={eligibleRoles}
+                    />
+                  );
+                }}
               />
             </div>
 
@@ -430,7 +468,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
               </p>
               <SalaryStructureForm
                 mode="create"
-                // Cast required: Control<ConcreteType> → Control<FieldValues> for the sub-form bridge.
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 control={control as any}
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -478,7 +515,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 <p className="text-mint/70 text-xs">Updates as you fill the form</p>
               </div>
               <div className="px-5 py-5">
-                {/* Avatar — neutral placeholder per prototype */}
                 <div className="flex flex-col items-center mb-5">
                   <div className="w-16 h-16 rounded-full bg-sage/20 flex items-center justify-center mb-2">
                     <svg className="w-7 h-7 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -490,28 +526,25 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   ) : (
                     <div className="text-sm font-semibold text-sage">Full Name</div>
                   )}
-                  {watchedDesignation ? (
-                    <div className="text-xs text-slate mt-0.5">{watchedDesignation}</div>
+                  {watchedDesignationLabel ? (
+                    <div className="text-xs text-slate mt-0.5">{watchedDesignationLabel}</div>
                   ) : (
                     <div className="text-xs text-sage/70 mt-0.5">Designation</div>
                   )}
                 </div>
-
-                {/* EMP Code */}
                 <div className="bg-softmint rounded-lg px-3 py-2.5 mb-4 text-center">
                   <div className="text-xs text-slate mb-0.5">EMP Code</div>
                   <div className="font-heading text-base font-bold text-forest">EMP-{new Date().getFullYear()}-XXXX</div>
                   <div className="text-xs text-slate/70 mt-1">Auto-generated on creation</div>
                 </div>
-
                 <div className="space-y-2.5">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Department</span>
-                    <span className="text-xs font-medium text-charcoal">{watchedDept || '—'}</span>
+                    <span className="text-xs font-medium text-charcoal">{watchedDeptLabel || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Employment Type</span>
-                    <span className="text-xs font-medium text-charcoal">{watchedEmpType || '—'}</span>
+                    <span className="text-xs font-medium text-charcoal">{watchedEmpTypeLabel || '—'}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-slate">Date of Joining</span>
@@ -530,8 +563,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 </div>
               </div>
             </div>
-
-            {/* Info note */}
             <div className="bg-softmint border border-mint rounded-xl px-4 py-4">
               <div className="flex items-start gap-2.5">
                 <svg className="w-4 h-4 text-forest mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -545,7 +576,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 </div>
               </div>
             </div>
-
             <div className="text-xs text-slate px-1">
               Fields marked <span className="text-crimson font-bold">*</span> are required to create the employee record.
             </div>
@@ -558,6 +588,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
   // ── Edit mode ──────────────────────────────────────────────────────────────
   const {
     register: editRegister,
+    control: editControl,
     formState: { errors: editErrors },
     handleSubmit: editHandleSubmit,
   } = editForm;
@@ -579,7 +610,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
               maxLength={200}
             />
           </div>
-          {/* Phone Number */}
           <div>
             <Input
               {...editRegister('phone')}
@@ -590,7 +620,6 @@ export function EmployeeForm(props: EmployeeFormProps) {
               maxLength={20}
             />
           </div>
-          {/* Date of Birth */}
           <div>
             <Label htmlFor="edit-dob">Date of Birth</Label>
             <input
@@ -601,71 +630,108 @@ export function EmployeeForm(props: EmployeeFormProps) {
             />
             <FieldError id="edit-dob-error" message={editErrors.dateOfBirth?.message} />
           </div>
-          {/* Gender */}
           <div className="col-span-2">
-            <Label htmlFor="edit-gender">Gender</Label>
-            <select
-              id="edit-gender"
-              {...editRegister('gender')}
-              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-            >
-              <option value="">Select gender</option>
-              {GENDER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <FieldError id="edit-gender-error" message={editErrors.gender?.message} />
-          </div>
-          <div>
-            <Label htmlFor="edit-role" required>System Role</Label>
-            <select
-              id="edit-role"
-              {...editRegister('role')}
-              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-            >
-              <option value="Employee">Employee</option>
-              <option value="Manager">Manager</option>
-              <option value="Admin">Admin</option>
-              <option value="PayrollOfficer">Payroll Officer</option>
-            </select>
-            <FieldError id="edit-role-error" message={editErrors.role?.message} />
-          </div>
-          <div>
-            <Label htmlFor="edit-department" required>Department</Label>
-            <select
-              id="edit-department"
-              {...editRegister('department')}
-              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-            >
-              <option value="">Select department</option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            <FieldError id="edit-department-error" message={editErrors.department?.message} />
-          </div>
-          <div>
-            <Input
-              {...editRegister('designation')}
-              label="Designation / Job Title"
-              required
-              error={editErrors.designation?.message}
-              maxLength={150}
+            <Label htmlFor="edit-genderId">Gender</Label>
+            <Controller
+              name="genderId"
+              control={editControl}
+              render={({ field }) => (
+                <select
+                  id="edit-genderId"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-slate focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                >
+                  <option value="">Select gender</option>
+                  {(genders ?? []).map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              )}
             />
+            <FieldError id="edit-genderId-error" message={editErrors.genderId?.message} />
           </div>
           <div>
-            <Label htmlFor="edit-employment-type" required>Employment Type</Label>
-            <select
-              id="edit-employment-type"
-              {...editRegister('employmentType')}
-              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
-            >
-              <option value="Permanent">Permanent</option>
-              <option value="Contract">Contract</option>
-              <option value="Intern">Intern</option>
-              <option value="Probation">Probation</option>
-            </select>
-            <FieldError id="edit-employment-type-error" message={editErrors.employmentType?.message} />
+            <Label htmlFor="edit-roleId" required>System Role</Label>
+            <Controller
+              name="roleId"
+              control={editControl}
+              render={({ field }) => (
+                <select
+                  id="edit-roleId"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                >
+                  {(roles ?? []).map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            <FieldError id="edit-roleId-error" message={editErrors.roleId?.message} />
+          </div>
+          <div>
+            <Label htmlFor="edit-departmentId" required>Department</Label>
+            <Controller
+              name="departmentId"
+              control={editControl}
+              render={({ field }) => (
+                <select
+                  id="edit-departmentId"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(toIntOrUndefined(e.target.value))}
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                >
+                  <option value="">Select department</option>
+                  {(departments ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            <FieldError id="edit-departmentId-error" message={editErrors.departmentId?.message} />
+          </div>
+          <div>
+            <Label htmlFor="edit-designationId">Designation / Job Title</Label>
+            <Controller
+              name="designationId"
+              control={editControl}
+              render={({ field }) => (
+                <select
+                  id="edit-designationId"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(toIntOrUndefined(e.target.value))}
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                >
+                  <option value="">Select designation</option>
+                  {(designations ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            <FieldError id="edit-designationId-error" message={editErrors.designationId?.message} />
+          </div>
+          <div>
+            <Label htmlFor="edit-employmentTypeId" required>Employment Type</Label>
+            <Controller
+              name="employmentTypeId"
+              control={editControl}
+              render={({ field }) => (
+                <select
+                  id="edit-employmentTypeId"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+                >
+                  {(employmentTypes ?? []).map((et) => (
+                    <option key={et.id} value={et.id}>{et.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            <FieldError id="edit-employmentTypeId-error" message={editErrors.employmentTypeId?.message} />
           </div>
           <div>
             <Label htmlFor="edit-join-date">Date of Joining</Label>
@@ -695,11 +761,11 @@ export function EmployeeForm(props: EmployeeFormProps) {
                 name: emp.name,
                 phone: emp.phone ?? null,
                 dateOfBirth: emp.dateOfBirth ?? null,
-                gender: emp.gender ?? null,
-                role: emp.role,
-                department: emp.department ?? '',
-                designation: emp.designation ?? '',
-                employmentType: emp.employmentType,
+                genderId: emp.genderId ?? null,
+                roleId: emp.roleId,
+                departmentId: emp.departmentId ?? undefined,
+                designationId: emp.designationId ?? undefined,
+                employmentTypeId: emp.employmentTypeId,
                 joinDate: emp.joinDate,
                 version: emp.version,
               })

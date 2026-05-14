@@ -100,8 +100,11 @@ export function RegularisationForm() {
   });
   const originalRecord = attData?.data?.[0] ?? null;
 
-  // My regularisation history
-  const { data: historyData } = useRegularisations();
+  // My regularisation history — fetch up to 100 (regularisations are rare
+  // events; an employee with >100 is exceptional). Sort + paginate below.
+  const { data: historyData } = useRegularisations({ limit: 100 });
+  const [historyPage, setHistoryPage] = useState(1);
+  const HISTORY_PAGE_SIZE = 10;
 
   const submitMutation = useSubmitRegularisation();
 
@@ -276,7 +279,7 @@ export function RegularisationForm() {
             <svg className="w-4 h-4 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            Routing Rules (BL-029)
+            Routing Rules
           </h3>
           <div className="space-y-3">
             <div className="bg-greenbg rounded-lg p-3">
@@ -315,14 +318,14 @@ export function RegularisationForm() {
               <div className="w-1.5 h-1.5 rounded-full bg-crimson mt-1.5 flex-shrink-0" aria-hidden="true" />
               <span>
                 You <strong className="text-charcoal">cannot submit</strong> a regularisation for a date that has an
-                approved leave — it will be blocked with a conflict error (BL-010).
+                approved leave — it will be blocked with a conflict error.
               </span>
             </li>
             <li className="flex items-start gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-slate mt-1.5 flex-shrink-0" aria-hidden="true" />
               <span>
                 Original attendance record is <strong className="text-charcoal">preserved</strong> — corrections
-                create a new overlay entry upon approval (BL-007).
+                create a new overlay entry upon approval.
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -338,47 +341,112 @@ export function RegularisationForm() {
 
       {/* History table — full width below */}
       <div className="lg:col-span-3">
-        <div className="bg-white rounded-xl shadow-sm border border-sage/30">
-          <div className="px-6 py-4 border-b border-sage/20">
-            <h2 className="font-heading text-base font-semibold text-charcoal">My Regularisation History</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-offwhite border-b border-sage/20">
-                  <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Submitted</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">For Date</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days Old</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
-                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actioned By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sage/20">
-                {!historyData?.data?.length ? (
-                  <tr>
-                    <td colSpan={5} className="text-center text-sm text-slate py-8">
-                      No regularisation history.
-                    </td>
-                  </tr>
-                ) : (
-                  historyData.data.map((r) => (
-                    <tr key={r.id} className="hover:bg-offwhite transition-colors">
-                      <td className="px-6 py-4 font-medium text-charcoal">
-                        {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 py-4 text-slate">{r.date}</td>
-                      <td className="px-4 py-4 text-slate">{r.ageDaysAtSubmit} days</td>
-                      <td className="px-4 py-4">
-                        <RegularisationStatusBadge status={r.status} routedTo={r.routedTo} />
-                      </td>
-                      <td className="px-4 py-4 text-slate">{r.approverName ?? '—'}</td>
-                    </tr>
-                  ))
+        {(() => {
+          const allHistory = historyData?.data ?? [];
+          // Sort newest first by createdAt (defensive — the API already orders DESC
+          // but an explicit sort here means re-renders or partial-refresh updates
+          // can't shuffle the visible page out of order).
+          const sortedHistory = [...allHistory].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
+          const totalRows = sortedHistory.length;
+          const totalPages = Math.max(1, Math.ceil(totalRows / HISTORY_PAGE_SIZE));
+          const safePage = Math.min(historyPage, totalPages);
+          const startIdx = (safePage - 1) * HISTORY_PAGE_SIZE;
+          const pageRows = sortedHistory.slice(startIdx, startIdx + HISTORY_PAGE_SIZE);
+          const shownFrom = totalRows === 0 ? 0 : startIdx + 1;
+          const shownTo = startIdx + pageRows.length;
+
+          return (
+            <div className="bg-white rounded-xl shadow-sm border border-sage/30">
+              <div className="px-6 py-4 border-b border-sage/20 flex items-center justify-between">
+                <h2 className="font-heading text-base font-semibold text-charcoal">My Regularisation History</h2>
+                {totalRows > 0 && (
+                  <span className="text-xs text-slate">{totalRows} records</span>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-offwhite border-b border-sage/20">
+                      <th scope="col" className="text-left px-6 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Submitted</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">For Date</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days Old</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actioned By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sage/20">
+                    {totalRows === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center text-sm text-slate py-8">
+                          No regularisation history.
+                        </td>
+                      </tr>
+                    ) : (
+                      pageRows.map((r) => (
+                        <tr key={r.id} className="hover:bg-offwhite transition-colors">
+                          <td className="px-6 py-4 font-medium text-charcoal">
+                            {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-4 text-slate">{r.date}</td>
+                          <td className="px-4 py-4 text-slate">{r.ageDaysAtSubmit} days</td>
+                          <td className="px-4 py-4">
+                            <RegularisationStatusBadge status={r.status} routedToId={r.routedToId} />
+                          </td>
+                          <td className="px-4 py-4 text-slate">{r.approverName ?? '—'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalRows > 0 && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-sage/20 text-xs text-slate">
+                  <span>
+                    Showing {shownFrom}–{shownTo} of {totalRows}
+                  </span>
+                  {totalPages > 1 && (
+                    <nav aria-label="Regularisation history pagination" className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage(Math.max(1, safePage - 1))}
+                        disabled={safePage === 1}
+                        className="border border-sage/50 px-3 py-1.5 rounded hover:bg-offwhite disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Prev
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setHistoryPage(p)}
+                          aria-current={p === safePage ? 'page' : undefined}
+                          className={`px-3 py-1.5 rounded ${
+                            p === safePage
+                              ? 'bg-forest text-white'
+                              : 'border border-sage/50 hover:bg-offwhite'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setHistoryPage(Math.min(totalPages, safePage + 1))}
+                        disabled={safePage === totalPages}
+                        className="border border-sage/50 px-3 py-1.5 rounded hover:bg-offwhite disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </nav>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

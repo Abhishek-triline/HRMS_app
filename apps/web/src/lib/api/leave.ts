@@ -41,10 +41,10 @@ export async function getLeaveTypes(): Promise<LeaveTypesResponse['data']> {
 
 /** GET /api/v1/leave/balances/:employeeId — SELF / Manager / Admin */
 export async function getLeaveBalances(
-  employeeId: string,
+  employeeId: number,
 ): Promise<LeaveBalancesResponse['data']> {
   const res = await apiClient.get<LeaveBalancesResponse>(
-    `${BASE}/balances/${encodeURIComponent(employeeId)}`,
+    `${BASE}/balances/${employeeId}`,
   );
   return res.data;
 }
@@ -76,10 +76,15 @@ export async function listLeave(query: Partial<LeaveListQuery> = {}): Promise<Le
 
 // ── Requests — detail ─────────────────────────────────────────────────────────
 
-/** GET /api/v1/leave/requests/:id */
-export async function getLeave(id: string): Promise<LeaveRequest> {
+/**
+ * GET /api/v1/leave/requests/:idOrCode
+ * Accepts either the numeric id ("42") or the human-readable code
+ * ("L-2026-0018"). Notifications link by code so the URL is meaningful
+ * when shared; list pages link by id. The server resolves either form.
+ */
+export async function getLeave(idOrCode: number | string): Promise<LeaveRequest> {
   const res = await apiClient.get<{ data: LeaveRequest }>(
-    `${BASE}/requests/${encodeURIComponent(id)}`,
+    `${BASE}/requests/${idOrCode}`,
   );
   return res.data;
 }
@@ -88,11 +93,11 @@ export async function getLeave(id: string): Promise<LeaveRequest> {
 
 /** POST /api/v1/leave/requests/:id/approve — Manager (own queue) or Admin */
 export async function approveLeave(
-  id: string,
+  id: number,
   input: ApproveLeaveRequest,
 ): Promise<ApproveLeaveResponse['data']> {
   const res = await apiClient.post<ApproveLeaveResponse>(
-    `${BASE}/requests/${encodeURIComponent(id)}/approve`,
+    `${BASE}/requests/${id}/approve`,
     input,
   );
   return res.data;
@@ -100,11 +105,11 @@ export async function approveLeave(
 
 /** POST /api/v1/leave/requests/:id/reject — note is REQUIRED */
 export async function rejectLeave(
-  id: string,
+  id: number,
   input: RejectLeaveRequest,
 ): Promise<RejectLeaveResponse['data']> {
   const res = await apiClient.post<RejectLeaveResponse>(
-    `${BASE}/requests/${encodeURIComponent(id)}/reject`,
+    `${BASE}/requests/${id}/reject`,
     input,
   );
   return res.data;
@@ -112,11 +117,11 @@ export async function rejectLeave(
 
 /** POST /api/v1/leave/requests/:id/cancel — owner before start / Manager-in-chain / Admin always */
 export async function cancelLeave(
-  id: string,
+  id: number,
   input: CancelLeaveRequest,
 ): Promise<CancelLeaveResponse['data']> {
   const res = await apiClient.post<CancelLeaveResponse>(
-    `${BASE}/requests/${encodeURIComponent(id)}/cancel`,
+    `${BASE}/requests/${id}/cancel`,
     input,
   );
   return res.data;

@@ -20,7 +20,7 @@ import { FieldError } from '@/components/ui/FieldError';
 import { useApproveRegularisation, useRejectRegularisation } from '@/lib/hooks/useRegularisations';
 
 interface RegularisationApprovalActionsProps {
-  regularisationId: string;
+  regularisationId: number;
   version: number;
   /** Called after a successful decision so the parent can refresh/navigate */
   onDecision?: () => void;

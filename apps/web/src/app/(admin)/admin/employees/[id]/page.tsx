@@ -39,7 +39,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UpdateSalaryRequestSchema } from '@nexora/contracts/employees';
 import type { UpdateSalaryRequest } from '@nexora/contracts/employees';
-import type { EmployeeStatus } from '@nexora/contracts/common';
+import { EMPLOYEE_STATUS, ROLE_MAP, EMPLOYMENT_TYPE_MAP, GENDER_MAP } from '@/lib/status/maps';
 
 // Feature components
 import { StatusTimeline } from '@/features/employees/components/StatusTimeline';
@@ -85,7 +85,7 @@ function SalaryEditModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  employeeId: string;
+  employeeId: number;
   employeeName: string;
   currentVersion: number;
   currentSalary: { basic_paise: number; allowances_paise: number; effectiveFrom: string } | null;
@@ -109,7 +109,7 @@ function SalaryEditModal({
       showToast({
         type: 'success',
         title: 'Salary updated',
-        message: `${employeeName}'s salary will apply from next payroll run (BL-030).`,
+        message: `${employeeName}'s salary will apply from next payroll run.`,
       });
       onClose();
     } catch (err) {
@@ -156,12 +156,17 @@ function SalaryEditModal({
 
 // ── Inline Quick Actions status change ────────────────────────────────────────
 
-type ManualStatus = 'Active' | 'On-Notice' | 'Exited';
-const MANUAL_STATUSES: ManualStatus[] = ['Active', 'On-Notice', 'Exited'];
+// ManualStatus uses INT codes: 1=Active, 2=OnNotice, 5=Exited (matches ChangeStatusRequest)
+type ManualStatus = 1 | 2 | 5;
+const MANUAL_STATUS_OPTIONS: { value: ManualStatus; label: string }[] = [
+  { value: EMPLOYEE_STATUS.Active, label: 'Active' },
+  { value: EMPLOYEE_STATUS.OnNotice, label: 'On-Notice' },
+  { value: EMPLOYEE_STATUS.Exited, label: 'Exited' },
+];
 
-function toManualStatus(s: EmployeeStatus): ManualStatus {
-  if (s === 'Active' || s === 'On-Notice' || s === 'Exited') return s;
-  return 'Active'; // On-Leave / Inactive fall back to Active for the selector default
+function toManualStatus(s: number): ManualStatus {
+  if (s === EMPLOYEE_STATUS.Active || s === EMPLOYEE_STATUS.OnNotice || s === EMPLOYEE_STATUS.Exited) return s as ManualStatus;
+  return EMPLOYEE_STATUS.Active; // On-Leave / Inactive fall back to Active for the selector default
 }
 
 function QuickStatusChange({
@@ -169,8 +174,8 @@ function QuickStatusChange({
   currentStatus,
   version,
 }: {
-  employeeId: string;
-  currentStatus: EmployeeStatus;
+  employeeId: number;
+  currentStatus: number;
   version: number;
 }) {
   const [selected, setSelected] = useState<ManualStatus>(toManualStatus(currentStatus));
@@ -181,7 +186,8 @@ function QuickStatusChange({
     const today = new Date().toISOString().slice(0, 10);
     try {
       await changeStatus.mutateAsync({ status: selected, effectiveDate: today, version });
-      showToast({ type: 'success', title: 'Status updated', message: `Status changed to ${selected}.` });
+      const label = MANUAL_STATUS_OPTIONS.find((o) => o.value === selected)?.label ?? String(selected);
+      showToast({ type: 'success', title: 'Status updated', message: `Status changed to ${label}.` });
     } catch (err) {
       if (err instanceof ApiError) {
         showToast({ type: 'error', title: 'Status change failed', message: err.message });
@@ -190,7 +196,7 @@ function QuickStatusChange({
     }
   }
 
-  const isExited = currentStatus === 'Exited';
+  const isExited = currentStatus === EMPLOYEE_STATUS.Exited;
 
   return (
     <div>
@@ -198,13 +204,13 @@ function QuickStatusChange({
       <div className="flex gap-2">
         <select
           value={selected}
-          onChange={(e) => setSelected(e.target.value as ManualStatus)}
+          onChange={(e) => setSelected(Number(e.target.value) as ManualStatus)}
           disabled={isExited || changeStatus.isPending}
           aria-label="Select new status"
           className="flex-1 border border-sage/50 rounded-lg px-2.5 py-2 text-xs text-slate focus:outline-none focus:ring-1 focus:ring-forest/30 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {MANUAL_STATUSES.map((s) => (
-            <option key={s} value={s}>{s === 'On-Notice' ? 'On Notice' : s}</option>
+          {MANUAL_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label === 'On-Notice' ? 'On Notice' : opt.label}</option>
           ))}
         </select>
         <Button
@@ -219,7 +225,7 @@ function QuickStatusChange({
       </div>
       <p className="text-[11px] text-slate mt-1.5 leading-snug">
         <span className="font-semibold text-charcoal">On-Leave</span> is set automatically when an
-        approved leave is active. It cannot be set manually (BL-006).
+        approved leave is active. It cannot be set manually.
       </p>
     </div>
   );
@@ -228,18 +234,19 @@ function QuickStatusChange({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function EmployeeDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = Number(idParam ?? 0);
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: employee, isLoading, isError, error } = useEmployee(id ?? '');
+  const { data: employee, isLoading, isError, error } = useEmployee(id);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const statusModal = useModal();
   const reassignModal = useModal();
   const salaryModal = useModal();
 
-  if (!id) return null;
+  if (!idParam) return null;
 
   if (isLoading) {
     return (
@@ -265,6 +272,7 @@ export default function EmployeeDetailPage() {
 
   const initials = getInitials(employee.name);
   const salary = employee.salaryStructure;
+  const isExited = employee.status === EMPLOYEE_STATUS.Exited;
 
   // Salary 4-tile breakdown — use the real component fields when present.
   // If a legacy record has only basic+allowances stored, fall back to a 40%
@@ -310,6 +318,31 @@ export default function EmployeeDetailPage() {
         </div>
       </div>
 
+      {isExited && (
+        <div
+          role="note"
+          className="flex items-start gap-3 bg-lockedbg border border-sage/40 rounded-xl px-5 py-4 mb-5 text-sm text-charcoal"
+        >
+          <svg
+            className="w-5 h-5 text-slate flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <div>
+            <div className="font-semibold mb-0.5">Read-only record</div>
+            <p className="text-xs text-slate leading-relaxed">
+              This employee has exited{employee.exitDate ? ` on ${formatDate(employee.exitDate)}` : ''}.
+              Profile details, salary structure, and reporting manager are locked. Historical data remains visible for audit.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 2-column grid */}
       <div className="flex gap-5 items-start">
         {/* LEFT COLUMN — main content */}
@@ -331,7 +364,7 @@ export default function EmployeeDetailPage() {
                       <span className="text-sage">&middot;</span>
                       <EmployeeStatusBadge status={employee.status} />
                       <span className="bg-softmint text-forest text-xs font-bold px-2 py-0.5 rounded">
-                        {employee.role}
+                        {ROLE_MAP[employee.roleId]?.label ?? String(employee.roleId)}
                       </span>
                     </div>
                   </div>
@@ -366,7 +399,7 @@ export default function EmployeeDetailPage() {
                     <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-xs text-slate">{employee.employmentType}</span>
+                    <span className="text-xs text-slate">{EMPLOYMENT_TYPE_MAP[employee.employmentTypeId]?.label ?? String(employee.employmentTypeId)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,13 +407,13 @@ export default function EmployeeDetailPage() {
                     </svg>
                     <span className="text-xs text-slate">Joined: {formatDate(employee.joinDate)}</span>
                   </div>
-                  {(employee.gender || employee.dateOfBirth) && (
+                  {(employee.genderId || employee.dateOfBirth) && (
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-sage flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       <span className="text-xs text-slate">
-                        {employee.gender ? (employee.gender === 'PreferNotToSay' ? 'Prefer not to say' : employee.gender === 'Other' ? 'Non-binary' : employee.gender) : '—'}
+                        {employee.genderId ? (GENDER_MAP[employee.genderId]?.label ?? String(employee.genderId)) : '—'}
                         {employee.dateOfBirth && (
                           <> &middot; DoB: {formatDate(employee.dateOfBirth)}</>
                         )}
@@ -445,9 +478,11 @@ export default function EmployeeDetailPage() {
               <h3 className="text-xs font-semibold text-slate uppercase tracking-wide">
                 Salary Structure
               </h3>
-              <Button variant="secondary" size="sm" onClick={salaryModal.open}>
-                Edit Salary
-              </Button>
+              {!isExited && (
+                <Button variant="secondary" size="sm" onClick={salaryModal.open}>
+                  Edit Salary
+                </Button>
+              )}
             </div>
             {salary ? (
               <>
@@ -501,8 +536,8 @@ export default function EmployeeDetailPage() {
             )}
           </div>
 
-          {/* Edit Profile Form (toggled) */}
-          {showEditForm ? (
+          {/* Edit Profile Form (toggled) — hidden entirely for Exited employees */}
+          {!isExited && showEditForm ? (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading text-sm font-bold text-charcoal">Edit Profile</h3>
@@ -545,28 +580,30 @@ export default function EmployeeDetailPage() {
                 version={employee.version}
               />
 
-              <div className="border-t border-sage/20 pt-3 space-y-2">
-                <button
-                  type="button"
-                  onClick={reassignModal.open}
-                  className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Change Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditForm((prev) => !prev)}
-                  className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
-                </button>
-              </div>
+              {!isExited && (
+                <div className="border-t border-sage/20 pt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={reassignModal.open}
+                    className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Change Manager
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditForm((prev) => !prev)}
+                    className="w-full border border-forest text-forest hover:bg-forest hover:text-white px-3 py-2 rounded-lg font-body text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

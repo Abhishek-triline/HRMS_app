@@ -1,45 +1,16 @@
 /**
- * LeaveStatusBadge — maps LeaveStatus to StatusBadge variant.
- * Escalated is rendered as a distinct amber-toned badge since StatusBadge
- * doesn't have an 'escalated' variant — we handle it inline.
+ * LeaveStatusBadge — thin wrapper around StatusBadge for leave status INT codes.
+ * Status codes: 1=Pending, 2=Approved, 3=Rejected, 4=Cancelled, 5=Escalated
  */
 
-import { StatusBadge, type BadgeStatus } from '@/components/ui/StatusBadge';
-import type { LeaveStatus } from '@nexora/contracts/leave';
-import { clsx } from 'clsx';
-
-const statusToVariant: Record<Exclude<LeaveStatus, 'Escalated'>, BadgeStatus> = {
-  Pending: 'pending',
-  Approved: 'approved',
-  Rejected: 'rejected',
-  Cancelled: 'inactive',
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
 
 interface LeaveStatusBadgeProps {
-  status: LeaveStatus;
+  /** INT status code from the API (1–5) */
+  status: number;
   className?: string;
 }
 
 export function LeaveStatusBadge({ status, className }: LeaveStatusBadgeProps) {
-  if (status === 'Escalated') {
-    return (
-      <span
-        className={clsx(
-          'inline-flex items-center text-xs font-bold px-2 py-0.5 rounded tracking-[0.03em]',
-          'bg-umberbg text-umber',
-          className,
-        )}
-      >
-        Escalated
-      </span>
-    );
-  }
-
-  return (
-    <StatusBadge
-      status={statusToVariant[status]}
-      label={status}
-      className={className}
-    />
-  );
+  return <StatusBadge entity="leaveStatus" code={status} className={className} />;
 }

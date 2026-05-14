@@ -1,5 +1,8 @@
 /**
- * Payroll contract — Phase 4.
+ * Payroll contract.
+ *
+ * v2: All IDs are INT; status fields are INT codes.
+ * §3.5 payroll_run.status_id / payslip.status_id: 1=Draft, 2=Review, 3=Finalised, 4=Reversed.
  *
  * Endpoints (docs/HRMS_API.md § 8):
  *   POST /payroll/runs                              A-12 / P-03   Admin / PO
@@ -31,6 +34,9 @@
 
 import { z } from 'zod';
 import {
+  EmployeeCodeSchema,
+  IdParamSchema,
+  IdSchema,
   ISODateOnlySchema,
   ISODateSchema,
   PaginationQuerySchema,
@@ -45,18 +51,26 @@ import {
  */
 const PaiseSchema = z.number().int().nonnegative().max(1_00_00_00_00 * 100);
 
-// ── Run + payslip lifecycle ─────────────────────────────────────────────────
+// ── Run + payslip lifecycle (§3.5) ─────────────────────────────────────────
 
-export const PayrollRunStatusSchema = z.enum(['Draft', 'Review', 'Finalised', 'Reversed']);
-export type PayrollRunStatus = z.infer<typeof PayrollRunStatusSchema>;
+/** 1=Draft, 2=Review, 3=Finalised, 4=Reversed. */
+export const PayrollRunStatusSchema = z.number().int().min(1).max(4);
+/** 1=Draft, 2=Review, 3=Finalised, 4=Reversed. */
+export const PayslipStatusSchema = z.number().int().min(1).max(4);
 
-export const PayslipStatusSchema = z.enum(['Draft', 'Review', 'Finalised', 'Reversed']);
-export type PayslipStatus = z.infer<typeof PayslipStatusSchema>;
+export const PayrollRunStatus = {
+  Draft: 1,
+  Review: 2,
+  Finalised: 3,
+  Reversed: 4,
+} as const;
+export type PayrollRunStatusValue =
+  (typeof PayrollRunStatus)[keyof typeof PayrollRunStatus];
 
 // ── Payroll run — full + summary ────────────────────────────────────────────
 
 export const PayrollRunSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: z.string(), // RUN-YYYY-MM
   month: z.number().int().min(1).max(12),
   year: z.number().int().min(2000).max(2999),
@@ -65,13 +79,13 @@ export const PayrollRunSchema = z.object({
   /** Effective dates of the period — server computes from month + year + holidays. */
   periodStart: ISODateOnlySchema,
   periodEnd: ISODateOnlySchema,
-  initiatedBy: z.string(),
+  initiatedBy: IdSchema,
   initiatedByName: z.string(),
   initiatedAt: ISODateSchema,
-  finalisedBy: z.string().nullable(),
+  finalisedBy: IdSchema.nullable(),
   finalisedByName: z.string().nullable(),
   finalisedAt: ISODateSchema.nullable(),
-  reversedBy: z.string().nullable(),
+  reversedBy: IdSchema.nullable(),
   reversedByName: z.string().nullable(),
   reversedAt: ISODateSchema.nullable(),
   reversalReason: z.string().nullable(),
@@ -81,8 +95,12 @@ export const PayrollRunSchema = z.object({
   totalLopPaise: PaiseSchema,
   totalTaxPaise: PaiseSchema,
   totalNetPaise: PaiseSchema,
+  /** Count of payslips with lopDays > 0 (BL-024). */
+  lopCount: z.number().int().min(0),
+  /** Count of mid-month joiners (workingDays < run.workingDays). */
+  proRatedCount: z.number().int().min(0),
   /** Set on reversal records. Null on originals. */
-  reversalOfRunId: z.string().nullable(),
+  reversalOfRunId: IdSchema.nullable(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,
@@ -108,13 +126,13 @@ export type PayrollRunSummary = z.infer<typeof PayrollRunSummarySchema>;
 // ── Payslip — full + summary ────────────────────────────────────────────────
 
 export const PayslipSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: z.string(), // P-YYYY-MM-NNNN
-  runId: z.string(),
+  runId: IdSchema,
   runCode: z.string(),
-  employeeId: z.string(),
+  employeeId: IdSchema,
   employeeName: z.string(),
-  employeeCode: z.string(),
+  employeeCode: EmployeeCodeSchema,
   designation: z.string().nullable(),
   department: z.string().nullable(),
   month: z.number().int().min(1).max(12),
@@ -127,27 +145,38 @@ export const PayslipSchema = z.object({
   /** Days actually worked — used for proration on mid-month joiners/exits (BL-036). */
   daysWorked: z.number().int().min(0).max(31),
   lopDays: z.number().int().min(0).max(31),
-  /** Snapshot of the salary structure applied — taken from the latest
-      `effectiveFrom <= periodStart` (BL-030). */
-  basicPaise: PaiseSchema,
-  allowancesPaise: PaiseSchema,
+  /**
+   * MONEY FIELDS — nullable for hardening (see canSeePayslipMoney). A
+   * Manager viewing a subordinate's payslip gets these as null; Admin,
+   * PayrollOfficer, and the employee themselves see real numbers.
+   * Snapshot of the salary structure applied — taken from the latest
+   * `effectiveFrom <= periodStart` (BL-030).
+   */
+  basicPaise: PaiseSchema.nullable(),
+  allowancesPaise: PaiseSchema.nullable(),
   /** Pro-rated amount actually earned this period (BL-036). */
-  grossPaise: PaiseSchema,
+  grossPaise: PaiseSchema.nullable(),
   /** Loss of pay deduction (BL-035). */
-  lopDeductionPaise: PaiseSchema,
+  lopDeductionPaise: PaiseSchema.nullable(),
   /** Reference figure computed from `gross × standardRate` (BL-036a). */
-  referenceTaxPaise: PaiseSchema,
+  referenceTaxPaise: PaiseSchema.nullable(),
   /** Final tax — entered by PO during Review. Defaults to referenceTaxPaise. */
-  finalTaxPaise: PaiseSchema,
+  finalTaxPaise: PaiseSchema.nullable(),
   /** Standard non-tax deductions (PF, professional tax, etc.). */
-  otherDeductionsPaise: PaiseSchema,
+  otherDeductionsPaise: PaiseSchema.nullable(),
   /** Net pay = gross − lopDeduction − finalTax − otherDeductions. */
-  netPayPaise: PaiseSchema,
+  netPayPaise: PaiseSchema.nullable(),
   finalisedAt: ISODateSchema.nullable(),
+  /** Encashment days paid in this payslip (BL-LE-09). 0 if no encashment. */
+  encashmentDays: z.number().int().min(0).default(0),
+  /** Encashment amount in paise (BL-LE-08). Adds to gross — null when redacted. */
+  encashmentPaise: z.number().int().min(0).nullable().default(0),
+  /** FK to the encashment record paid in this payslip. Null for payslips without encashment. */
+  encashmentId: IdSchema.nullable().default(null),
   /** Set on reversal records — links back to the original payslip. */
-  reversalOfPayslipId: z.string().nullable(),
+  reversalOfPayslipId: IdSchema.nullable(),
   /** Set on the original payslip when a reversal exists. */
-  reversedByPayslipId: z.string().nullable(),
+  reversedByPayslipId: IdSchema.nullable(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,
@@ -196,7 +225,7 @@ export type CreatePayrollRunResponse = z.infer<typeof CreatePayrollRunResponseSc
 
 export const PayrollRunListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
-  status: PayrollRunStatusSchema.optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
 });
 export type PayrollRunListQuery = z.infer<typeof PayrollRunListQuerySchema>;
 
@@ -208,10 +237,15 @@ export type PayrollRunListResponse = z.infer<typeof PayrollRunListResponseSchema
 
 // ── GET /payroll/runs/{id} ──────────────────────────────────────────────────
 
+/**
+ * Run detail returns only the run summary now. Payslips are fetched via the
+ * paginated GET /payslips?runId=X endpoint so large runs don't ship 1000+
+ * line items in one response. Aggregate totals + lopCount / proRatedCount
+ * already live on the run.
+ */
 export const PayrollRunDetailResponseSchema = z.object({
   data: z.object({
     run: PayrollRunSchema,
-    payslips: z.array(PayslipSummarySchema),
   }),
 });
 export type PayrollRunDetailResponse = z.infer<typeof PayrollRunDetailResponseSchema>;
@@ -241,7 +275,7 @@ export type FinaliseRunResponse = z.infer<typeof FinaliseRunResponseSchema>;
 
 /** Carried in `error.details` when BL-034 fires on the losing caller. */
 export const RunAlreadyFinalisedDetailsSchema = z.object({
-  winnerId: z.string(),
+  winnerId: IdSchema,
   winnerName: z.string(),
   winnerAt: ISODateSchema,
 });
@@ -272,10 +306,10 @@ export type ReverseRunResponse = z.infer<typeof ReverseRunResponseSchema>;
 export const PayslipListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),
-  employeeId: z.string().optional(),
-  status: PayslipStatusSchema.optional(),
+  employeeId: IdParamSchema.optional(),
+  status: z.coerce.number().int().min(1).max(4).optional(),
   /** Filter to a single payroll run (BUG-PAY-004 fix). */
-  runId: z.string().optional(),
+  runId: IdParamSchema.optional(),
   /** Filter to reversal records only (or originals only). */
   isReversal: z.coerce.boolean().optional(),
 });
@@ -298,7 +332,7 @@ export type PayslipDetailResponse = z.infer<typeof PayslipDetailResponseSchema>;
 
 /**
  * BL-036a — only PO (and Admin) can edit the final tax, only while the
- * parent run is `Review`. Recomputes net = gross − lop − finalTax − other.
+ * parent run is `Review` (status=2). Recomputes net = gross − lop − finalTax − other.
  */
 export const UpdatePayslipTaxRequestSchema = z.object({
   finalTaxPaise: PaiseSchema,
@@ -312,13 +346,13 @@ export type UpdatePayslipTaxResponse = z.infer<typeof UpdatePayslipTaxResponseSc
 // ── Reversal history (A-24 / P-07) ──────────────────────────────────────────
 
 export const ReversalHistoryItemSchema = z.object({
-  reversalRunId: z.string(),
+  reversalRunId: IdSchema,
   reversalRunCode: z.string(),
-  originalRunId: z.string(),
+  originalRunId: IdSchema,
   originalRunCode: z.string(),
   month: z.number().int().min(1).max(12),
   year: z.number().int().min(2000).max(2999),
-  reversedBy: z.string(),
+  reversedBy: IdSchema,
   reversedByName: z.string(),
   reversedAt: ISODateSchema,
   reason: z.string(),
@@ -336,9 +370,8 @@ export type ReversalHistoryResponse = z.infer<typeof ReversalHistoryResponseSche
 // ── Tax settings (A-17) ─────────────────────────────────────────────────────
 
 /**
- * Gross-taxable-income basis options — the definition used to compute the
- * reference figure on each payslip. Stored as Configuration key
- * `TAX_GROSS_TAXABLE_BASIS`.
+ * Gross-taxable-income basis — stored as Configuration key
+ * `TAX_GROSS_TAXABLE_BASIS` (a JSON string value; not a DB enum/master).
  *
  * v1: stored + displayed but the payroll engine still uses `gross × rate`
  * unconditionally. The branch will be wired in v2 once the slab engine lands.

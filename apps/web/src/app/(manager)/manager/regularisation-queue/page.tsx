@@ -13,15 +13,18 @@
  *   5. Actions cell: stacked Approve + Reject buttons + audit italic subtext
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
-import type { RegStatus } from '@nexora/contracts/attendance';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
+import { REG_STATUS, ROUTED_TO } from '@/lib/status/maps';
+import type { RegStatusValue } from '@nexora/contracts/attendance';
 
-type FilterStatus = 'all' | RegStatus;
+type FilterStatus = 'all' | RegStatusValue;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -67,13 +70,23 @@ export default function ManagerRegularisationQueuePage() {
     toDate: '',
   });
 
+  // Server-side cursor pagination; resets on filter change.
+  const pager = useCursorPagination({
+    pageSize: 20,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+  });
   const query = {
-    ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatus } : {}),
+    ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    limit: pager.pageSize,
+    cursor: pager.cursor,
   };
 
   const { data, isLoading, isError, error, refetch } = useRegularisations(query);
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
 
   const rows = data?.data ?? [];
 
@@ -91,16 +104,16 @@ export default function ManagerRegularisationQueuePage() {
   // Pending-first sort
   const sorted = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
-      if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-      if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+      if (a.status === REG_STATUS.Pending && b.status !== REG_STATUS.Pending) return -1;
+      if (a.status !== REG_STATUS.Pending && b.status === REG_STATUS.Pending) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [filteredRows]);
 
-  const pendingCount = rows.filter((r) => r.status === 'Pending').length;
-  const approvedCount = rows.filter((r) => r.status === 'Approved').length;
-  const rejectedCount = rows.filter((r) => r.status === 'Rejected').length;
-  const adminRoutedCount = rows.filter((r) => r.routedTo === 'Admin').length;
+  const pendingCount = rows.filter((r) => r.status === REG_STATUS.Pending).length;
+  const approvedCount = rows.filter((r) => r.status === REG_STATUS.Approved).length;
+  const rejectedCount = rows.filter((r) => r.status === REG_STATUS.Rejected).length;
+  const adminRoutedCount = rows.filter((r) => r.routedToId === ROUTED_TO.Admin).length;
 
   const handleApply = () => {
     setAppliedFilters({
@@ -170,13 +183,13 @@ export default function ManagerRegularisationQueuePage() {
           <select
             id="mgr-reg-status"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+            onChange={(e) => setStatusFilter(e.target.value === 'all' ? 'all' : Number(e.target.value) as RegStatusValue)}
             className="border border-sage/50 rounded-lg px-3 py-2 text-sm text-charcoal bg-white focus:outline-none focus:ring-2 focus:ring-forest/30"
           >
             <option value="all">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value={REG_STATUS.Pending}>Pending</option>
+            <option value={REG_STATUS.Approved}>Approved</option>
+            <option value={REG_STATUS.Rejected}>Rejected</option>
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -276,9 +289,9 @@ export default function ManagerRegularisationQueuePage() {
                 ) : (
                   sorted.map((r) => {
                     const initials = r.employeeName.slice(0, 2).toUpperCase();
-                    const isPending = r.status === 'Pending';
-                    const isManagerHandled = r.routedTo === 'Manager';
-                    const isAdminRouted = r.routedTo === 'Admin';
+                    const isPending = r.status === REG_STATUS.Pending;
+                    const isManagerHandled = r.routedToId === ROUTED_TO.Manager;
+                    const isAdminRouted = r.routedToId === ROUTED_TO.Admin;
 
                     return (
                       <tr
@@ -329,7 +342,7 @@ export default function ManagerRegularisationQueuePage() {
                           {isAdminRouted ? (
                             <span className="bg-sage/30 text-slate text-xs font-bold px-2 py-1 rounded">Admin Routed</span>
                           ) : (
-                            <RegularisationStatusBadge status={r.status} routedTo={r.routedTo} />
+                            <RegularisationStatusBadge status={r.status} routedToId={r.routedToId} />
                           )}
                         </td>
                         <td className="px-4 py-4">
@@ -343,7 +356,7 @@ export default function ManagerRegularisationQueuePage() {
                                 onDecision={() => refetch()}
                               />
                               <p className="text-xs text-slate italic">
-                                Audit: Original record preserved per BL-007.
+                                Audit: Original record preserved.
                               </p>
                             </div>
                           ) : (
@@ -361,6 +374,16 @@ export default function ManagerRegularisationQueuePage() {
                 )}
               </tbody>
             </table>
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={rows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+            />
           </div>
         )}
       </div>

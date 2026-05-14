@@ -122,11 +122,13 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>;
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  Admin: '/admin/dashboard',
-  Manager: '/manager/dashboard',
-  Employee: '/employee/dashboard',
-  PayrollOfficer: '/payroll/dashboard',
+import { ROLE_ID } from '@/lib/status/maps';
+
+const ROLE_DASHBOARD: Record<number, string> = {
+  [ROLE_ID.Admin]: '/admin/dashboard',
+  [ROLE_ID.Manager]: '/manager/dashboard',
+  [ROLE_ID.Employee]: '/employee/dashboard',
+  [ROLE_ID.PayrollOfficer]: '/payroll/dashboard',
 };
 
 // ── Main form (needs searchParams) ───────────────────────────────────────────
@@ -156,7 +158,7 @@ function FirstLoginForm() {
         newPassword: data.newPassword,
       });
       // Session cookie is now set — redirect to role dashboard
-      const destination = ROLE_DASHBOARD[result.data.role] ?? '/employee/dashboard';
+      const destination = ROLE_DASHBOARD[result.data.roleId] ?? '/employee/dashboard';
       router.push(destination);
     } catch (err) {
       if (err instanceof ApiError) {

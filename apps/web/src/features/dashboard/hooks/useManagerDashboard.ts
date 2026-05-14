@@ -5,10 +5,12 @@
  *
  * KPI sources:
  *   My Team:            useTeam(me.id)
- *   Pending Approvals:  useLeaveList({ status: 'Pending', approverId: me.id })
+ *   Pending Approvals:  useLeaveList({ status: 1 })
  *   Late Marks (month): useAttendanceList('team', { from: monthStart, to: today })
  *                       → client-side count of records where late === true
- *   Review Cycle:       useCycles({ status: 'Open', limit: 1 })
+ *   Review Cycle:       useCycles({ status: 1, limit: 1 }) — 1=Open
+ *
+ * v2: me.id is number, status codes are INT.
  */
 
 import { useMemo } from 'react';
@@ -17,6 +19,7 @@ import { useTeam } from '@/lib/hooks/useEmployees';
 import { useLeaveList } from '@/lib/hooks/useLeave';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { useCycles, useReviews } from '@/lib/hooks/usePerformance';
+import { LEAVE_STATUS, ROUTED_TO } from '@/lib/status/maps';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -29,10 +32,10 @@ function monthStartISO(): string {
 
 export function useManagerDashboard() {
   const me = useMe();
-  const myId = me.data?.data?.user?.id ?? '';
+  const myId: number | undefined = me.data?.data?.user?.id;
 
-  const team = useTeam(myId);
-  const pendingLeave = useLeaveList({ status: 'Pending' });
+  const team = useTeam(myId ?? 0);
+  const pendingLeave = useLeaveList({ status: LEAVE_STATUS.Pending });
 
   const today = todayISO();
   const monthStart = monthStartISO();
@@ -42,7 +45,7 @@ export function useManagerDashboard() {
     to: today,
   });
 
-  const openCycles = useCycles({ status: 'Open' });
+  const openCycles = useCycles({ status: 1 }); // 1 = Open
 
   // Reviews where I am the manager — my direct reports' pending manager ratings
   const myReviews = useReviews({ managerId: myId });
@@ -50,24 +53,23 @@ export function useManagerDashboard() {
   // Client-side: count late marks for my team this month
   const lateMarkCount = useMemo(() => {
     const records = teamAttendance.data?.data ?? [];
-    return records.filter((r: { late?: boolean }) => r.late).length;
+    return records.filter((r) => r.late).length;
   }, [teamAttendance.data]);
 
   // Today's attendance for team panel
   const teamToday = useMemo(() => {
     const records = teamAttendance.data?.data ?? [];
-    return records.filter((r: { date?: string }) => r.date === today);
+    return records.filter((r) => r.date === today);
   }, [teamAttendance.data, today]);
 
   // Pending approvals scoped to my queue
   const pendingMine = useMemo(() => {
     const all = pendingLeave.data?.data ?? [];
-    // If approverId filter isn't supported, client-filter
+    // Client-filter to approvals routed to Manager (routedToId=1)
     return all.filter(
-      (r: { approverId?: string | null; routedTo?: string }) =>
-        r.approverId === myId || r.routedTo === 'Manager',
+      (r) => r.routedToId === ROUTED_TO.Manager,
     );
-  }, [pendingLeave.data, myId]);
+  }, [pendingLeave.data]);
 
   const activeCycle = openCycles.data?.data?.[0] ?? null;
 
@@ -75,8 +77,7 @@ export function useManagerDashboard() {
   const pendingReviews = useMemo(() => {
     const all = myReviews.data?.data ?? [];
     return all.filter(
-      (r: { managerRating?: number | null; selfRating?: number | null }) =>
-        r.selfRating != null && r.managerRating == null,
+      (r) => r.selfRating != null && r.managerRating == null,
     );
   }, [myReviews.data]);
 
@@ -112,7 +113,7 @@ export function useManagerDashboard() {
 
     // My own goals for the goals panel
     myGoalReview: myReviews.data?.data?.find(
-      (r: { employeeId?: string }) => r.employeeId === myId,
+      (r) => r.employeeId === myId,
     ) ?? null,
   };
 }

@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { PayrollRunStatusBadge } from './PayrollRunStatusBadge';
 import { MoneyDisplay } from './MoneyDisplay';
+import { PAYROLL_STATUS } from '@/lib/status/maps';
 import type { PayrollRun } from '@nexora/contracts/payroll';
 
 const MONTH_NAMES = [
@@ -20,7 +21,7 @@ interface RunSummaryCardProps {
  * Prototype reference: prototype/admin/payroll-run-detail.html — "Summary Stat Cards".
  */
 export function RunSummaryStatStrip({ run }: RunSummaryCardProps) {
-  const isEstimated = run.status === 'Draft' || run.status === 'Review';
+  const isEstimated = run.status === PAYROLL_STATUS.Draft || run.status === PAYROLL_STATUS.Review;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 mb-8">
@@ -52,7 +53,7 @@ export function RunSummaryStatStrip({ run }: RunSummaryCardProps) {
       </div>
 
       {/* Net Total */}
-      <div className={clsx('bg-white rounded-xl shadow-sm border p-5', run.status === 'Finalised' ? 'border-richgreen/30 bg-greenbg/10' : 'border-sage/30')}>
+      <div className={clsx('bg-white rounded-xl shadow-sm border p-5', run.status === PAYROLL_STATUS.Finalised ? 'border-richgreen/30 bg-greenbg/10' : 'border-sage/30')}>
         <p className="text-xs text-slate font-semibold uppercase tracking-wider mb-2">Net Total</p>
         {isEstimated ? (
           <>
@@ -84,7 +85,7 @@ export function RunSummaryDetail({
   run,
   proRatedCount = 0,
 }: RunSummaryCardProps & { proRatedCount?: number }) {
-  const isEstimated = run.status === 'Draft' || run.status === 'Review';
+  const isEstimated = run.status === PAYROLL_STATUS.Draft || run.status === PAYROLL_STATUS.Review;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-5">

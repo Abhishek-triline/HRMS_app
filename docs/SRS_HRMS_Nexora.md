@@ -999,5 +999,37 @@ The following are explicitly out of scope for v1 and tracked as future-phase wor
 
 ---
 
+## § 7  Leave Encashment Business Rules (BL-LE-01..14)
+
+These rules govern the Leave Encashment feature added in v1.1.
+
+| Rule ID | Category | Description |
+|---------|----------|-------------|
+| BL-LE-01 | Eligibility | Only **Annual** (Earned) leave may be encashed. Sick, Casual, Maternity, Paternity, and Compensatory leave types are ineligible. |
+| BL-LE-02 | Limit | At AdminFinalise the server clamps `daysApproved` to `floor(daysRemaining × maxPercent ÷ 100)`. Default `maxPercent = 50`. The employee's `daysRequested` is advisory; the server is the source of truth. |
+| BL-LE-03 | Quota | An employee may have at most **one** encashment in status `ManagerApproved`, `AdminFinalised`, or `Paid` per calendar year. Multiple `Pending` or `Rejected`/`Cancelled` rows are allowed. The constraint is enforced at the application layer (MySQL cannot express a partial unique index). |
+| BL-LE-04 | Window | Encashment requests may only be submitted within a configurable window. Default: **December 1 to January 15** of the following year (crosses the calendar year boundary). Configurable via `ENCASHMENT_WINDOW_START_MONTH`, `ENCASHMENT_WINDOW_END_MONTH`, `ENCASHMENT_WINDOW_END_DAY` in the `configuration` table. Submissions outside the window return `409 ENCASHMENT_OUT_OF_WINDOW`. |
+| BL-LE-05 | Routing | Encashment approval mirrors the leave routing for Annual leave. If the employee has an Active reporting Manager, the request goes to that Manager first (`Pending → ManagerApproved → AdminFinalised`). If there is no Manager, or the Manager is Exited/On-Leave, the request routes directly to Admin. |
+| BL-LE-06 | Balance | The Annual leave balance (`LeaveBalance.daysRemaining` and `daysEncashed`) is decremented **at AdminFinalise**, not at submit time. If an `AdminFinalised` encashment is subsequently cancelled, the balance is restored in the same transaction. Balance is NOT restored on payslip reversal (BL-LE-11). |
+| BL-LE-07 | Rate | `ratePerDayPaise = (basicPaise + daPaise) ÷ workingDaysInPayingMonth`. DA is optional; if `daPaise` is null or zero it is treated as zero. At AdminFinalise an approximate rate is locked using `APPROX_WORKING_DAYS = 26`. At payroll-engine time the actual working-days count for the paying month is used and the locked rate/amount are updated to the actual values. |
+| BL-LE-08 | Snapshot | `ratePerDayPaise` and `totalAmountPaise` are locked on the `LeaveEncashment` row at AdminFinalise. These serve as the committed liability. The payroll engine may update them to the actual paying-month values when it marks the encashment `Paid`. |
+| BL-LE-09 | Payroll | During monthly payroll finalisation the engine queries `AdminFinalised` encashments where `year = run.year - 1` and `status = AdminFinalised`. Each qualifying encashment is included in the employee's payslip: `encashmentPaise` is added to `grossPaise` before tax. The encashment is marked `Paid` (with `paidInPayslipId`) inside the same transaction as payslip creation. |
+| BL-LE-10 | Audit | Every state transition on a `LeaveEncashment` row writes an append-only `audit_log` entry with actor, timestamp, action (e.g. `leave.encashment.submit`, `leave.encashment.approve`, `leave.encashment.finalise`, `leave.encashment.pay`, `leave.encashment.reject`, `leave.encashment.cancel`), before snapshot, and after snapshot. |
+| BL-LE-11 | Reversal | When a payslip that carried an encashment (`encashmentId != null`) is reversed, the reversal payslip carries a **negative** `encashmentPaise`. The encashment record receives a `leave.encashment.payment.reverse` audit entry. The Annual leave balance is NOT restored — the encashment is considered consumed. |
+| BL-LE-12 | Tax | Encashment payout is added to `grossPaise` before tax computation. It is therefore taxable income in the month it is paid. Tax calculation remains manual in v1 (BL-036a applies). |
+| BL-LE-13 | Exited | An employee in `Exited` status cannot submit an encashment request. Admin cannot finalise an encashment if the employee's status has transitioned to `Exited` between submission and finalisation. Both checks return `409 VALIDATION_FAILED` with `ruleId: BL-LE-13`. |
+| BL-LE-14 | Escalation | Encashment requests in `Pending` or `ManagerApproved` status older than the configured `escalationPeriodDays` (default 5 working days) are flipped to `Escalated` status and a notification is sent to all Admin users. The sweep runs hourly alongside the leave escalation sweep. NEVER auto-approves. |
+
+### Configuration keys (Leave Encashment)
+
+| Key | Default | Type | Description |
+|-----|---------|------|-------------|
+| `ENCASHMENT_WINDOW_START_MONTH` | `12` | int | Month number (1-12) when the submission window opens |
+| `ENCASHMENT_WINDOW_END_MONTH` | `1` | int | Month number when the submission window closes |
+| `ENCASHMENT_WINDOW_END_DAY` | `15` | int | Day of month (inclusive) when the window closes |
+| `ENCASHMENT_MAX_PERCENT` | `50` | int | Maximum percentage of remaining Annual balance that can be encashed |
+
+---
+
 *End of Document*  
-*Version 1.0 — May 2026 — Nexora Technologies Pvt. Ltd.*
+*Version 1.1 — May 2026 — Nexora Technologies Pvt. Ltd.*

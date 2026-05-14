@@ -18,7 +18,12 @@
  */
 
 import { z } from 'zod';
-import { EmployeeStatusSchema, RoleSchema, EmployeeCodeSchema } from './common.js';
+import {
+  EmployeeCodeSchema,
+  EmployeeStatusSchema,
+  IdSchema,
+  RoleIdSchema,
+} from './common.js';
 
 // ── Password policy ─────────────────────────────────────────────────────────
 
@@ -30,15 +35,15 @@ const passwordPolicy = z
 // ── Public user payload (returned by /auth/me and /auth/login) ──────────────
 
 export const AuthUserSchema = z.object({
-  id: z.string(),
+  id: IdSchema,
   code: EmployeeCodeSchema,
   email: z.string().email(),
   name: z.string(),
-  role: RoleSchema,
+  roleId: RoleIdSchema,
   status: EmployeeStatusSchema,
   department: z.string().nullable(),
   designation: z.string().nullable(),
-  reportingManagerId: z.string().nullable(),
+  reportingManagerId: IdSchema.nullable(),
   mustResetPassword: z.boolean(),
 });
 
@@ -56,7 +61,7 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export const LoginResponseSchema = z.object({
   data: z.object({
     user: AuthUserSchema,
-    role: RoleSchema,
+    roleId: RoleIdSchema,
   }),
 });
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
@@ -107,7 +112,7 @@ export type FirstLoginSetPasswordRequest = z.infer<typeof FirstLoginSetPasswordR
 export const FirstLoginSetPasswordResponseSchema = z.object({
   data: z.object({
     user: AuthUserSchema,
-    role: RoleSchema,
+    roleId: RoleIdSchema,
   }),
 });
 export type FirstLoginSetPasswordResponse = z.infer<typeof FirstLoginSetPasswordResponseSchema>;
@@ -117,7 +122,7 @@ export type FirstLoginSetPasswordResponse = z.infer<typeof FirstLoginSetPassword
 export const AuthMeResponseSchema = z.object({
   data: z.object({
     user: AuthUserSchema,
-    role: RoleSchema,
+    roleId: RoleIdSchema,
     permissions: z.array(z.string()),
   }),
 });

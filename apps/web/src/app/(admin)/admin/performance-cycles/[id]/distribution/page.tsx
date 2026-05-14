@@ -75,9 +75,10 @@ function downloadCsv(filename: string, rows: Array<Array<string | number>>): voi
 export default function DistributionReportPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const idNum = Number(id);
 
-  const { data: cycleData, isLoading: cycleLoading } = useCycle(id);
-  const { data, isLoading, isError } = useDistribution(id);
+  const { data: cycleData, isLoading: cycleLoading } = useCycle(idNum);
+  const { data, isLoading, isError } = useDistribution(idNum);
   const { data: allCycles } = useCycles({});
 
   const isLoadingAny = isLoading || cycleLoading;

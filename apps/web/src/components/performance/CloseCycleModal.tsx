@@ -18,7 +18,7 @@ interface CloseCycleModalProps {
   isOpen: boolean;
   onClose: () => void;
   cycle: Pick<PerformanceCycle, 'id' | 'code' | 'version'>;
-  onConfirm: (cycleId: string, version: number) => Promise<void>;
+  onConfirm: (cycleId: number, version: number) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -83,7 +83,7 @@ export function CloseCycleModal({
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <p className="text-sm text-crimson leading-relaxed">
-            <strong>This action is irreversible (BL-041).</strong> Closing this cycle will lock all
+            <strong>This action is irreversible.</strong> Closing this cycle will lock all
             final ratings immediately. No edits — by any employee, manager, or admin — will be
             possible after closure. All pending self-ratings and manager ratings will be frozen
             in their current state.

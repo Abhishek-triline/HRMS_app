@@ -8,7 +8,7 @@ import { useMe } from '@/lib/hooks/useAuth';
 
 export default function PayrollApplyLeavePage() {
   const { data: me, isLoading: meLoading } = useMe();
-  const employeeId = me?.data?.user?.id ?? '';
+  const employeeId = me?.data?.user?.id ?? 0;
   const typesQuery = useLeaveTypes();
   const balancesQuery = useLeaveBalances(employeeId);
 

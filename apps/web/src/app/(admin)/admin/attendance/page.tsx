@@ -17,17 +17,21 @@
  * (prototype/admin/my-attendance.html — A-10).
  */
 
-import { useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/Spinner';
-import { useAttendanceList } from '@/lib/hooks/useAttendance';
+import { CursorPaginator } from '@/components/ui/CursorPaginator';
+import { useAttendanceList, useAttendanceStats } from '@/lib/hooks/useAttendance';
+import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
+import { useDepartments } from '@/lib/hooks/useMasters';
 import { MyAttendanceView } from '@/features/attendance/components/MyAttendanceView';
-import type { AttendanceStatus } from '@nexora/contracts/attendance';
+import type { AttendanceStatusValue } from '@nexora/contracts/attendance';
+import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '';
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
@@ -37,13 +41,12 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const DEPARTMENTS = ['All Departments', 'Engineering', 'Design', 'Finance', 'Operations', 'HR'];
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status, late }: { status: AttendanceStatus; late?: boolean }) {
-  if (late && status === 'Present') {
+function StatusBadge({ status, late }: { status: AttendanceStatusValue; late?: boolean }) {
+  if (late && status === ATTENDANCE_STATUS.Present) {
     return (
       <div className="flex items-center gap-1">
         <span className="bg-greenbg text-richgreen text-xs font-bold px-2 py-0.5 rounded">Present</span>
@@ -51,15 +54,15 @@ function StatusBadge({ status, late }: { status: AttendanceStatus; late?: boolea
       </div>
     );
   }
-  const map: Record<AttendanceStatus, string> = {
-    Present: 'bg-greenbg text-richgreen',
-    Absent: 'bg-crimsonbg text-crimson',
-    'On-Leave': 'bg-umberbg text-umber',
-    'Weekly-Off': 'bg-gray-100 text-slate',
-    Holiday: 'bg-softmint text-forest',
+  const map: Record<number, string> = {
+    [ATTENDANCE_STATUS.Present]: 'bg-greenbg text-richgreen',
+    [ATTENDANCE_STATUS.Absent]: 'bg-crimsonbg text-crimson',
+    [ATTENDANCE_STATUS.OnLeave]: 'bg-umberbg text-umber',
+    [ATTENDANCE_STATUS.WeeklyOff]: 'bg-gray-100 text-slate',
+    [ATTENDANCE_STATUS.Holiday]: 'bg-softmint text-forest',
   };
-  const label = status === 'On-Leave' ? 'On Leave' : status === 'Weekly-Off' ? 'Weekly Off' : status;
-  return <span className={`text-xs font-bold px-2 py-0.5 rounded ${map[status]}`}>{label}</span>;
+  const label = ATTENDANCE_STATUS_MAP[status]?.label ?? String(status);
+  return <span className={`text-xs font-bold px-2 py-0.5 rounded ${map[status] ?? ''}`}>{label}</span>;
 }
 
 // ── KPI Tile ───────────────────────────────────────────────────────────────────
@@ -81,66 +84,6 @@ function KpiTile({ label, value, subtitle, valueClass = 'text-charcoal' }: KpiTi
   );
 }
 
-// ── Paginator ─────────────────────────────────────────────────────────────────
-
-interface PaginatorProps {
-  page: number;
-  totalPages: number;
-  totalItems: number;
-  showing: number;
-  onChange: (p: number) => void;
-}
-
-function Paginator({ page, totalPages, totalItems, showing, onChange }: PaginatorProps) {
-  if (totalPages <= 1) {
-    return (
-      <div className="flex justify-between items-center px-5 py-3 border-t border-sage/20 text-xs text-slate">
-        <span>Showing {showing} of {totalItems} records</span>
-      </div>
-    );
-  }
-
-  const pages: number[] = [];
-  for (let i = 1; i <= Math.min(totalPages, 5); i++) pages.push(i);
-
-  return (
-    <div className="flex justify-between items-center px-5 py-3 border-t border-sage/20 text-xs text-slate">
-      <span>Showing {showing} of {totalItems} records</span>
-      <nav aria-label="Pagination" className="flex gap-1.5">
-        <button
-          onClick={() => onChange(Math.max(1, page - 1))}
-          disabled={page === 1}
-          className="border border-sage/50 px-3 py-1.5 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Previous page"
-        >
-          Prev
-        </button>
-        {pages.map((p) => (
-          <button
-            key={p}
-            onClick={() => onChange(p)}
-            aria-current={p === page ? 'page' : undefined}
-            className={`px-3 py-1.5 rounded ${p === page ? 'bg-forest text-white' : 'border border-sage/50 hover:bg-white'}`}
-          >
-            {p}
-          </button>
-        ))}
-        {totalPages > 5 && page < totalPages && (
-          <span className="px-2 py-1.5 text-slate">…</span>
-        )}
-        <button
-          onClick={() => onChange(Math.min(totalPages, page + 1))}
-          disabled={page === totalPages}
-          className="border border-sage/50 px-3 py-1.5 rounded hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Next page"
-        >
-          Next
-        </button>
-      </nav>
-    </div>
-  );
-}
-
 // ── Scope-router ───────────────────────────────────────────────────────────────
 
 /**
@@ -151,7 +94,7 @@ function Paginator({ page, totalPages, totalItems, showing, onChange }: Paginato
 function AdminAttendanceRouter() {
   const searchParams = useSearchParams();
   if (searchParams.get('scope') === 'me') {
-    return <MyAttendanceView />;
+    return <MyAttendanceView regularisationHref="/admin/regularisation" />;
   }
   return <OrgAttendancePage />;
 }
@@ -167,67 +110,66 @@ export default function AdminAttendancePage() {
 // ── Org-wide Page ──────────────────────────────────────────────────────────────
 
 function OrgAttendancePage() {
-  const today = new Date();
-
-  // Date picker: default to today, query month data then filter client-side
+  // Date picker: default to today.
   const [selectedDate, setSelectedDate] = useState(todayISO());
-  const [statusFilter, setStatusFilter] = useState<AttendanceStatus | ''>('');
-  const [deptFilter, setDeptFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<AttendanceStatusValue | 0>(0);
+  const [departmentId, setDepartmentId] = useState<number | 0>(0);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
 
-  // Derive month range from selected date
-  const [sy, sm] = selectedDate.split('-').map(Number);
-  const from = `${sy}-${String(sm).padStart(2, '0')}-01`;
-  const lastDay = new Date(sy, sm, 0).getDate();
-  const to = `${sy}-${String(sm).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const { data: departments = [] } = useDepartments();
 
-  const { data, isLoading, isError, error } = useAttendanceList('all', {
-    from,
-    to,
-    ...(statusFilter ? { status: statusFilter } : {}),
-    ...(deptFilter && deptFilter !== 'All Departments' ? { department: deptFilter } : {}),
+  // Server-side cursor pagination over the table. Filter changes reset to page 1.
+  const pager = useCursorPagination({
+    pageSize: PAGE_SIZE,
+    filtersKey: `${selectedDate}|${statusFilter}|${departmentId}`,
   });
 
-  // Client-side filter to the chosen day
-  const dayRows = useMemo(() => {
-    const rows = data?.data ?? [];
-    return rows.filter((r) => r.date === selectedDate);
-  }, [data, selectedDate]);
+  const { data, isLoading, isError, error } = useAttendanceList('all', {
+    date: selectedDate,
+    limit: pager.pageSize,
+    cursor: pager.cursor,
+    ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
+    ...(departmentId ? { departmentId } : {}),
+  });
 
-  // Apply text search
-  const filteredRows = useMemo(() => {
-    if (!search.trim()) return dayRows;
+  useEffect(() => {
+    if (data) pager.cacheNextCursor(data.nextCursor);
+  }, [data, pager]);
+
+  // Aggregate KPI counts come from a separate stats endpoint so they're
+  // accurate over the whole filtered set, not just the visible page.
+  const statsQuery = useAttendanceStats({
+    date: selectedDate,
+    ...(departmentId ? { departmentId } : {}),
+  });
+  const stats = statsQuery.data;
+
+  const pageRows = useMemo(() => data?.data ?? [], [data]);
+
+  // Client-side search narrows the visible page only — server doesn't yet
+  // support a name/code search filter. Acceptable since search is best-effort
+  // within the current page.
+  const visibleRows = useMemo(() => {
+    if (!search.trim()) return pageRows;
     const q = search.toLowerCase();
-    return dayRows.filter(
+    return pageRows.filter(
       (r) =>
         (r.employeeName ?? '').toLowerCase().includes(q) ||
         (r.employeeCode ?? '').toLowerCase().includes(q),
     );
-  // dayRows is stable because it's computed from data + selectedDate
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dayRows, search]);
+  }, [pageRows, search]);
 
-  // KPI counts from the day's slice
-  const kpiPresent = filteredRows.filter((r) => r.status === 'Present').length;
-  const kpiLeave = filteredRows.filter((r) => r.status === 'On-Leave').length;
-  const kpiAbsent = filteredRows.filter((r) => r.status === 'Absent').length;
-  const kpiLate = filteredRows.filter((r) => r.late).length;
-  // "Yet to check-in" = absent + no check-in (simple approximation)
-  const kpiYetToCheckIn = filteredRows.filter(
-    (r) => r.status === 'Absent' && !r.checkInTime,
-  ).length;
+  const total = stats?.total ?? 0;
+  const kpiPresent = stats?.present ?? 0;
+  const kpiLeave = stats?.onLeave ?? 0;
+  const kpiAbsent = stats?.absent ?? 0;
+  const kpiLate = stats?.late ?? 0;
+  const kpiYetToCheckIn = stats?.yetToCheckIn ?? 0;
+  const presentPct = total > 0 ? Math.round((kpiPresent / total) * 100) : 0;
 
-  const totalActive = filteredRows.length;
-  const presentPct = totalActive > 0 ? Math.round((kpiPresent / totalActive) * 100) : 0;
-
-  // Late threshold breaches this month (>= 3 late marks) — approximate from data
-  const lateThresholdBreachCount = 3; // placeholder; would need per-employee month counts
-
-  // Pagination
-  const totalItems = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Late threshold breaches this month (>= 3 late marks) — needs a separate
+  // monthly aggregate endpoint (v1.1 backlog). For now we just label the alert.
+  const lateThresholdBreachCount = kpiLate;
 
   const fmtDateDisplay = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-');
@@ -245,28 +187,31 @@ function OrgAttendancePage() {
           type="date"
           value={selectedDate}
           max={todayISO()}
-          onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
+          onChange={(e) => setSelectedDate(e.target.value)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         />
         <select
           id="admin-att-dept"
-          value={deptFilter}
-          onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
+          value={departmentId || ''}
+          onChange={(e) => setDepartmentId(e.target.value ? Number(e.target.value) : 0)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         >
-          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+          <option value="">All Departments</option>
+          {departments.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
         </select>
         <select
           id="admin-att-status"
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as AttendanceStatus | ''); setPage(1); }}
+          value={statusFilter || ''}
+          onChange={(e) => setStatusFilter(e.target.value ? Number(e.target.value) as AttendanceStatusValue : 0)}
           className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
         >
           <option value="">All Status</option>
-          <option value="Present">Present</option>
-          <option value="Absent">Absent</option>
-          <option value="On-Leave">On Leave</option>
-          <option value="Weekly-Off">Weekly Off</option>
+          <option value={ATTENDANCE_STATUS.Present}>Present</option>
+          <option value={ATTENDANCE_STATUS.Absent}>Absent</option>
+          <option value={ATTENDANCE_STATUS.OnLeave}>On Leave</option>
+          <option value={ATTENDANCE_STATUS.WeeklyOff}>Weekly Off</option>
         </select>
         <div className="ml-auto flex gap-2">
           <button className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite">Export CSV</button>
@@ -295,13 +240,13 @@ function OrgAttendancePage() {
         <KpiTile
           label="On Leave"
           value={kpiLeave}
-          subtitle={totalActive > 0 ? `${Math.round((kpiLeave / totalActive) * 100)}%` : '—'}
+          subtitle={total > 0 ? `${Math.round((kpiLeave / total) * 100)}%` : '—'}
           valueClass="text-umber"
         />
         <KpiTile
           label="Absent"
           value={kpiAbsent}
-          subtitle={totalActive > 0 ? `${Math.round((kpiAbsent / totalActive) * 100)}% · No check-in` : '—'}
+          subtitle={total > 0 ? `${Math.round((kpiAbsent / total) * 100)}% · No check-in` : '—'}
           valueClass="text-crimson"
         />
         <KpiTile
@@ -350,7 +295,17 @@ function OrgAttendancePage() {
           <h3 className="text-sm font-semibold text-charcoal">
             Attendance — {fmtDateDisplay(selectedDate)}
           </h3>
-          <span className="text-xs text-slate">{totalItems} records</span>
+          <span className="text-xs text-slate">{total} record{total !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="px-5 py-3 border-b border-sage/20">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search current page by name or EMP code…"
+            aria-label="Search by employee name or code (current page)"
+            className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+          />
         </div>
 
         {isLoading ? (
@@ -377,14 +332,14 @@ function OrgAttendancePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage/10 text-sm">
-                  {pageRows.length === 0 ? (
+                  {visibleRows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center text-sm text-slate py-10">
                         No records found for this date and filter.
                       </td>
                     </tr>
                   ) : (
-                    pageRows.map((r) => {
+                    visibleRows.map((r) => {
                       const initials = (r.employeeName ?? '?')
                         .split(' ')
                         .slice(0, 2)
@@ -395,7 +350,7 @@ function OrgAttendancePage() {
                         ? `${Math.floor(r.hoursWorkedMinutes / 60)}h ${r.hoursWorkedMinutes % 60}m`
                         : r.checkInTime && !r.checkOutTime
                           ? 'In progress'
-                          : '—';
+                          : '';
                       return (
                         <tr key={`${r.employeeId}-${r.date}`} className="hover:bg-offwhite/50 transition-colors">
                           <td className="px-5 py-3">
@@ -404,20 +359,20 @@ function OrgAttendancePage() {
                                 {initials}
                               </div>
                               <div>
-                                <div className="font-semibold text-charcoal">{r.employeeName ?? '—'}</div>
-                                <div className="text-xs text-slate">{r.employeeCode ?? '—'}</div>
+                                <div className="font-semibold text-charcoal">{r.employeeName ?? ''}</div>
+                                <div className="text-xs text-slate">{r.employeeCode ?? ''}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-slate">
-                            {(r as unknown as { department?: string }).department ?? '—'}
+                            {(r as unknown as { department?: string }).department ?? ''}
                           </td>
-                          <td className="px-4 py-3"><StatusBadge status={r.status} late={r.late} /></td>
+                          <td className="px-4 py-3"><StatusBadge status={r.status as AttendanceStatusValue} late={r.late} /></td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkInTime)}</td>
                           <td className="px-4 py-3 text-slate">{fmtTime(r.checkOutTime)}</td>
                           <td className="px-4 py-3 text-slate">{hours}</td>
                           <td className="px-4 py-3 text-slate">
-                            {(r as unknown as { lateThisMonth?: number }).lateThisMonth ?? '—'}
+                            {r.lateMonthCount}
                           </td>
                         </tr>
                       );
@@ -426,12 +381,16 @@ function OrgAttendancePage() {
                 </tbody>
               </table>
             </div>
-            <Paginator
-              page={page}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              showing={pageRows.length}
-              onChange={setPage}
+            <CursorPaginator
+              currentPage={pager.currentPage}
+              pageSize={pager.pageSize}
+              currentPageCount={pageRows.length}
+              hasMore={pager.hasMore}
+              highestReachablePage={pager.highestReachablePage}
+              onPageChange={pager.goToPage}
+              onPrev={pager.goPrev}
+              onNext={pager.goNext}
+              label={({ from, to }) => `Showing ${from}–${to} of ${total} records`}
             />
           </>
         )}

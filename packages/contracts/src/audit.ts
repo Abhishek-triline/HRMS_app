@@ -1,5 +1,22 @@
 /**
- * Audit Log contract — Phase 7.
+ * Audit Log contract.
+ *
+ * v2: All IDs are INT. Module is an FK to the `audit_modules` master table
+ * (frozen IDs per HRMS_Schema_v2_Plan §2). Actor role and target type are
+ * INT codes per §3.9:
+ *
+ *   actor_role_id (§3.9):
+ *     1=Employee, 2=Manager, 3=PayrollOfficer, 4=Admin, 99=unknown, 100=system.
+ *
+ *   target_type_id (§3.9):
+ *     1=Employee, 2=LeaveRequest, 3=LeaveEncashment, 4=AttendanceRecord,
+ *     5=RegularisationRequest, 6=PayrollRun, 7=Payslip, 8=PerformanceCycle,
+ *     9=PerformanceReview, 10=Goal, 11=Configuration, 12=SalaryStructure,
+ *     13=Holiday, 14=Notification.
+ *
+ *   module_id (master `audit_modules`):
+ *     1=auth, 2=employees, 3=leave, 4=payroll, 5=attendance, 6=performance,
+ *     7=notifications, 8=audit, 9=configuration.
  *
  * Endpoints (docs/HRMS_API.md § 12):
  *   GET /audit-logs   Admin only. Read-only, cursor-paginated.
@@ -8,59 +25,29 @@
  *   BL-047  Every state-changing action writes an append-only audit entry.
  *   BL-048  The DB enforces append-only via REVOKE UPDATE/DELETE on audit_log.
  *           There is NO POST, PUT, PATCH, or DELETE on this resource.
- *
- * Filters supported:
- *   actorId       — specific actor employee id
- *   actorRole     — one of the known role strings
- *   module        — top-level module group (auth|leave|attendance|payroll|performance|notifications|employees|system)
- *   action        — exact or partial action string (LIKE %q%)
- *   targetType    — entity type e.g. LeaveRequest, Employee
- *   targetId      — exact target id
- *   from / to     — ISO datetime boundaries (inclusive)
- *   q             — free-text search on action string (cheap LIKE)
  */
 
 import { z } from 'zod';
-import { ISODateSchema, PaginationQuerySchema } from './common.js';
+import { IdParamSchema, IdSchema, ISODateSchema, PaginationQuerySchema } from './common.js';
 
-// ── Audit modules enum ───────────────────────────────────────────────────────
+// ── Module / actor / target code schemas ────────────────────────────────────
 
-export const AuditModuleSchema = z.enum([
-  'auth',
-  'leave',
-  'attendance',
-  'payroll',
-  'performance',
-  'notifications',
-  'employees',
-  'configuration',
-  'system',
-]);
-export type AuditModule = z.infer<typeof AuditModuleSchema>;
-
-// ── Audit actor roles (superset of RoleSchema to include system + legacy strings) ──
-
-export const AuditActorRoleSchema = z.enum([
-  'Employee',
-  'Manager',
-  'PayrollOfficer',
-  'Admin',
-  'system',
-  'Approver',
-]);
-export type AuditActorRole = z.infer<typeof AuditActorRoleSchema>;
+export const AuditModuleIdSchema = z.number().int().min(1);
+export const AuditActorRoleIdSchema = z.number().int().min(1);
+export const AuditTargetTypeIdSchema = z.number().int().min(1);
 
 // ── AuditLogEntry — mirrors the audit_log table exactly ─────────────────────
 
 export const AuditLogEntrySchema = z.object({
-  id: z.string(),
-  actorId: z.string().nullable(),
-  actorRole: z.string(),
+  id: IdSchema,
+  actorId: IdSchema.nullable(),
+  actorRoleId: AuditActorRoleIdSchema,
   actorIp: z.string().nullable(),
   action: z.string(),
-  module: z.string(),
-  targetType: z.string().nullable(),
-  targetId: z.string().nullable(),
+  moduleId: AuditModuleIdSchema,
+  moduleName: z.string(),
+  targetTypeId: AuditTargetTypeIdSchema.nullable(),
+  targetId: IdSchema.nullable(),
   /** JSON snapshot before the mutation — null for creates. */
   before: z.unknown().nullable(),
   /** JSON snapshot after the mutation — null for deletes. */
@@ -73,26 +60,22 @@ export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
 
 export const AuditLogListQuerySchema = PaginationQuerySchema.extend({
   /** Filter to a specific actor by employee id. */
-  actorId: z.string().max(50).optional(),
-  /** Filter by actor role. */
-  actorRole: z.string().max(50).optional(),
-  /** Filter by top-level module group. */
-  module: z.string().max(50).optional(),
+  actorId: IdParamSchema.optional(),
+  /** Filter by actor role id (§3.9). */
+  actorRoleId: z.coerce.number().int().min(1).optional(),
+  /** Filter by audit_modules.id (1..9). */
+  moduleId: z.coerce.number().int().min(1).optional(),
   /** Filter by action string — substring match (LIKE %action%). */
   action: z.string().max(200).optional(),
-  /** Filter by target entity type. */
-  targetType: z.string().max(100).optional(),
+  /** Filter by target type id (§3.9). */
+  targetTypeId: z.coerce.number().int().min(1).optional(),
   /** Filter by exact target entity id. */
-  targetId: z.string().max(100).optional(),
+  targetId: IdParamSchema.optional(),
   /** Lower bound for createdAt (ISO 8601 datetime). */
   from: ISODateSchema.optional(),
   /** Upper bound for createdAt (ISO 8601 datetime). */
   to: ISODateSchema.optional(),
-  /**
-   * Free-text search — matches as a substring on the `action` field only.
-   * Identical to the `action` substring filter but exists as a separate query
-   * param so the UI can expose both (exact action filter + general search box).
-   */
+  /** Free-text search — matches as a substring on the `action` field only. */
   q: z.string().max(200).optional(),
 });
 export type AuditLogListQuery = z.infer<typeof AuditLogListQuerySchema>;

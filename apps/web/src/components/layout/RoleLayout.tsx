@@ -1,5 +1,6 @@
 import type { AuthUser } from '@nexora/contracts/auth';
-import type { Role } from '@nexora/contracts/common';
+import type { RoleKey } from './roleNavConfig';
+import { roleIdToKey } from './roleNavConfig';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { MobileDrawerWrapper } from './MobileDrawerWrapper';
@@ -17,8 +18,8 @@ interface RoleLayoutProps {
   hasUnread?: boolean;
 }
 
-/** Derive the notifications page path from the user's role. */
-function notificationsPath(role: Role): string {
+/** Derive the notifications page path from the user's role key. */
+function notificationsPath(role: RoleKey): string {
   switch (role) {
     case 'Admin':         return '/admin/notifications';
     case 'Manager':       return '/manager/notifications';
@@ -39,11 +40,11 @@ export function RoleLayout({
   currentPath,
   pageTitle,
 }: RoleLayoutProps) {
-  const role = user.role as Role;
+  const role = roleIdToKey(user.roleId);
   const notifHref = notificationsPath(role);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="fixed inset-0 flex overflow-hidden">
       {/* Skip-to-main link — WCAG 2.4.1 */}
       <a
         href="#main-content"

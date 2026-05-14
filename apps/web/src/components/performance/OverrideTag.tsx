@@ -30,7 +30,7 @@ export function OverrideTag({ show, className }: OverrideTagProps) {
         onBlur={() => setTooltipVisible(false)}
         tabIndex={0}
         role="note"
-        aria-label="Manager changed rating from employee self-rating (BL-040)"
+        aria-label="Manager changed rating from employee self-rating"
       >
         <svg
           className="w-2.5 h-2.5"
@@ -50,7 +50,7 @@ export function OverrideTag({ show, className }: OverrideTagProps) {
           role="tooltip"
           className="absolute bottom-full left-0 mb-1.5 z-10 w-56 bg-charcoal text-white text-xs rounded-lg px-2.5 py-2 shadow-lg pointer-events-none"
         >
-          The manager&apos;s rating differs from the employee&apos;s self-rating. Per BL-040, the manager rating takes precedence once submitted.
+          The manager&apos;s rating differs from the employee&apos;s self-rating. The manager rating takes precedence once submitted.
         </span>
       )}
     </span>

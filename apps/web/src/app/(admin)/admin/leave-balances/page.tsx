@@ -25,7 +25,8 @@ import { LeaveBalanceGrid } from '@/components/leave/LeaveBalanceGrid';
 import { useEmployeesList } from '@/lib/hooks/useEmployees';
 import { useLeaveBalances, useAdjustBalance } from '@/lib/hooks/useLeave';
 import { useToast } from '@/lib/hooks/useToast';
-import { AdjustBalanceRequestSchema, type LeaveType } from '@nexora/contracts/leave';
+import { AdjustBalanceRequestSchema } from '@nexora/contracts/leave';
+import { LEAVE_TYPE_ID, LEAVE_TYPE_MAP } from '@/lib/status/maps';
 
 // ── Adjust form schema ────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ function AdjustModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  employeeId: string;
+  employeeId: number;
   employeeName: string;
 }) {
   const toast = useToast();
@@ -64,9 +65,10 @@ function AdjustModal({
   async function onSubmit(values: AdjustFormValues) {
     try {
       await adjustMutation.mutateAsync({ ...values, employeeId });
+      const leaveLabel = LEAVE_TYPE_MAP[values.leaveTypeId]?.label ?? String(values.leaveTypeId);
       toast.success(
         'Balance adjusted',
-        `${values.type} leave ${values.delta > 0 ? 'granted' : 'deducted'} for ${employeeName}.`,
+        `${leaveLabel} leave ${values.delta > 0 ? 'granted' : 'deducted'} for ${employeeName}.`,
       );
       reset();
       onClose();
@@ -112,20 +114,20 @@ function AdjustModal({
           <select
             id="adj-type"
             aria-required="true"
-            aria-describedby={errors.type ? 'adj-type-error' : undefined}
+            aria-describedby={errors.leaveTypeId ? 'adj-type-error' : undefined}
             className={clsx(
               'w-full border rounded-lg px-3 py-2.5 text-sm text-charcoal bg-white mt-1',
               'focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-colors',
-              errors.type ? 'border-crimson' : 'border-sage',
+              errors.leaveTypeId ? 'border-crimson' : 'border-sage',
             )}
-            {...register('type')}
+            {...register('leaveTypeId', { valueAsNumber: true })}
           >
             <option value="">Select type</option>
-            {(['Annual', 'Sick', 'Casual'] as LeaveType[]).map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+            <option value={LEAVE_TYPE_ID.Annual}>Annual</option>
+            <option value={LEAVE_TYPE_ID.Sick}>Sick</option>
+            <option value={LEAVE_TYPE_ID.Casual}>Casual</option>
           </select>
-          {errors.type && <FieldError id="adj-type-error" message={errors.type.message ?? 'Required'} />}
+          {errors.leaveTypeId && <FieldError id="adj-type-error" message={errors.leaveTypeId.message ?? 'Required'} />}
         </div>
 
         <div>
@@ -179,7 +181,7 @@ function EmployeeBalanceSection({
   employeeId,
   employeeName,
 }: {
-  employeeId: string;
+  employeeId: number;
   employeeName: string;
 }) {
   const balancesQuery = useLeaveBalances(employeeId);
@@ -219,7 +221,7 @@ function EmployeeBalanceSection({
 
 export default function AdminLeaveBalancesPage() {
   const [search, setSearch] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<{ id: number; name: string } | null>(null);
 
   const employeesQuery = useEmployeesList({ q: search, limit: 20 });
 

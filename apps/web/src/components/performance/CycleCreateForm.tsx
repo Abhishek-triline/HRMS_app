@@ -7,7 +7,7 @@
  * Option B admin self-review: lists every Admin employee with a
  * HierarchyPicker for each one so the cycle creator can assign a peer reviewer.
  *
- * adminPeerReviewers submitted as { [adminId]: peerId }.
+ * adminPeerReviewers submitted as { [adminId]: peerId } (string key, number value).
  * Admins not paired will surface in the missing-reviews report (managerId=null).
  *
  * Validation: fyStart < fyEnd, deadlines within window, all date fields required.
@@ -19,11 +19,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { FieldError } from '@/components/ui/FieldError';
 import { Label } from '@/components/ui/Label';
 import { HierarchyPicker } from '@/components/employees/HierarchyPicker';
 import { useEmployeesList } from '@/lib/hooks/useEmployees';
+import { EMPLOYEE_STATUS, ROLE_ID } from '@/lib/status/maps';
 import type { CreateCycleRequest } from '@nexora/contracts/performance';
 
 const cycleCreateSchema = z
@@ -59,18 +59,22 @@ type CycleCreateFormValues = z.infer<typeof cycleCreateSchema>;
 interface CycleCreateFormProps {
   onSubmit: (data: CreateCycleRequest) => Promise<void>;
   isSubmitting?: boolean;
-  /** Currently authenticated user's ID — excluded from peer picker */
-  currentUserId?: string;
+  /** Currently authenticated user's ID (INT) — excluded from peer picker */
+  currentUserId?: number;
 }
 
 export function CycleCreateForm({ onSubmit, isSubmitting = false, currentUserId }: CycleCreateFormProps) {
-  // adminPeerReviewers: { adminId -> peerId | null }
-  const [peerAssignments, setPeerAssignments] = useState<Record<string, string | null>>({});
+  // peerAssignments: { adminId (number) -> peerId (number | null) }
+  const [peerAssignments, setPeerAssignments] = useState<Record<number, number | null>>({});
 
-  // Fetch all active Admin employees for Option B pairing.
-  const { data: adminData } = useEmployeesList({ status: 'Active', role: 'Admin', limit: 100 });
+  // Fetch all active Admin employees (roleId=4) for Option B pairing.
+  const { data: adminData } = useEmployeesList({
+    status: EMPLOYEE_STATUS.Active,
+    roleId: ROLE_ID.Admin,
+    limit: 100,
+  });
   const adminEmployees = (adminData?.data ?? []).filter(
-    (emp) => emp.id !== currentUserId,
+    (emp) => (emp.id as number) !== currentUserId,
   );
 
   const {
@@ -83,10 +87,11 @@ export function CycleCreateForm({ onSubmit, isSubmitting = false, currentUserId 
 
   async function onValid(data: CycleCreateFormValues) {
     // Build adminPeerReviewers — only include pairs where a peer has been selected.
-    const adminPeerReviewers: Record<string, string> = {};
-    for (const [adminId, peerId] of Object.entries(peerAssignments)) {
-      if (peerId) {
-        adminPeerReviewers[adminId] = peerId;
+    // Key is string representation of admin ID (required by contract), value is number.
+    const adminPeerReviewers: Record<string, number> = {};
+    for (const [adminIdStr, peerId] of Object.entries(peerAssignments)) {
+      if (peerId != null) {
+        adminPeerReviewers[adminIdStr] = peerId;
       }
     }
 
@@ -212,12 +217,13 @@ export function CycleCreateForm({ onSubmit, isSubmitting = false, currentUserId 
                   <div className="text-xs text-slate">{admin.code}{admin.designation ? ` · ${admin.designation}` : ''}</div>
                   <div className="mt-2">
                     <HierarchyPicker
-                      value={peerAssignments[admin.id] ?? null}
+                      value={peerAssignments[admin.id as number] ?? null}
                       onChange={(peerId) =>
-                        setPeerAssignments((prev) => ({ ...prev, [admin.id]: peerId }))
+                        setPeerAssignments((prev) => ({ ...prev, [admin.id as number]: peerId }))
                       }
-                      excludeId={admin.id}
+                      excludeId={admin.id as number}
                       label="Peer reviewer"
+                      eligibleRoles="4"
                     />
                   </div>
                 </div>
