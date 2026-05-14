@@ -170,7 +170,19 @@ aside > * {
   background: linear-gradient(160deg, #0F2E22 0%, #1C3D2E 25%, #2D7A5F 60%, #4DA37A 90%, #6FBE9E 100%);
 }
 [data-nx-hero][data-tod="day"] {
-  background: linear-gradient(160deg, #1C3D2E 0%, #2D7A5F 28%, #4DA37A 50%, #C8843B 78%, #E8A14A 100%);
+  /* Two layers: a soft warm horizon band sits on top of the main diagonal
+   * gradient. The horizon centres at ~64% — exactly where green meets
+   * amber — so the transition reads as a sunlit horizon rather than a hard
+   * colour break. Alpha kept low (≤0.20) so the band glows without obscuring
+   * the underlying palette. */
+  background:
+    linear-gradient(180deg,
+      transparent 50%,
+      rgba(255, 196, 120, 0.20) 62%,
+      rgba(255, 178, 95, 0.12) 70%,
+      transparent 80%
+    ),
+    linear-gradient(160deg, #1C3D2E 0%, #2D7A5F 28%, #4DA37A 50%, #C8843B 78%, #E8A14A 100%);
 }
 [data-nx-hero][data-tod="evening"] {
   background: linear-gradient(180deg, #5B3D6F 0%, #B85B6F 45%, #F4A56B 80%, #B85B6F 100%);
