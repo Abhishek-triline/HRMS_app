@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { LoginRequest } from '@nexora/contracts/auth';
 import { LoginRequestSchema } from '@nexora/contracts/auth';
 import { ApiError } from '@/lib/api/client';
@@ -62,11 +62,28 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginRequest>({
     resolver: zodResolver(LoginRequestSchema),
     defaultValues: { rememberMe: false },
   });
+
+  /**
+   * Demo shortcut — pre-fills the form with a seeded credential and
+   * programmatically submits. TC-AUTH-006: demo chips must be present.
+   * RHF needs a tick to flush setValue updates before submit() reads them.
+   */
+  const handleDemoLogin = useCallback(
+    (email: string, password: string) => {
+      setValue('email', email);
+      setValue('password', password);
+      setTimeout(() => {
+        document.getElementById('nx-login-submit')?.click();
+      }, 0);
+    },
+    [setValue],
+  );
 
   const onSubmit = async (data: LoginRequest) => {
     setServerError(null);
@@ -309,6 +326,43 @@ export default function LoginPage() {
                 Sign in
               </Button>
             </form>
+
+            {/* "Demo as" divider */}
+            <div className="flex items-center gap-3 my-6" aria-hidden="true">
+              <div className="flex-1 h-px bg-sage/40" />
+              <span className="text-[10px] text-slate uppercase tracking-[0.15em] font-semibold">Demo as</span>
+              <div className="flex-1 h-px bg-sage/40" />
+            </div>
+
+            {/* Demo role shortcuts — TC-AUTH-006 */}
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Demo login shortcuts">
+              {DEMO_ROLES.map((role) => (
+                <button
+                  key={role.label}
+                  type="button"
+                  onClick={() => handleDemoLogin(role.email, role.password)}
+                  className="group flex items-center gap-2 bg-softmint border border-mint hover:border-forest hover:bg-mint rounded-lg px-3 py-2 transition-colors"
+                  aria-label={`Sign in as demo ${role.label}`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-md ${role.bg} ${role.text} flex items-center justify-center text-[10px] font-bold flex-shrink-0`}
+                    aria-hidden="true"
+                  >
+                    {role.abbr}
+                  </div>
+                  <span className="text-xs font-semibold text-forest flex-1 text-left">{role.label}</span>
+                  <svg
+                    className="w-3 h-3 text-emerald group-hover:translate-x-0.5 transition-transform flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
 
           </div>
 
