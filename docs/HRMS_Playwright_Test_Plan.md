@@ -440,7 +440,7 @@ Screenshots are captured only on failure (`screenshot: 'only-on-failure'`) to ke
 | 1 | Scaffold: `playwright.config.ts`, fixtures, two POMs (Login, EmployeeLeave), one passing spec (E2E-LEAVE-001) | ~0.5 day | ✅ |
 | 2 | Implement the **smoke pack** (~18 specs) | ~2 days | ✅ exceeded — 32 specs landed |
 | 3 | Wire smoke into the GitHub Actions PR gate | ~0.5 day | ✅ `e2e-smoke.yml` |
-| 4 | Implement the **regression pack** (remaining ~52 specs) | ~5 days | 🟡 11 batched in so far — Leave (5), Manager-Leave (1), Performance (3), Payroll (3); the heavier attendance / payroll-write / cron-driven specs remain |
+| 4 | Implement the **regression pack** (remaining ~52 specs) | ~5 days | 🟡 70 specs landed — Auth (8), Leave (12), Reg (2), Att (4 incl. idempotency), Perf (5), Payroll (5), Emp (4), UI/sidebar (12), Dash (4), Notifications (4), Config (9), Role guards (2). Remaining: cron-driven flows (BL-018, BL-LE-04, carry-forward), BL-034 concurrent finalise, performance write-path — need time-travel endpoint + concurrency fixtures |
 | 5 | Wire nightly regression + flake-issue automation | ~0.5 day | ✅ `e2e-nightly.yml` |
 
 **Total: ~8.5 engineering days for full coverage.** Stops at any point are useful: even phase 1 + phase 2 already protects every release from the worst integration regressions.

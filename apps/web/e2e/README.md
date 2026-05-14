@@ -157,11 +157,11 @@ each step — fastest way to diagnose a CI-only failure.
 
 ## Migration status
 
-Per the plan §12, current phase: **Phase 4 in progress, all scaffolding phases complete.**
+Per the plan §12, current phase: **Phase 4 deep into regression coverage, all scaffolding + automation phases complete.**
 
 - ✅ Phase 0 — Plan doc
 - ✅ Phase 1 — Scaffold + first spec
 - ✅ Phase 2 — Smoke pack (32 specs, mix of read-only + write-path)
 - ✅ Phase 3 — CI workflow shipped (`.github/workflows/e2e-smoke.yml`); first PR validates the green path
-- 🟡 Phase 4 — Regression pack (11 specs in so far — Leave, Performance, Payroll). Remaining: attendance write-path, payroll initiate/finalise, performance write-path, encashment + cron-driven flows
+- 🟡 Phase 4 — Regression pack: **70 specs landed total**. Covered: auth, leave (12 specs incl. routing / overlap / balance / cancel paths), regularisation routing, attendance idempotency, performance read + data-shape, payroll list / lock / redaction, employee create + status transitions, dashboards / notifications / sidebar / config / role guards. Remaining: cron-driven flows (BL-018 escalation, midnight generate, carry-forward, BL-LE-04 encashment window), concurrent finalise (BL-034), performance write-path (cycle create, goals, ratings) — these need the time-travel endpoint + concurrency fixtures
 - ✅ Phase 5 — Nightly regression + auto-issue (`.github/workflows/e2e-nightly.yml`) — opens / updates a tagged `e2e-fail` issue on failure
