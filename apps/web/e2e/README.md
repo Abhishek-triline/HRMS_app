@@ -157,11 +157,11 @@ each step — fastest way to diagnose a CI-only failure.
 
 ## Migration status
 
-Per the plan §12, current phase: **Phase 2 complete, Phase 3 in progress.**
+Per the plan §12, current phase: **Phase 4 in progress, all scaffolding phases complete.**
 
 - ✅ Phase 0 — Plan doc
 - ✅ Phase 1 — Scaffold + first spec
 - ✅ Phase 2 — Smoke pack (32 specs, mix of read-only + write-path)
-- 🟡 Phase 3 — CI workflow shipped (`.github/workflows/e2e-smoke.yml`); first PR will validate the green path
-- ❌ Phase 4 — Regression pack (~40 more edge cases)
-- ❌ Phase 5 — Nightly + flake-issue automation
+- ✅ Phase 3 — CI workflow shipped (`.github/workflows/e2e-smoke.yml`); first PR validates the green path
+- 🟡 Phase 4 — Regression pack (11 specs in so far — Leave, Performance, Payroll). Remaining: attendance write-path, payroll initiate/finalise, performance write-path, encashment + cron-driven flows
+- ✅ Phase 5 — Nightly regression + auto-issue (`.github/workflows/e2e-nightly.yml`) — opens / updates a tagged `e2e-fail` issue on failure

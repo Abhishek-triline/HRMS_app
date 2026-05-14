@@ -1,0 +1,211 @@
+name: E2E Nightly Regression
+
+# Runs the FULL Playwright pack every night at 02:00 IST (20:30 UTC).
+# Failures get a GitHub issue auto-opened (or re-opened) tagged
+# `e2e-fail` so the next morning's standup picks it up without anyone
+# having to scrub workflow runs.
+#
+# Manual runs are allowed via workflow_dispatch — handy for verifying
+# a fix against the full pack without waiting for the cron tick.
+#
+# Differences from the PR-gate workflow (e2e-smoke.yml):
+#   - No --grep filter (runs everything, smoke + non-smoke).
+#   - Longer wall-time budget (30 min hard cap).
+#   - Two retries per failed test instead of one (CI default is one).
+#   - Failure → open / update a GitHub issue automatically.
+#
+# See docs/HRMS_Playwright_Test_Plan.md § 9.2.
+
+on:
+  schedule:
+    # 20:30 UTC ≈ 02:00 IST. Cron is in UTC.
+    - cron: '30 20 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-nightly
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    name: Playwright full regression (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: nexora_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      CI: 'true'
+      NODE_ENV: production
+      TZ: Asia/Kolkata
+      LOCALE: en-IN
+
+      DATABASE_URL: mysql://root:rootpw@localhost:3306/nexora_e2e
+      API_PORT: 4000
+      API_BASE_URL: http://localhost:4000/api/v1
+      WEB_PORT: 3000
+      WEB_BASE_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+
+      SESSION_SECRET: ci-only-secret-do-not-use-in-prod-1234567890
+      SESSION_COOKIE_NAME: nx_session
+      SESSION_COOKIE_DOMAIN: ''
+      SESSION_TTL_HOURS: '12'
+      SESSION_REMEMBER_ME_DAYS: '30'
+      PASSWORD_RESET_TTL_MINUTES: '30'
+
+      MAIL_TRANSPORT: filesystem
+      MAIL_FROM: 'Nexora HRMS CI <ci@example.invalid>'
+      MAIL_DIR: /tmp/mail
+
+      SEED_ADMIN_EMAIL: admin@triline.co.in
+      SEED_ADMIN_PASSWORD: admin@123
+
+      LOG_LEVEL: warn
+      LOG_TO_FILE: 'false'
+
+      # Nightly is more tolerant of a single transient flake. Smoke
+      # keeps retries at 1; nightly bumps to 2 so we don't open a noisy
+      # issue for a one-off network hiccup.
+      PLAYWRIGHT_RETRIES: '2'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -prootpw --silent; then
+              echo "MySQL ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL did not become ready"; exit 1
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        working-directory: apps/api
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed test data
+        working-directory: apps/api
+        run: pnpm exec tsx prisma/seed.ts
+
+      - name: Build contracts
+        run: pnpm --filter @nexora/contracts run build
+
+      - name: Build api
+        run: pnpm --filter @nexora/api run build
+
+      - name: Build web
+        run: pnpm --filter @nexora/web run build
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E full pack
+        id: e2e
+        working-directory: apps/web
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-nightly
+          path: apps/web/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload test artifacts (traces / screenshots / videos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-nightly
+          path: apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # ── Auto-open / update a tracking issue on failure ─────────────
+      - name: Open or update e2e-fail issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const runUrl = `${context.payload.repository.html_url}/actions/runs/${context.runId}`;
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `[e2e-nightly] Regression pack failed — ${today}`;
+            const body = [
+              `Nightly E2E regression run failed.`,
+              ``,
+              `**Run:** ${runUrl}`,
+              `**Commit:** \`${context.sha.substring(0, 7)}\``,
+              `**Ref:** \`${context.ref}\``,
+              ``,
+              `Download the **playwright-report-nightly** artifact for the HTML report, and **test-results-nightly** for trace.zip files (replay with \`pnpm exec playwright show-trace <path>\`).`,
+              ``,
+              `If the failure pattern matches one already triaged today, comment on the existing issue rather than closing-and-reopening.`,
+            ].join('\n');
+
+            // Find an open issue with our label so we don't spam one per night.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'e2e-fail',
+              per_page: 5,
+            });
+
+            if (existing.data.length > 0) {
+              const issue = existing.data[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Another nightly failure — ${runUrl} (commit \`${context.sha.substring(0, 7)}\`).`,
+              });
+              core.info(`Commented on existing issue #${issue.number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['e2e-fail', 'auto-generated'],
+              });
+              core.info(`Opened issue #${created.data.number}`);
+            }
