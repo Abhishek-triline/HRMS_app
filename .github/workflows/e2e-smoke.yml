@@ -1,0 +1,165 @@
+name: E2E Smoke
+
+# Runs the @smoke-tagged Playwright pack on pull requests against the
+# main branches. Target wall-time ≤ 6 min, hard fail at 10 min.
+#
+# Strategy:
+#   1. Spin up MySQL 8 as a service container.
+#   2. Install pnpm deps, generate Prisma client, apply migrations, seed.
+#   3. Build contracts → api → web (production mode).
+#   4. Install Playwright browsers (chromium only — Firefox/WebKit opt-in).
+#   5. Run `pnpm e2e:smoke`. The playwright.config.ts webServer block
+#      starts the api + web as background processes when CI=true.
+#   6. Upload playwright-report/ + test-results/ on failure for debugging.
+#
+# See docs/HRMS_Playwright_Test_Plan.md § 9 for the broader plan.
+
+on:
+  pull_request:
+    branches: [main, app, ft_testing]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Playwright smoke (chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: nexora_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # ── Test-run identity ────────────────────────────────────────
+      CI: 'true'
+      NODE_ENV: production
+      TZ: Asia/Kolkata
+      LOCALE: en-IN
+
+      # ── Database + API ──────────────────────────────────────────
+      DATABASE_URL: mysql://root:rootpw@localhost:3306/nexora_e2e
+      API_PORT: 4000
+      API_BASE_URL: http://localhost:4000/api/v1
+      WEB_PORT: 3000
+      WEB_BASE_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+
+      # ── Web ─────────────────────────────────────────────────────
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+
+      # ── Auth / Sessions (CI-only secrets, never reused elsewhere) ─
+      SESSION_SECRET: ci-only-secret-do-not-use-in-prod-1234567890
+      SESSION_COOKIE_NAME: nx_session
+      SESSION_COOKIE_DOMAIN: ''
+      SESSION_TTL_HOURS: '12'
+      SESSION_REMEMBER_ME_DAYS: '30'
+      PASSWORD_RESET_TTL_MINUTES: '30'
+
+      # ── Mail — filesystem transport keeps CI hermetic ─────────────
+      MAIL_TRANSPORT: filesystem
+      MAIL_FROM: 'Nexora HRMS CI <ci@example.invalid>'
+      MAIL_DIR: /tmp/mail
+
+      # ── Seed accounts that the e2e specs log in as ────────────────
+      SEED_ADMIN_EMAIL: admin@triline.co.in
+      SEED_ADMIN_PASSWORD: admin@123
+
+      # ── Logging ──────────────────────────────────────────────────
+      LOG_LEVEL: warn
+      LOG_TO_FILE: 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -prootpw --silent; then
+              echo "MySQL ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL did not become ready"; exit 1
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        working-directory: apps/api
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed test data
+        working-directory: apps/api
+        run: pnpm exec tsx prisma/seed.ts
+
+      - name: Build contracts
+        run: pnpm --filter @nexora/contracts run build
+
+      - name: Build api
+        run: pnpm --filter @nexora/api run build
+
+      - name: Build web
+        run: pnpm --filter @nexora/web run build
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E smoke
+        working-directory: apps/web
+        run: pnpm e2e:smoke
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload test artifacts (traces / screenshots / videos)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: apps/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Mail spool (debug)
+        if: failure()
+        run: |
+          ls -la /tmp/mail/ 2>/dev/null || true

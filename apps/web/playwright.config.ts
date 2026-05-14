@@ -51,11 +51,39 @@ export default defineConfig({
     // { name: 'webkit',   use: { ...devices['Desktop Safari']   } },
   ],
 
-  // Uncomment to have Playwright manage the dev stack lifecycle:
-  // webServer: {
-  //   command: 'pnpm -w dev',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 120_000,
-  // },
+  /**
+   * Two web servers, kept independent.
+   *
+   * - The API serves on :4000 and Playwright probes /api/v1/health for
+   *   readiness. In CI we run the compiled output (`node dist/index.js`);
+   *   locally we keep `reuseExistingServer: true` so an open `pnpm dev`
+   *   session is reused without rebuilding.
+   * - The web on :3000 is the Next.js production server (`next start`)
+   *   in CI and reuses dev locally.
+   *
+   * `pnpm start` per package is fast and stable in CI — the dev server
+   * we relied on earlier compiled pages on demand, which produced flakes
+   * (E2E-AUD-001, E2E-EMP-007) under sustained load. Production-mode
+   * removes that whole class of timing problem.
+   */
+  webServer: process.env.CI
+    ? [
+        {
+          command: 'pnpm --filter @nexora/api start',
+          url: 'http://localhost:4000/api/v1/health',
+          reuseExistingServer: false,
+          timeout: 120_000,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+        {
+          command: 'pnpm --filter @nexora/web start',
+          url: 'http://localhost:3000/login',
+          reuseExistingServer: false,
+          timeout: 120_000,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      ]
+    : undefined,
 });
