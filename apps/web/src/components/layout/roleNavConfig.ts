@@ -96,7 +96,10 @@ const adminNav: NavEntry[] = [
   { type: 'link', label: 'Regularisation Queue', href: '/admin/regularisation-queue',    iconPath: ICONS.regularisation },
   { type: 'link', label: 'Attendance',           href: '/admin/attendance',              iconPath: ICONS.attendance },
   { type: 'link', label: 'Payroll Runs',         href: '/admin/payroll-runs',            iconPath: ICONS.payroll },
-  { type: 'link', label: 'Reports',              href: '/admin/reports',                 iconPath: ICONS.reports },
+  // Reports hidden until v1.1 — exports are stubbed ("Coming soon" toasts) and the
+  // page is not in the SRS A-XX list. Re-enable by uncommenting this line and the
+  // matching entry in payrollNav once the CSV/PDF exports ship.
+  // { type: 'link', label: 'Reports',              href: '/admin/reports',                 iconPath: ICONS.reports },
   { type: 'link', label: 'Reversal History',     href: '/admin/reversal-history',        iconPath: ICONS.reversal },
   { type: 'link', label: 'Performance',          href: '/admin/performance-cycles',      iconPath: ICONS.performance },
   { type: 'link', label: 'Audit Log',            href: '/admin/audit-log',               iconPath: ICONS.auditLog },
@@ -148,7 +151,8 @@ const employeeNav: NavEntry[] = [
 const payrollNav: NavEntry[] = [
   { type: 'link', label: 'Dashboard',        href: '/payroll/dashboard',           iconPath: ICONS.dashboard },
   { type: 'link', label: 'Payroll Runs',     href: '/payroll/payroll-runs',        iconPath: ICONS.payroll },
-  { type: 'link', label: 'Reports',          href: '/payroll/reports',             iconPath: ICONS.reports },
+  // Reports hidden until v1.1 — see adminNav comment.
+  // { type: 'link', label: 'Reports',          href: '/payroll/reports',             iconPath: ICONS.reports },
   { type: 'link', label: 'Reversal History', href: '/payroll/reversal-history',    iconPath: ICONS.reversal },
   { type: 'subhead', label: 'My Records' },
   { type: 'link', label: 'My Leave',         href: '/payroll/leave',               iconPath: ICONS.leave },
