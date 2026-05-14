@@ -46,6 +46,11 @@ test.describe('E2E-ATT @smoke', () => {
     await page.goto('/admin/attendance');
     await page.waitForLoadState('networkidle');
 
+    // Wait for the data to actually hydrate. networkidle alone isn't
+    // sufficient — React-Query can fetch after networkidle resolves
+    // and the table briefly renders with no body rows.
+    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 10_000 });
+
     // Locate the column header by its accessible role, then take the
     // index and assert each cell in that column for the first 4 rows is
     // numeric (0 or more). The fix replaced an `as unknown as` cast that

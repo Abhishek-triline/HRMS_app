@@ -43,4 +43,22 @@ test.describe('E2E-AUTH @smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page).not.toHaveURL(/\/admin\/employees$/);
   });
+
+  test('E2E-AUTH-005 — Sign Out lands back on /login and blocks dashboard access', async ({ page, context }) => {
+    const login = new LoginPage(page);
+    await login.loginAs('admin');
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+
+    // The sidebar renders Sign Out as a <button> via SignOutButton (not a
+    // bare <a>) so the click can clear cookies + invalidate the React-
+    // Query cache before navigating. Click it and wait for /login.
+    await page.getByRole('button', { name: /sign out/i }).click();
+    await page.waitForURL(/\/login/, { timeout: 15_000 });
+
+    // Direct-URL access to a protected page after logout must NOT render
+    // the dashboard. The middleware should bounce back to /login.
+    await page.goto('/admin/dashboard');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/login/);
+  });
 });

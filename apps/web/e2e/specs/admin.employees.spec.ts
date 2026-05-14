@@ -47,4 +47,40 @@ test.describe('E2E-EMP @smoke', () => {
     await expect(page.getByRole('button', { name: /Change Manager/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Edit Profile/i })).toHaveCount(0);
   });
+
+  test('E2E-EMP-009 — Detail-page tabs render scoped data, not placeholders', async ({ page }) => {
+    // Use Kavya (EMP-2024-0003) — known to have seeded leaves, attendance,
+    // payslips. Without this regression guard, the three non-leave tabs
+    // were placeholder cards linking to admin-self pages that ignored the
+    // employeeId query param.
+    const login = new LoginPage(page);
+    await login.loginAs('admin');
+
+    await page.goto('/admin/employees');
+    await page.waitForLoadState('networkidle');
+    const search = page.getByPlaceholder(/search/i).first();
+    await search.fill('EMP-2024-0003');
+    const row = page.getByRole('row', { name: /EMP-2024-0003/ });
+    await expect(row).toBeVisible();
+    await row.getByRole('link').first().click();
+    await page.waitForLoadState('networkidle');
+
+    // The tab card lives at the bottom of the detail page. None of the
+    // four tabs should render the old "View Full Attendance →" /
+    // "View All Payslips →" / "View All Reviews →" links — those were the
+    // placeholder affordances that linked to the wrong destinations.
+    await expect(page.getByRole('link', { name: /View Full Attendance/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /View All Payslips/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /View All Reviews/i })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Full History/i })).toHaveCount(0);
+
+    // Each tab is reachable and renders a proper <table> (either with
+    // employee-scoped rows OR an empty-state row inside). The old
+    // placeholder cards had no table — they had a single <p> + a link.
+    for (const tabLabel of ['Attendance Summary', 'Payslips', 'Reviews']) {
+      await page.getByRole('tab', { name: tabLabel }).click();
+      const activePanel = page.locator('[role="tabpanel"]:not([hidden])').first();
+      await expect(activePanel.locator('table')).toBeVisible({ timeout: 5_000 });
+    }
+  });
 });

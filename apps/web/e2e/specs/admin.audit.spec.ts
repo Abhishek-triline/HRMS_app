@@ -30,4 +30,30 @@ test.describe('E2E-AUD @smoke', () => {
     // The "append-only" disclosure copy must be present (BL-047 trail).
     await expect(page.locator('body')).toContainText(/append-only/i);
   });
+
+  test('E2E-AUD-001 — Module filter scopes all visible rows to the selected module', async ({ page }) => {
+    const login = new LoginPage(page);
+    await login.loginAs('admin');
+
+    await page.goto('/admin/audit-log');
+    await page.waitForLoadState('networkidle');
+
+    // Apply the Auth filter. Seed always produces login audit entries on
+    // first run, so this returns a non-empty subset.
+    const moduleSelect = page.getByLabel('Filter by module');
+    await expect(moduleSelect).toBeVisible();
+    await moduleSelect.selectOption({ value: 'auth' });
+    await page.waitForLoadState('networkidle');
+
+    // Every visible row must carry the "Sign-in" module badge — the
+    // audit log component maps module=auth to that display label
+    // (see moduleLabel() in AuditLogPageClient.tsx). Row count alone is
+    // unreliable because the log paginates.
+    const rows = page.locator('tbody tr');
+    const count = await rows.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      await expect(rows.nth(i)).toContainText(/sign-?in/i);
+    }
+  });
 });

@@ -42,4 +42,29 @@ test.describe('E2E-LEAVE @smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('body')).toContainText(/Leave|Balance|Pending|Approved/i);
   });
+
+  test('E2E-LEAVE-011 — L-code and numeric id both resolve the detail page', async ({ page }) => {
+    const login = new LoginPage(page);
+    await login.loginAs('employee');
+
+    // Open by code — protects against the regression where the route used
+    // Number(idOrCode), which made "L-2026-0018" → NaN → 404.
+    await page.goto('/employee/leave/L-2026-0018');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).toContainText('L-2026-0018');
+
+    // Resolve the numeric id via the API and confirm the same detail page
+    // loads when the route param is numeric — both code styles must work.
+    const apiResp = await page.request.get(
+      'http://localhost:4000/api/v1/leave/requests/L-2026-0018',
+    );
+    expect(apiResp.ok()).toBe(true);
+    const body = await apiResp.json();
+    const numericId = body?.data?.id ?? body?.id;
+    expect(typeof numericId).toBe('number');
+
+    await page.goto(`/employee/leave/${numericId}`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).toContainText('L-2026-0018');
+  });
 });
