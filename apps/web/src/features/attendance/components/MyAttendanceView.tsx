@@ -246,6 +246,16 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
 
+  // Live clock — ticks once per minute. Used to derive in-progress hours
+  // for today's row (checked in, not yet checked out). Anchored to setState
+  // so the chart bar and detailed-log table auto-update without a refetch.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month, 0).getDate();
   const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -264,15 +274,29 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
     setMonth(m);
   }, []);
 
-  const rows = (data?.data ?? []).map((r) => ({
-    date: r.date,
-    status: r.status,
-    checkInTime: r.checkInTime,
-    checkOutTime: r.checkOutTime,
-    hoursWorkedMinutes: r.hoursWorkedMinutes,
-    late: r.late,
-    targetHours: r.targetHours,
-  }));
+  const rows = (data?.data ?? []).map((r) => {
+    // For today's row, if the employee has checked in but not yet checked
+    // out, surface the live elapsed minutes so the chart and table reflect
+    // progress instead of showing 0 until check-out commits the value.
+    let effectiveMinutes = r.hoursWorkedMinutes;
+    if (
+      r.date === todayISO &&
+      r.checkInTime &&
+      !r.checkOutTime
+    ) {
+      const start = new Date(r.checkInTime).getTime();
+      effectiveMinutes = Math.max(0, Math.floor((now.getTime() - start) / 60_000));
+    }
+    return {
+      date: r.date,
+      status: r.status,
+      checkInTime: r.checkInTime,
+      checkOutTime: r.checkOutTime,
+      hoursWorkedMinutes: effectiveMinutes,
+      late: r.late,
+      targetHours: r.targetHours,
+    };
+  });
 
   // ── Computed stats ──────────────────────────────────────────────────────────
 
@@ -324,17 +348,22 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
       };
     });
 
-  // 7-day slices starting from day 1. Reset to the latest slice when the
-  // month changes.
+  // 7-day slices starting from day 1. On initial load and on month change,
+  // jump to the slice containing TODAY so the latest week is the default
+  // view; fall back to the last slice when today isn't in the rendered
+  // month (e.g. the user is viewing a past or future month). Manual prev/
+  // next clicks are preserved because the effect only re-fires when the
+  // visible data set actually changes (year / month / row count).
   const WEEK_SIZE = 7;
   const weekCount = Math.max(1, Math.ceil(allBars.length / WEEK_SIZE));
   const [weekIndex, setWeekIndex] = useState(0);
   useEffect(() => {
-    setWeekIndex(Math.max(0, weekCount - 1));
-    // Recompute when month or year change (allBars changes too but its
-    // identity isn't stable; weekCount is a fine proxy).
+    const todayIdx = allBars.findIndex((b) => b.date === todayISO);
+    const target =
+      todayIdx >= 0 ? Math.floor(todayIdx / WEEK_SIZE) : Math.max(0, weekCount - 1);
+    setWeekIndex(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month]);
+  }, [year, month, allBars.length]);
   const clampedWeek = Math.min(weekIndex, weekCount - 1);
   const weekStart = clampedWeek * WEEK_SIZE;
   const chartBars = allBars.slice(weekStart, weekStart + WEEK_SIZE);
