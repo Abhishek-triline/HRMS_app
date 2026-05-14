@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "prebuild": "pnpm -w -F @nexora/contracts run build",
+    "prebuild": "tsc -p ../../packages/contracts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "pretypecheck": "pnpm -w -F @nexora/contracts run build",
+    "pretypecheck": "tsc -p ../../packages/contracts",
     "typecheck": "tsc --noEmit",
     "test": "echo \"(unit tests added in later phases)\"",
     "e2e": "playwright test",
