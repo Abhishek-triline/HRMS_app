@@ -135,11 +135,32 @@ export async function getLeaveBalances(
 export async function getLeaveRequest(
   ctx: APIRequestContext,
   id: number,
-): Promise<{ id: number; status: number; version: number; code: string }> {
+): Promise<{ id: number; status: number; version: number; code: string; routedToId?: number }> {
   const res = await ctx.get(`/api/v1/leave/requests/${id}`);
   if (!res.ok()) {
     throw new Error(`getLeaveRequest(${id}) failed: ${res.status()}`);
   }
   const body = await res.json();
   return body?.data ?? body;
+}
+
+/**
+ * Approve a leave request via POST /api/v1/leave/requests/:id/approve.
+ * Required by tests that need an Approved leave as their precondition
+ * (e.g. cancel-before-start, balance-deduction). Uses the version from
+ * a GET to satisfy optimistic concurrency.
+ */
+export async function approveLeaveRequest(
+  ctx: APIRequestContext,
+  leaveId: number,
+  note = 'e2e approve',
+): Promise<void> {
+  const cur = await getLeaveRequest(ctx, leaveId);
+  const res = await ctx.post(`/api/v1/leave/requests/${leaveId}/approve`, {
+    data: { note, version: cur.version },
+  });
+  if (!res.ok()) {
+    const text = await res.text();
+    throw new Error(`approveLeaveRequest(${leaveId}) failed: ${res.status()} ${text}`);
+  }
 }
