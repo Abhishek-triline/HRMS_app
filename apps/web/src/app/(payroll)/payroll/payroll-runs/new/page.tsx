@@ -32,6 +32,12 @@ function getFiscalYear(month: number, year: number): string {
   return `FY ${year - 1}-${String(year).slice(2)}`;
 }
 
+/** Indian fiscal-year bounds for (month, year) — April 1st → March 31st. */
+function fiscalYearBounds(month: number, year: number): { start: string; end: string } {
+  const fyStartYear = month >= 4 ? year : year - 1;
+  return { start: `${fyStartYear}-04-01`, end: `${fyStartYear + 1}-03-31` };
+}
+
 function monthStart(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}-01`;
 }
@@ -69,6 +75,7 @@ export default function PONewPayrollRunPage() {
   }
 
   const fiscalYear = getFiscalYear(month, year);
+  const fyBounds = fiscalYearBounds(month, year);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -76,6 +83,15 @@ export default function PONewPayrollRunPage() {
     if (override !== '') {
       const n = parseInt(override, 10);
       if (isNaN(n) || n < 1 || n > 31) newErrors.workingDays = 'Working days must be between 1 and 31.';
+    }
+    if (periodStart < fyBounds.start || periodStart > fyBounds.end) {
+      newErrors.periodStart = `Must fall within ${fiscalYear} (${fyBounds.start} – ${fyBounds.end}).`;
+    }
+    if (periodEnd < fyBounds.start || periodEnd > fyBounds.end) {
+      newErrors.periodEnd = `Must fall within ${fiscalYear} (${fyBounds.start} – ${fyBounds.end}).`;
+    }
+    if (!newErrors.periodStart && !newErrors.periodEnd && periodEnd < periodStart) {
+      newErrors.periodEnd = 'Period end must be on or after period start.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -145,14 +161,26 @@ export default function PONewPayrollRunPage() {
               <div>
                 <Label htmlFor="po-period-start">Period Start</Label>
                 <input id="po-period-start" type="date" value={periodStart}
+                  min={fyBounds.start} max={fyBounds.end}
                   onChange={(e) => setPeriodStart(e.target.value)}
+                  aria-describedby={errors.periodStart ? 'po-period-start-error' : 'po-period-start-hint'}
                   className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20" />
+                <p id="po-period-start-hint" className="text-xs text-slate mt-1.5">
+                  Must lie within {fiscalYear}.
+                </p>
+                <FieldError id="po-period-start-error" message={errors.periodStart} />
               </div>
               <div>
                 <Label htmlFor="po-period-end">Period End</Label>
                 <input id="po-period-end" type="date" value={periodEnd}
+                  min={fyBounds.start} max={fyBounds.end}
                   onChange={(e) => setPeriodEnd(e.target.value)}
+                  aria-describedby={errors.periodEnd ? 'po-period-end-error' : 'po-period-end-hint'}
                   className="mt-1 w-full border border-sage/50 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20" />
+                <p id="po-period-end-hint" className="text-xs text-slate mt-1.5">
+                  Must lie within {fiscalYear}.
+                </p>
+                <FieldError id="po-period-end-error" message={errors.periodEnd} />
               </div>
               <div>
                 <Label htmlFor="po-working-days">Working Days (optional)</Label>
@@ -215,7 +243,12 @@ export default function PONewPayrollRunPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-charcoal">Unprocessed regularisation requests</p>
-                  <p className="text-xs text-slate">May affect attendance-driven LOP — <Link href="/payroll/regularisation-queue" className="text-emerald font-semibold hover:underline">Review queue →</Link></p>
+                  {/* PayrollOfficer has no access to the regularisation queue
+                      (Manager / Admin only) — the route 404s for this role, so
+                      we surface the heads-up without a drill-in link. PO should
+                      coordinate with Admin/Manager out-of-band if pending regs
+                      need clearing before the run. */}
+                  <p className="text-xs text-slate">May affect attendance-driven LOP — ask an Admin or Manager to clear the queue before initiating.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
