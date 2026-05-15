@@ -8,8 +8,8 @@
  *   1. umberbg warning banner — "Pending Manager Decisions: Records within 7 days…"
  *   2. 3-tile KPI strip — Pending / Approved This Month / Rejected
  *   3. Filter bar — Status + From Date + To Date + Employee Search + Apply
- *   4. Table — Employee | For Date | Days Old | Original Record |
- *              Correction Requested | Submitted | Status | Actions
+ *   4. Table — Employee | For Date | Days Old | Correction Requested |
+ *              Submitted | Status | Actions
  *   5. Actions cell: stacked Approve + Reject buttons + audit italic subtext
  */
 
@@ -272,7 +272,6 @@ export default function ManagerRegularisationQueuePage() {
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-5 py-3">Employee</th>
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">For Date</th>
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Days Old</th>
-                  <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Original Record</th>
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Correction Requested</th>
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Submitted</th>
                   <th scope="col" className="text-left text-xs font-semibold text-slate px-4 py-3">Status</th>
@@ -282,7 +281,7 @@ export default function ManagerRegularisationQueuePage() {
               <tbody className="divide-y divide-sage/20">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center text-sm text-slate py-10">
+                    <td colSpan={7} className="text-center text-sm text-slate py-10">
                       No regularisation requests found.
                     </td>
                   </tr>
@@ -318,16 +317,10 @@ export default function ManagerRegularisationQueuePage() {
                             {r.ageDaysAtSubmit} days
                           </span>
                         </td>
-                        {/* Original Record & Correction — detail endpoint has full data */}
-                        <td className="px-4 py-4">
-                          <Link
-                            href={`/manager/regularisation-queue/${r.id}`}
-                            className="text-xs text-forest hover:underline"
-                            aria-label={`View original record for ${r.employeeName}`}
-                          >
-                            View detail →
-                          </Link>
-                        </td>
+                        {/* Correction Requested — drill-down only. Was previously two
+                            columns (Original Record / Correction Requested), both
+                            linking to the same detail page where the side-by-side
+                            comparison still lives. */}
                         <td className="px-4 py-4">
                           <Link
                             href={`/manager/regularisation-queue/${r.id}`}

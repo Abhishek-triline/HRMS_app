@@ -9,7 +9,7 @@
  *   2. 3-tile KPI strip — Pending Admin Approval / Approved This Month / Rejected
  *   3. Filter bar — Status + From Date + To Date + Employee Search + Apply
  *   4. Table — Employee | EMP Code | For Date | Requested On | Days Old |
- *              Original Record | Correction Requested | Status | Actions
+ *              Correction Requested | Status | Actions
  *   5. Actions cell: Approve + Reject stacked buttons + audit italic subtext
  */
 
@@ -280,7 +280,6 @@ export default function AdminRegularisationQueuePage() {
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">For Date</th>
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Requested On</th>
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Days Old</th>
-                  <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Original Record</th>
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Correction Requested</th>
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Status</th>
                   <th scope="col" className="text-left px-4 py-3 font-semibold text-slate text-xs uppercase tracking-wide">Actions</th>
@@ -289,7 +288,7 @@ export default function AdminRegularisationQueuePage() {
               <tbody className="divide-y divide-sage/10">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center text-sm text-slate py-10">
+                    <td colSpan={8} className="text-center text-sm text-slate py-10">
                       No regularisation requests in the admin queue.
                     </td>
                   </tr>
@@ -320,18 +319,10 @@ export default function AdminRegularisationQueuePage() {
                             {r.ageDaysAtSubmit} days old
                           </span>
                         </td>
-                        {/* Original Record — detail endpoint has this; list summary does not.
-                            Show a "View" link for full context per BL-007 */}
-                        <td className="px-4 py-4">
-                          <Link
-                            href={`/admin/regularisation-queue/${r.id}`}
-                            className="text-xs text-forest hover:underline"
-                            aria-label={`View original record for ${r.employeeName}`}
-                          >
-                            View detail →
-                          </Link>
-                        </td>
-                        {/* Correction Requested — also in detail endpoint */}
+                        {/* Correction Requested — drill-down only. Was previously two
+                            columns (Original Record / Correction Requested), both
+                            linking to the same detail page where the side-by-side
+                            comparison still lives. */}
                         <td className="px-4 py-4">
                           <Link
                             href={`/admin/regularisation-queue/${r.id}`}
