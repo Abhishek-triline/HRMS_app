@@ -90,17 +90,35 @@ export function LeaveRequestForm({
   // Resolve selected type name for display
   const selectedTypeName = leaveTypes.find((lt) => lt.id === selectedTypeId)?.name ?? null;
 
+  // Event-based leave routes directly to Admin (Maternity=5, Paternity=6)
+  // and is exempt from the year-boundary date constraint — Maternity
+  // can span up to 26 weeks and naturally crosses year-end.
+  const isAdminRoute =
+    selectedTypeId === LEAVE_TYPE_ID.Maternity || selectedTypeId === LEAVE_TYPE_ID.Paternity;
+
+  // ── Date-input bounds — match the server-side guardrails so the
+  // native date picker never offers invalid options.
+  //   - fromDate min  = today (BL-LEAVE-PAST: past dates go through Regularisation)
+  //   - toDate   min  = currently picked fromDate (or today)
+  //   - toDate   max  = Dec 31 of current year for non-event-based leaves
+  //                     (BL-LEAVE-YEAR: quotas reset on Jan 1)
+  const _now = new Date();
+  const todayYmd = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+  const dec31Ymd = `${_now.getFullYear()}-12-31`;
+  const fromDateMin = todayYmd;
+  const toDateMin = fromDate && fromDate >= todayYmd ? fromDate : todayYmd;
+  const toDateMax = isAdminRoute ? undefined : dec31Ymd;
+
   const conflictError =
     createLeave.error instanceof ApiError &&
     (createLeave.error.code === ErrorCode.LEAVE_OVERLAP ||
       createLeave.error.code === ErrorCode.LEAVE_REG_CONFLICT ||
-      createLeave.error.code === ErrorCode.INSUFFICIENT_BALANCE)
+      createLeave.error.code === ErrorCode.INSUFFICIENT_BALANCE ||
+      createLeave.error.code === ErrorCode.LEAVE_FROM_DATE_IN_PAST ||
+      createLeave.error.code === ErrorCode.LEAVE_SAME_DAY_ALREADY_CHECKED_IN ||
+      createLeave.error.code === ErrorCode.LEAVE_CROSSES_YEAR_BOUNDARY)
       ? createLeave.error
       : null;
-
-  // Event-based leave routes directly to Admin (Maternity=5, Paternity=6)
-  const isAdminRoute =
-    selectedTypeId === LEAVE_TYPE_ID.Maternity || selectedTypeId === LEAVE_TYPE_ID.Paternity;
 
   async function onSubmit(values: FormValues) {
     try {
@@ -212,6 +230,8 @@ export function LeaveRequestForm({
                 <Input
                   id="fromDate"
                   type="date"
+                  min={fromDateMin}
+                  max={toDateMax}
                   aria-required="true"
                   aria-describedby={errors.fromDate ? 'fromDate-error' : undefined}
                   error={errors.fromDate?.message}
@@ -228,6 +248,8 @@ export function LeaveRequestForm({
                 <Input
                   id="toDate"
                   type="date"
+                  min={toDateMin}
+                  max={toDateMax}
                   aria-required="true"
                   aria-describedby={errors.toDate ? 'toDate-error' : undefined}
                   error={errors.toDate?.message}
@@ -238,6 +260,13 @@ export function LeaveRequestForm({
                 )}
               </div>
             </div>
+
+            {/* Past-date / year-boundary hint */}
+            <p className="text-xs text-slate -mt-2">
+              {isAdminRoute
+                ? 'Event-based leave can span across calendar years.'
+                : `Leave dates must fall on or after today and end by 31 Dec ${_now.getFullYear()}. For past attendance corrections, use the Regularisation form.`}
+            </p>
 
             {/* Day count preview */}
             <div className="flex items-center gap-3 bg-softmint rounded-lg px-4 py-3">

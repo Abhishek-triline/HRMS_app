@@ -1,12 +1,15 @@
 'use client';
 
 /**
- * ConflictErrorBlock — BL-010 / DN-19 hook.
+ * ConflictErrorBlock — leave-form inline conflict surface.
  *
  * Must be rendered instead of a generic error whenever the API returns:
- *   - LEAVE_OVERLAP      (BL-009) — conflicting leave dates
- *   - LEAVE_REG_CONFLICT (BL-010) — conflicting regularisation
- *   - INSUFFICIENT_BALANCE (BL-014) — not enough days
+ *   - LEAVE_OVERLAP                       (BL-009)
+ *   - LEAVE_REG_CONFLICT                  (BL-010)
+ *   - INSUFFICIENT_BALANCE                (BL-014)
+ *   - LEAVE_FROM_DATE_IN_PAST             — past-date self-apply
+ *   - LEAVE_SAME_DAY_ALREADY_CHECKED_IN   — same-day after check-in
+ *   - LEAVE_CROSSES_YEAR_BOUNDARY         — toDate outside current year
  *
  * Never render a generic error string for these codes. If the error code
  * is not a leave conflict, this component renders nothing (returns null).
@@ -34,13 +37,17 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
   const isLeaveConflict =
     code === ErrorCode.LEAVE_OVERLAP ||
     code === ErrorCode.LEAVE_REG_CONFLICT ||
-    code === ErrorCode.INSUFFICIENT_BALANCE;
+    code === ErrorCode.INSUFFICIENT_BALANCE ||
+    code === ErrorCode.LEAVE_FROM_DATE_IN_PAST ||
+    code === ErrorCode.LEAVE_SAME_DAY_ALREADY_CHECKED_IN ||
+    code === ErrorCode.LEAVE_CROSSES_YEAR_BOUNDARY;
 
   if (!isLeaveConflict) return null;
 
   const details = error.details as Partial<LeaveConflictDetails> & {
     requestedDays?: number;
     availableDays?: number;
+    currentYear?: number;
   } | undefined;
 
   let heading = '';
@@ -96,6 +103,43 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
           </>
         )}
         {' '}Consider using Unpaid Leave or adjusting your date range.
+      </p>
+    );
+  } else if (code === ErrorCode.LEAVE_FROM_DATE_IN_PAST) {
+    heading = "Past dates can't be applied as leave";
+    body = (
+      <p className="text-xs text-slate leading-relaxed">
+        Leave can only be applied for today or a future date. To correct
+        a <span className="font-semibold text-charcoal">past attendance record</span>,
+        use the <span className="font-semibold text-charcoal">Regularisation form</span>{' '}
+        instead — your manager (or Admin, if the record is older than 7
+        days) will review it.
+      </p>
+    );
+  } else if (code === ErrorCode.LEAVE_SAME_DAY_ALREADY_CHECKED_IN) {
+    heading = 'Already checked in today';
+    body = (
+      <p className="text-xs text-slate leading-relaxed">
+        You've already checked in today, so today can't be converted to a
+        leave day through this form. Submit a{' '}
+        <span className="font-semibold text-charcoal">Regularisation request</span>{' '}
+        for today's date with the correct attendance state — that flow
+        cleanly overlays the existing record.
+      </p>
+    );
+  } else if (code === ErrorCode.LEAVE_CROSSES_YEAR_BOUNDARY) {
+    const year = details?.currentYear;
+    heading = 'Leave dates must stay within this year';
+    body = (
+      <p className="text-xs text-slate leading-relaxed">
+        Leave can only be applied for dates within the current calendar
+        year{year ? ` (${year})` : ''}, because leave balances reset on
+        January 1st. For a break that spans year-end, please submit two
+        separate requests: one ending{' '}
+        <span className="font-semibold text-charcoal">31 Dec</span> and
+        one starting from{' '}
+        <span className="font-semibold text-charcoal">1 Jan</span>{' '}
+        next year. Maternity and Paternity leave are exempt from this rule.
       </p>
     );
   }
