@@ -281,6 +281,21 @@ export const RegularisationRequestSchema = z.object({
   decisionNote: z.string().nullable(),
   /** Link to the corrected attendance row created on approval (BL-026). */
   correctedRecordId: IdSchema.nullable(),
+  /**
+   * Snapshot of the original system-generated attendance row for the
+   * (employeeId, date) being corrected. Surfaced on the detail endpoint
+   * so the approver can compare original vs proposed without a second
+   * round-trip. Null when no system row exists yet (extremely rare —
+   * the midnight job creates one for every active employee).
+   */
+  originalRecord: z
+    .object({
+      status: AttendanceStatusSchema,
+      checkInTime: ISODateSchema.nullable(),
+      checkOutTime: ISODateSchema.nullable(),
+      late: z.boolean(),
+    })
+    .nullable(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,

@@ -135,8 +135,36 @@ export default function ManagerRegularisationDetailPage() {
         {/* Original vs Proposed */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-sage/30 p-6">
           <h2 className="font-heading text-sm font-semibold text-charcoal mb-4">Correction Comparison</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Original (would need a separate fetch — placeholder with status context) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Original Record */}
+            <div className="bg-offwhite rounded-lg p-4">
+              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Original Record</div>
+              {reg.originalRecord ? (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Status</div>
+                    <AttendanceStatusBadge status={reg.originalRecord.status} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Check-In</div>
+                    <div className="font-semibold text-charcoal">
+                      {formatTime(reg.originalRecord.checkInTime)}
+                      {reg.originalRecord.late && (
+                        <span className="ml-1.5 text-xs font-semibold text-umber">(late)</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Check-Out</div>
+                    <div className="font-semibold text-charcoal">{formatTime(reg.originalRecord.checkOutTime)}</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate italic">No system record exists for this date.</p>
+              )}
+            </div>
+
+            {/* Proposed Correction */}
             <div className="bg-offwhite rounded-lg p-4">
               <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Proposed Correction</div>
               <div className="space-y-3 text-sm">

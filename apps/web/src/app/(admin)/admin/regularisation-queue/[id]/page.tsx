@@ -8,6 +8,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Spinner } from '@/components/ui/Spinner';
+import { AttendanceStatusBadge } from '@/components/attendance/AttendanceStatusBadge';
 import { RegularisationStatusBadge } from '@/components/attendance/RegularisationStatusBadge';
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisation } from '@/lib/hooks/useRegularisations';
@@ -122,26 +123,67 @@ export default function AdminRegularisationDetailPage() {
         </div>
 
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-sage/30 p-6">
-          <h2 className="font-heading text-sm font-semibold text-charcoal mb-4">Proposed Correction</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-xs text-slate mb-0.5">Proposed Check-In</div>
-              <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckIn)}</div>
+          <h2 className="font-heading text-sm font-semibold text-charcoal mb-4">Correction Comparison</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Original Record */}
+            <div className="bg-offwhite rounded-lg p-4">
+              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Original Record</div>
+              {reg.originalRecord ? (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Status</div>
+                    <AttendanceStatusBadge status={reg.originalRecord.status} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Check-In</div>
+                    <div className="font-semibold text-charcoal">
+                      {formatTime(reg.originalRecord.checkInTime)}
+                      {reg.originalRecord.late && (
+                        <span className="ml-1.5 text-xs font-semibold text-umber">(late)</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Check-Out</div>
+                    <div className="font-semibold text-charcoal">{formatTime(reg.originalRecord.checkOutTime)}</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate italic">No system record exists for this date.</p>
+              )}
             </div>
-            <div>
-              <div className="text-xs text-slate mb-0.5">Proposed Check-Out</div>
-              <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckOut)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate mb-0.5">Status</div>
-              <RegularisationStatusBadge status={reg.status} />
-            </div>
-            {reg.correctedRecordId && (
-              <div>
-                <div className="text-xs text-slate mb-0.5">Corrected Record</div>
-                <div className="font-mono text-xs text-charcoal">{reg.correctedRecordId}</div>
+
+            {/* Proposed Correction */}
+            <div className="bg-offwhite rounded-lg p-4">
+              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Proposed Correction</div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-xs text-slate mb-0.5">Proposed Check-In</div>
+                  <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckIn)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate mb-0.5">Proposed Check-Out</div>
+                  <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckOut)}</div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Decision info */}
+            <div className="bg-offwhite rounded-lg p-4">
+              <div className="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Decision Info</div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-xs text-slate mb-0.5">Status</div>
+                  <RegularisationStatusBadge status={reg.status} />
+                </div>
+                {reg.correctedRecordId && (
+                  <div>
+                    <div className="text-xs text-slate mb-0.5">Corrected Record</div>
+                    <div className="font-mono text-xs text-charcoal">{reg.correctedRecordId}</div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

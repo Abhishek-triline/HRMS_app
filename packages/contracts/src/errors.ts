@@ -53,6 +53,13 @@ export const ErrorCode = {
   UNDO_WINDOW_EXPIRED: 'UNDO_WINDOW_EXPIRED',
   UNDO_OUTSIDE_DAY: 'UNDO_OUTSIDE_DAY',
 
+  // Regularisation duplicate — another reg already exists for the same
+  // (employee, date), either Pending or already Approved. Surfaces on
+  // submit (blocks the duplicate up-front) and on approve (graceful 409
+  // instead of a P2002 unique-constraint 500 when the date's overlay slot
+  // is already taken by another reg).
+  REGULARISATION_DUPLICATE: 'REGULARISATION_DUPLICATE',
+
   // Leave Encashment (BL-LE-01..14)
   ENCASHMENT_OUT_OF_WINDOW: 'ENCASHMENT_OUT_OF_WINDOW',
   ENCASHMENT_ALREADY_USED: 'ENCASHMENT_ALREADY_USED',
