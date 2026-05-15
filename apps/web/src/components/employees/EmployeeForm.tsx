@@ -78,6 +78,14 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const JOIN_DATE_MIN = '2000-01-01';
 const JOIN_DATE_MAX = `${new Date().getFullYear() + 1}-03-31`;
 
+// Date-of-birth bounds:
+//   - Floor at 1950-01-01: older entries are almost certainly typos; the
+//     oldest plausibly-active workforce hovers around mid-70s in 2026.
+//   - Ceiling at today: a future DOB is never legitimate. Native picker
+//     blocks the click and the hint copy spells it out for screen readers.
+const DOB_MIN = '1950-01-01';
+const DOB_MAX = TODAY;
+
 // Coerce select value to number | null (empty string → undefined, '0' → undefined)
 function toIntOrUndefined(val: string | number): number | undefined {
   const n = Number(val);
@@ -302,9 +310,15 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   <input
                     id="dob"
                     type="date"
+                    min={DOB_MIN}
+                    max={DOB_MAX}
                     {...register('dateOfBirth')}
+                    aria-describedby="dob-hint"
                     className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
                   />
+                  <p id="dob-hint" className="text-xs text-slate mt-1">
+                    Between {DOB_MIN} and today.
+                  </p>
                   <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
                 </div>
                 <div>
@@ -641,9 +655,15 @@ export function EmployeeForm(props: EmployeeFormProps) {
             <input
               id="edit-dob"
               type="date"
+              min={DOB_MIN}
+              max={DOB_MAX}
               {...editRegister('dateOfBirth')}
+              aria-describedby="edit-dob-hint"
               className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
             />
+            <p id="edit-dob-hint" className="text-xs text-slate mt-1">
+              Between {DOB_MIN} and today.
+            </p>
             <FieldError id="edit-dob-error" message={editErrors.dateOfBirth?.message} />
           </div>
           <div className="col-span-2">
