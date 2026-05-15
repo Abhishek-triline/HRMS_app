@@ -53,14 +53,17 @@ export function MoneyInput({
   const fieldId = id ?? generatedId;
   const errorId = `${fieldId}-error`;
 
-  // Display as rupees (integer division; paise < 100 are ignored in display)
-  const rupeesValue = valuePaise > 0 ? String(Math.floor(valuePaise / 100)) : '';
+  // Display as rupees. We round (not floor) so the input matches the
+  // <MoneyDisplay> component, which also rounds via Intl.NumberFormat with
+  // maximumFractionDigits: 0. Flooring here let ₹807.50 show as 807 in the
+  // input while the on-screen amount said ₹808 — confusing for users.
+  const rupeesValue = valuePaise > 0 ? String(Math.round(valuePaise / 100)) : '';
 
   const [raw, setRaw] = useState(rupeesValue);
 
   // Sync external value changes (e.g. form reset)
   useEffect(() => {
-    setRaw(valuePaise > 0 ? String(Math.floor(valuePaise / 100)) : '');
+    setRaw(valuePaise > 0 ? String(Math.round(valuePaise / 100)) : '');
   }, [valuePaise]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {

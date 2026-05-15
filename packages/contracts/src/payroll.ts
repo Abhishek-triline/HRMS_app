@@ -197,9 +197,17 @@ export const PayslipSummarySchema = PayslipSchema.pick({
   lopDays: true,
   grossPaise: true,
   finalTaxPaise: true,
+  // System-computed reference figure (gross × flat rate) — surfaced on
+  // the summary so the inline tax editor's "Use reference" button has
+  // something to copy. The detail endpoint still owns the full payslip.
+  referenceTaxPaise: true,
   netPayPaise: true,
   finalisedAt: true,
   reversalOfPayslipId: true,
+  // version is included so inline tax edits on the run detail table can
+  // submit an accurate optimistic-concurrency token without re-fetching
+  // the full payslip.
+  version: true,
 });
 export type PayslipSummary = z.infer<typeof PayslipSummarySchema>;
 

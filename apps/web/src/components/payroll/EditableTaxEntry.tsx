@@ -46,7 +46,11 @@ export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
     try {
       await mutation.mutateAsync({
         finalTaxPaise: taxPaise,
-        version: 1, // version is required; detail page passes full payslip with version
+        // Pass the actual payslip version so the server-side optimistic
+        // concurrency check matches. Hardcoding any value (the old TODO
+        // shipped `1`) breaks every save when the row hasn't been touched
+        // since creation (version=0).
+        version: payslip.version,
       });
       showToast({ type: 'success', title: 'Tax saved', message: `Updated for ${payslip.employeeName}` });
       onSaved?.();
@@ -71,19 +75,21 @@ export function EditableTaxEntry({ payslip, onSaved }: EditableTaxEntryProps) {
 
   return (
     <div className="space-y-4">
-      {/* Reference figure */}
+      {/* Reference figure — system-computed (gross × flat rate). Distinct
+          from finalTaxPaise, which is whatever the PO has saved so far. */}
       <div className="flex items-center justify-between bg-offwhite rounded-lg px-4 py-3 border border-sage/30">
         <div>
           <p className="text-xs font-semibold text-slate uppercase tracking-wide">Reference Tax</p>
           <p className="text-sm font-bold text-charcoal mt-0.5">
-            <MoneyDisplay paise={payslip.finalTaxPaise} />
+            <MoneyDisplay paise={payslip.referenceTaxPaise} />
           </p>
           <p className="text-xs text-slate mt-0.5">System-computed: gross × flat rate</p>
         </div>
         <button
           type="button"
-          onClick={() => setTaxPaise(payslip.finalTaxPaise ?? 0)}
-          className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors"
+          onClick={() => setTaxPaise(payslip.referenceTaxPaise ?? 0)}
+          disabled={payslip.referenceTaxPaise == null || taxPaise === payslip.referenceTaxPaise}
+          className="text-xs font-semibold text-forest border border-forest/30 rounded-lg px-3 py-1.5 hover:bg-forest/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Use reference
         </button>

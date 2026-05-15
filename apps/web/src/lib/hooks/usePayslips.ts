@@ -61,12 +61,19 @@ export function useUpdatePayslipTax(id: number) {
     onSuccess: (data) => {
       // Update the payslip cache with the new computed net.
       queryClient.setQueryData(qk.payslips.detail(id), data);
+      // Invalidate any list queries that include this payslip so the row
+      // on the run-detail page picks up the new version. Without this the
+      // parent re-renders with stale version and a second save in the same
+      // session returns VERSION_MISMATCH.
+      void queryClient.invalidateQueries({ queryKey: ['payslips', 'list'] });
       idempotencyKeyRef.current = generateKey();
     },
     onError: () => {
-      // On VERSION_MISMATCH or PAYSLIP_IMMUTABLE, refresh the detail so the
-      // UI reflects the current locked state.
+      // On VERSION_MISMATCH or PAYSLIP_IMMUTABLE, refresh the detail + the
+      // list so the UI reflects the current locked state and the new
+      // version propagates to the parent table.
       void queryClient.invalidateQueries({ queryKey: qk.payslips.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: ['payslips', 'list'] });
     },
   });
 }
