@@ -4,7 +4,7 @@
  * RegularisationForm — RHF + zod form for E-07 Regularisation Request.
  *
  * - Date picker: only past dates allowed
- * - proposedCheckIn / proposedCheckOut: HH:MM time inputs (24h)
+ * - proposedCheckIn / proposedCheckOut: HH:MM time inputs (HTML type="time")
  * - reason: textarea with 5-1000 char validation
  * - Original Record panel: fetched from useAttendanceList filtered to chosen date
  * - 409 LEAVE_REG_CONFLICT → rendered via ConflictErrorBlock (Phase 2 reuse, DN-19)
@@ -27,7 +27,7 @@ import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
 import { useMe } from '@/lib/hooks/useAuth';
 import { useProfile } from '@/lib/hooks/useEmployees';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatTime } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
 
 // ── Zod schema (mirrors CreateRegularisationRequestSchema but with UX coercion) ─
@@ -49,12 +49,12 @@ function buildFormSchema(joinDate: string | null) {
         ),
       proposedCheckIn: z
         .string()
-        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
+        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM')
         .nullable()
         .optional(),
       proposedCheckOut: z
         .string()
-        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
+        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM')
         .nullable()
         .optional(),
       reason: z.string().min(5, 'Reason must be at least 5 characters.').max(1000, 'Max 1000 characters.'),
@@ -68,12 +68,6 @@ function buildFormSchema(joinDate: string | null) {
 type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 function todayMinus1(): string {
   const d = new Date();
@@ -218,8 +212,8 @@ export function RegularisationForm() {
                     <div>
                       <div className="text-xs text-slate mb-0.5">Check-In / Out</div>
                       <div className="text-charcoal text-xs">
-                        {formatHHMM(originalRecord.checkInTime)} –{' '}
-                        {formatHHMM(originalRecord.checkOutTime)}
+                        {formatTime(originalRecord.checkInTime)} –{' '}
+                        {formatTime(originalRecord.checkOutTime)}
                       </div>
                     </div>
                   </div>

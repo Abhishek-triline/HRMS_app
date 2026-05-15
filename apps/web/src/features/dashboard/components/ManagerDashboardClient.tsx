@@ -18,6 +18,7 @@ import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
 import { showToast } from '@/components/ui/Toast';
 import { ATTENDANCE_STATUS, GOAL_OUTCOME, LEAVE_TYPE_MAP } from '@/lib/status/maps';
+import { formatTime } from '@/lib/utils';
 
 // v2: all IDs are number
 type GoalRow = {
@@ -67,7 +68,7 @@ function currentMonthLabel() {
 
 function formatCheckIn(iso?: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return formatTime(iso);
 }
 
 function statusBadge(status: number, late: boolean) {

@@ -18,24 +18,9 @@ import { clsx } from 'clsx';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { useTodayAttendance, useCheckIn, useCheckOut, useUndoCheckOut } from '@/lib/hooks/useAttendance';
+import { formatTime } from '@/lib/utils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatTime12(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
-}
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 function minutesToHM(mins: number | null): string {
   if (mins === null) return '—';
@@ -290,7 +275,7 @@ function WorkingPanel({ now, checkInIso, standardDailyHours, onCheckOut, isLoadi
       <div className="grid grid-cols-3 gap-2 mt-6 text-sm">
         <div>
           <div className="text-[10px] text-slate uppercase tracking-widest font-semibold mb-0.5">Checked in</div>
-          <div className="font-semibold text-charcoal">{formatHHMM(checkInIso)}</div>
+          <div className="font-semibold text-charcoal">{formatTime(checkInIso)}</div>
         </div>
         <div className="border-l border-r border-sage/30">
           <div className="text-[10px] text-slate uppercase tracking-widest font-semibold mb-0.5">Worked</div>
@@ -383,11 +368,11 @@ function ConfirmPanel({
       <div className="grid grid-cols-3 gap-2 mt-6 text-sm">
         <div>
           <div className="text-[10px] text-slate uppercase tracking-widest font-semibold mb-0.5">Check-in</div>
-          <div className="font-semibold text-charcoal">{formatHHMM(checkInIso)}</div>
+          <div className="font-semibold text-charcoal">{formatTime(checkInIso)}</div>
         </div>
         <div className="border-l border-r border-sage/30">
           <div className="text-[10px] text-slate uppercase tracking-widest font-semibold mb-0.5">Check-out</div>
-          <div className="font-semibold text-charcoal">{formatHHMM(checkOutIso)}</div>
+          <div className="font-semibold text-charcoal">{formatTime(checkOutIso)}</div>
         </div>
         <div>
           <div className="text-[10px] text-richgreen uppercase tracking-widest font-semibold mb-0.5">Total</div>

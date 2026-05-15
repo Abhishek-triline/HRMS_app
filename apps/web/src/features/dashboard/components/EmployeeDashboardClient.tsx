@@ -16,6 +16,7 @@ import { TimeOfDayHero } from './TimeOfDayHero';
 import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
 import { LEAVE_STATUS, LEAVE_TYPE_MAP, PAYROLL_STATUS, PANEL_STATE } from '@/lib/status/maps';
+import { formatTime } from '@/lib/utils';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -239,7 +240,7 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
                   </svg>
                   <span className="text-slate">Checked In:</span>
                   <span className="font-semibold text-charcoal">
-                    {new Date(dash.todayRecord.record.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {formatTime(dash.todayRecord.record.checkInTime)}
                   </span>
                 </div>
               )}

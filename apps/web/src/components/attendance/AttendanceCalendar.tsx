@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo, useRef, KeyboardEvent } from 'react';
 import { clsx } from 'clsx';
 import { AttendanceStatusBadge } from './AttendanceStatusBadge';
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
+import { formatTime } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,12 +56,6 @@ const cellBg: Record<number, string> = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 function minutesToHM(mins: number | null): string {
   if (mins === null || mins === undefined) return '—';
@@ -122,11 +117,11 @@ function DayDetail({ day, onClose }: { day: CalendarDay; onClose: () => void }) 
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
             <div className="text-xs text-slate mb-1">Check-in</div>
-            <div className="font-semibold text-charcoal">{formatHHMM(day.checkInTime)}</div>
+            <div className="font-semibold text-charcoal">{formatTime(day.checkInTime)}</div>
           </div>
           <div>
             <div className="text-xs text-slate mb-1">Check-out</div>
-            <div className="font-semibold text-charcoal">{formatHHMM(day.checkOutTime)}</div>
+            <div className="font-semibold text-charcoal">{formatTime(day.checkOutTime)}</div>
           </div>
           <div>
             <div className="text-xs text-slate mb-1">Hours</div>
@@ -320,7 +315,7 @@ export function AttendanceCalendar({
           >
             <div>
               <div className="font-medium text-charcoal">{d.date}</div>
-              <div className="text-xs text-slate">{formatHHMM(d.checkInTime)} – {formatHHMM(d.checkOutTime)}</div>
+              <div className="text-xs text-slate">{formatTime(d.checkInTime)} – {formatTime(d.checkOutTime)}</div>
             </div>
             <AttendanceStatusBadge status={d.status} />
           </button>

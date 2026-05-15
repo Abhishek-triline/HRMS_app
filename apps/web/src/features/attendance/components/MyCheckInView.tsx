@@ -21,15 +21,13 @@ import { AttendanceStatusBadge } from '@/components/attendance/AttendanceStatusB
 import { Spinner } from '@/components/ui/Spinner';
 import { useTodayAttendance } from '@/lib/hooks/useAttendance';
 import { useMe } from '@/lib/hooks/useAuth';
+import { formatTime } from '@/lib/utils';
 
-function formatHHMM(iso: string | null): string {
+function formatCheckTime(iso: string | null): string {
+  // formatTime returns "—" for null; this view prefers "— Pending" so the
+  // empty slot still reads as actionable rather than just blank.
   if (!iso) return '— Pending';
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
+  return formatTime(iso);
 }
 
 interface MyCheckInViewProps {
@@ -73,12 +71,12 @@ export function MyCheckInView({ regularisationHref = '/regularisation' }: MyChec
               </div>
               <div>
                 <div className="text-xs text-slate mb-1.5">Check-In</div>
-                <div className="font-semibold text-charcoal">{formatHHMM(record?.checkInTime ?? null)}</div>
+                <div className="font-semibold text-charcoal">{formatCheckTime(record?.checkInTime ?? null)}</div>
               </div>
               <div>
                 <div className="text-xs text-slate mb-1.5">Check-Out</div>
                 <div className={record?.checkOutTime ? 'font-semibold text-charcoal' : 'text-slate italic'}>
-                  {formatHHMM(record?.checkOutTime ?? null)}
+                  {formatCheckTime(record?.checkOutTime ?? null)}
                 </div>
               </div>
             </div>

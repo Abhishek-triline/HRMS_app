@@ -38,7 +38,7 @@ const IST_FORMATTER = new Intl.DateTimeFormat('en-IN', {
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
-  hour12: false,
+  hour12: true,
 });
 
 const UTC_FORMATTER = new Intl.DateTimeFormat('en-GB', {
@@ -49,7 +49,7 @@ const UTC_FORMATTER = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
-  hour12: false,
+  hour12: true,
 });
 
 function formatIST(iso: string): string {

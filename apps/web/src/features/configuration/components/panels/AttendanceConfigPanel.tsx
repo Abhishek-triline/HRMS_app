@@ -217,7 +217,7 @@ export default function AttendanceConfigPanel() {
 
   function handleSaveThreshold() {
     if (!/^\d{2}:\d{2}$/.test(thresholdDraft)) {
-      showToast({ type: 'error', title: 'Invalid time', message: 'Use HH:MM (24-hour) format.' });
+      showToast({ type: 'error', title: 'Invalid time', message: 'Use HH:MM format.' });
       return;
     }
     void saveAttendancePartial({ lateThresholdTime: thresholdDraft }, 'Late threshold');

@@ -8,17 +8,12 @@
 import { clsx } from 'clsx';
 import { AttendanceStatusBadge } from './AttendanceStatusBadge';
 import type { CalendarDay } from './AttendanceCalendar';
+import { formatTime } from '@/lib/utils';
 
 interface AttendanceTableProps {
   rows: CalendarDay[];
   showEmployee?: boolean;
   caption?: string;
-}
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function minutesToHM(mins: number | null): string {
@@ -74,8 +69,8 @@ export function AttendanceTable({ rows, showEmployee = false, caption }: Attenda
                 <td className="px-4 py-3.5">
                   <AttendanceStatusBadge status={row.status} />
                 </td>
-                <td className="px-4 py-3.5 text-charcoal">{formatHHMM(row.checkInTime)}</td>
-                <td className="px-4 py-3.5 text-charcoal">{formatHHMM(row.checkOutTime)}</td>
+                <td className="px-4 py-3.5 text-charcoal">{formatTime(row.checkInTime)}</td>
+                <td className="px-4 py-3.5 text-charcoal">{formatTime(row.checkOutTime)}</td>
                 <td className="px-4 py-3.5 text-charcoal">{minutesToHM(row.hoursWorkedMinutes)}</td>
                 <td className="px-4 py-3.5">
                   {row.late ? (

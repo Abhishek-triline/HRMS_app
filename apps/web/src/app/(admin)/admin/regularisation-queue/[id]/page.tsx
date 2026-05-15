@@ -12,12 +12,7 @@ import { RegularisationStatusBadge } from '@/components/attendance/Regularisatio
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisation } from '@/lib/hooks/useRegularisations';
 import { REG_STATUS } from '@/lib/status/maps';
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
+import { formatTime } from '@/lib/utils';
 
 export default function AdminRegularisationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -131,11 +126,11 @@ export default function AdminRegularisationDetailPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-xs text-slate mb-0.5">Proposed Check-In</div>
-              <div className="font-semibold text-charcoal">{formatHHMM(reg.proposedCheckIn)}</div>
+              <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckIn)}</div>
             </div>
             <div>
               <div className="text-xs text-slate mb-0.5">Proposed Check-Out</div>
-              <div className="font-semibold text-charcoal">{formatHHMM(reg.proposedCheckOut)}</div>
+              <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckOut)}</div>
             </div>
             <div>
               <div className="text-xs text-slate mb-0.5">Status</div>

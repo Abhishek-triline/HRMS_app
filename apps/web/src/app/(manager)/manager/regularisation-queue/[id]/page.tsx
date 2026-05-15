@@ -17,12 +17,7 @@ import { RegularisationStatusBadge } from '@/components/attendance/Regularisatio
 import { RegularisationApprovalActions } from '@/components/attendance/RegularisationApprovalActions';
 import { useRegularisation } from '@/lib/hooks/useRegularisations';
 import { REG_STATUS, ROUTED_TO } from '@/lib/status/maps';
-
-function formatHHMM(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
+import { formatTime } from '@/lib/utils';
 
 export default function ManagerRegularisationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -147,11 +142,11 @@ export default function ManagerRegularisationDetailPage() {
               <div className="space-y-3 text-sm">
                 <div>
                   <div className="text-xs text-slate mb-0.5">Proposed Check-In</div>
-                  <div className="font-semibold text-charcoal">{formatHHMM(reg.proposedCheckIn)}</div>
+                  <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckIn)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate mb-0.5">Proposed Check-Out</div>
-                  <div className="font-semibold text-charcoal">{formatHHMM(reg.proposedCheckOut)}</div>
+                  <div className="font-semibold text-charcoal">{formatTime(reg.proposedCheckOut)}</div>
                 </div>
               </div>
             </div>
