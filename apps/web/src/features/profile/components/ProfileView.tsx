@@ -106,11 +106,20 @@ function QuickLinksCard({ roleId }: { roleId: number }) {
         ? '/payroll'
         : '/employee';
 
+  // The routes are unprefixed (`/employee/leave`, not `/employee/my-leave`).
+  // Reviews are also asymmetric: Employee lives at /performance, the other
+  // three roles expose /my-review. Mapping each one explicitly avoids
+  // making future contributors guess.
+  const reviewHref =
+    roleId === ROLE_ID.Employee
+      ? `${basePath}/performance`
+      : `${basePath}/my-review`;
+
   const links = [
-    { label: 'My Leave', href: `${basePath}/my-leave` },
-    { label: 'My Attendance', href: `${basePath}/my-attendance` },
-    { label: 'My Payslips', href: `${basePath}/my-payslips` },
-    { label: 'My Review', href: `${basePath}/my-review` },
+    { label: 'My Leave', href: `${basePath}/leave` },
+    { label: 'My Attendance', href: `${basePath}/attendance` },
+    { label: 'My Payslips', href: `${basePath}/payslips` },
+    { label: 'My Review', href: reviewHref },
   ];
 
   return (
