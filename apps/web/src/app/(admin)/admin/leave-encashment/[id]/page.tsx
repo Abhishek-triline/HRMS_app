@@ -1,13 +1,14 @@
 'use client';
 
-import { use } from 'react';
 import { EncashmentDetailView } from '@/features/leave-encashment/components/EncashmentDetailView';
 
+// Next.js 14 client components: `params` is a plain object, NOT a Promise.
+// `React.use(params)` here used to fail with "An unsupported type was passed
+// to use(): [object Object]" because params isn't a thenable.
 interface Props {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function AdminEncashmentDetailPage({ params }: Props) {
-  const { id } = use(params);
-  return <EncashmentDetailView encashmentId={Number(id)} backHref="/admin/leave-encashment" />;
+  return <EncashmentDetailView encashmentId={Number(params.id)} backHref="/admin/leave-encashment" />;
 }

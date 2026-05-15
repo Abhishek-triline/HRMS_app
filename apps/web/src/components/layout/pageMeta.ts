@@ -115,6 +115,7 @@ export interface PrefixMatchEntry {
 }
 
 export const PAGE_META_PREFIX: PrefixMatchEntry[] = [
+  { prefix: '/admin/leave-encashment-queue/', meta: { title: 'Encashment Request' } },
   { prefix: '/admin/leave-encashment/',   meta: { title: 'Encashment Request' } },
   { prefix: '/admin/employees/',          meta: { title: 'Employee Details' } },
   { prefix: '/admin/leave-queue/',        meta: { title: 'Leave Request Detail' } },

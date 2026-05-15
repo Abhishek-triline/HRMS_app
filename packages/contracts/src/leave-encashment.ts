@@ -56,6 +56,15 @@ export const LeaveEncashmentDetailSchema = z.object({
   daysApproved: z.number().int().min(0).nullable(),
   ratePerDayPaise: z.number().int().min(0).nullable(),
   amountPaise: z.number().int().min(0).nullable(),
+  /**
+   * Preview rate / amount computed from the employee's current salary
+   * using the same formula as adminFinaliseEncashment ((basic + DA) / 26
+   * × daysRequested). Surfaced on the detail endpoint only so approver
+   * and employee can see the projected payout before AdminFinalised
+   * snapshots the real rate. Null when no active salary structure exists.
+   */
+  ratePerDayPaiseEstimate: z.number().int().min(0).nullable().optional(),
+  amountPaiseEstimate: z.number().int().min(0).nullable().optional(),
   status: LeaveEncashmentStatusSchema,
   routedToId: RoutedToIdSchema,
   approverId: IdSchema.nullable(),
@@ -86,6 +95,11 @@ export const LeaveEncashmentSummarySchema = LeaveEncashmentDetailSchema.pick({
   daysRequested: true,
   daysApproved: true,
   amountPaise: true,
+  // Same preview as on the detail endpoint — surfaced on the summary so
+  // the approval queues can show a projected payout column alongside the
+  // locked amount. Null once the request is AdminFinalised (amountPaise
+  // takes over).
+  amountPaiseEstimate: true,
   status: true,
   routedToId: true,
   approverId: true,
@@ -114,12 +128,19 @@ export const LeaveEncashmentListQuerySchema = PaginationQuerySchema.extend({
   year: z.coerce.number().int().min(2000).max(2999).optional(),
   status: z.coerce.number().int().min(1).max(6).optional(),
   employeeId: IdParamSchema.optional(),
+  /** Submission window filters — matched against createdAt. */
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Free-text employee search (name contains OR code startsWith). */
+  q: z.string().trim().min(1).max(100).optional(),
 });
 export type LeaveEncashmentListQuery = z.infer<typeof LeaveEncashmentListQuerySchema>;
 
 export const LeaveEncashmentListResponseSchema = z.object({
   data: z.array(LeaveEncashmentSummarySchema),
   nextCursor: z.string().nullable(),
+  /** Total rows that match the filter (independent of cursor / limit). */
+  total: z.number().int().nonnegative(),
 });
 export type LeaveEncashmentListResponse = z.infer<typeof LeaveEncashmentListResponseSchema>;
 

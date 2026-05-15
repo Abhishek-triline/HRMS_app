@@ -107,8 +107,17 @@ interface EncashmentDocumentProps {
 }
 
 function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
-  const ratePerDay = enc.ratePerDayPaise != null
-    ? `₹${(enc.ratePerDayPaise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}/day`
+  // Locked value wins once admin-finalises; until then the server-provided
+  // estimate (computed from the employee's current salary) is shown instead
+  // so the approver and employee can see the projected payout.
+  const rateEstimate = (enc as { ratePerDayPaiseEstimate?: number | null }).ratePerDayPaiseEstimate;
+  const amountEstimate = (enc as { amountPaiseEstimate?: number | null }).amountPaiseEstimate;
+  const ratePerDayDisplayPaise = enc.ratePerDayPaise ?? rateEstimate ?? null;
+  const amountDisplayPaise = enc.amountPaise ?? amountEstimate ?? null;
+  const isRateEstimated = enc.ratePerDayPaise == null && rateEstimate != null;
+  const isAmountEstimated = enc.amountPaise == null && amountEstimate != null;
+  const ratePerDay = ratePerDayDisplayPaise != null
+    ? `₹${(ratePerDayDisplayPaise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}/day`
     : '—';
 
   return (
@@ -139,11 +148,21 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Rate per Day</p>
-            <p className="font-semibold text-charcoal mt-0.5">{ratePerDay}</p>
+            <p className="font-semibold text-charcoal mt-0.5">
+              {ratePerDay}
+              {isRateEstimated && (
+                <span className="ml-1.5 text-xs font-normal text-slate italic">(estimated)</span>
+              )}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Amount</p>
-            <p className="font-semibold text-richgreen mt-0.5 text-base">{fmtRupees(enc.amountPaise)}</p>
+            <p className="font-semibold text-richgreen mt-0.5 text-base">
+              {fmtRupees(amountDisplayPaise)}
+              {isAmountEstimated && (
+                <span className="ml-1.5 text-xs font-normal text-slate italic">(estimated)</span>
+              )}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Routed To</p>

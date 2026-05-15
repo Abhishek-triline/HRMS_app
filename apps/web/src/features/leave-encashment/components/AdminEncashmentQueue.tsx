@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import {
@@ -24,7 +25,7 @@ import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
 import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { Button } from '@/components/ui/Button';
 import { EncashmentStatusBadge } from './EncashmentStatusBadge';
-import { LEAVE_ENCASHMENT_STATUS } from '@/lib/status/maps';
+import { LEAVE_ENCASHMENT_STATUS, ROUTED_TO } from '@/lib/status/maps';
 import type { LeaveEncashmentSummary } from '@nexora/contracts/leave-encashment';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -250,9 +251,11 @@ interface QueueTableProps {
   showActions: boolean;
   onFinalise?: (enc: LeaveEncashmentSummary) => void;
   onReject?: (enc: LeaveEncashmentSummary) => void;
+  /** When true, also renders a View link drilling into the detail page. */
+  showView?: boolean;
 }
 
-function QueueTable({ items, showActions, onFinalise, onReject }: QueueTableProps) {
+function QueueTable({ items, showActions, onFinalise, onReject, showView }: QueueTableProps) {
   if (items.length === 0) {
     return (
       <div className="px-6 py-16 text-center">
@@ -273,10 +276,11 @@ function QueueTable({ items, showActions, onFinalise, onReject }: QueueTableProp
             <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Code</th>
             <th scope="col" className="text-center px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Year</th>
             <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Requested</th>
+            <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Amount</th>
             <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
             <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Submitted</th>
             <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Waiting</th>
-            {showActions && <th scope="col" className="px-4 py-3" />}
+            {(showActions || showView) && <th scope="col" className="px-4 py-3" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-sage/10" aria-live="polite">
@@ -292,6 +296,23 @@ function QueueTable({ items, showActions, onFinalise, onReject }: QueueTableProp
                 <td className="px-4 py-3 font-mono text-xs text-forest font-semibold">{enc.code}</td>
                 <td className="px-4 py-3 text-sm text-charcoal text-center">{enc.year}</td>
                 <td className="px-4 py-3 text-sm text-charcoal text-right">{enc.daysRequested} d</td>
+                <td className="px-4 py-3 text-sm text-right">
+                  {(() => {
+                    // Show the locked amount once finalised; otherwise the
+                    // server-provided estimate so the approver sees a number
+                    // before the request reaches AdminFinalised.
+                    const est = (enc as { amountPaiseEstimate?: number | null }).amountPaiseEstimate;
+                    const paise = enc.amountPaise ?? est ?? null;
+                    if (paise == null) return <span className="text-slate">—</span>;
+                    const isEstimate = enc.amountPaise == null;
+                    return (
+                      <span className={isEstimate ? 'text-slate' : 'font-semibold text-charcoal'}>
+                        {`₹${Math.round(paise / 100).toLocaleString('en-IN')}`}
+                        {isEstimate && <span className="ml-1 text-[10px] italic">(est.)</span>}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td className="px-4 py-3">
                   <EncashmentStatusBadge status={enc.status} />
                 </td>
@@ -305,29 +326,58 @@ function QueueTable({ items, showActions, onFinalise, onReject }: QueueTableProp
                     <span className="text-xs text-slate">{wdSince}d</span>
                   )}
                 </td>
-                {showActions && (
+                {(showActions || showView) && (
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {enc.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved && onFinalise && (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          onClick={() => onFinalise(enc)}
-                          className="min-h-[44px] px-3 py-1.5 text-xs"
+                      {/* View link — on the "All this year" tab the row isn't
+                          actionable, so a single drill-in link is the only
+                          control. */}
+                      {showView && (
+                        <Link
+                          // Routes through the queue namespace so the admin
+                          // sidebar stays on "Queues" rather than switching
+                          // to "My Encashment" (which owns /admin/leave-encashment).
+                          href={`/admin/leave-encashment-queue/${enc.id}`}
+                          className="text-xs font-semibold text-forest hover:underline"
+                          aria-label={`View encashment ${enc.code}`}
                         >
-                          Finalise
-                        </Button>
+                          View →
+                        </Link>
                       )}
-                      {onReject && (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          onClick={() => onReject(enc)}
-                          className="min-h-[44px] px-3 py-1.5 text-xs"
-                        >
-                          Reject
-                        </Button>
-                      )}
+                      {/* Finalise shows on:
+                          - ManagerApproved rows (normal two-step flow), or
+                          - Pending rows that were routed straight to Admin (one-step
+                            flow used when the employee had no manager — top-of-tree
+                            admins, exited-manager fallback, etc.). Without this the
+                            request would be stuck with no clickable action. */}
+                      {((enc.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved) ||
+                        (enc.status === LEAVE_ENCASHMENT_STATUS.Pending && enc.routedToId === ROUTED_TO.Admin)) &&
+                        onFinalise && (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            onClick={() => onFinalise(enc)}
+                            className="min-h-[44px] px-3 py-1.5 text-xs"
+                          >
+                            Finalise
+                          </Button>
+                        )}
+                      {/* Reject mirrors Finalise's row gating — admin can
+                          reject ManagerApproved or admin-routed Pending. We
+                          don't surface Reject on manager-routed Pending rows
+                          because that step belongs to the manager. */}
+                      {((enc.status === LEAVE_ENCASHMENT_STATUS.ManagerApproved) ||
+                        (enc.status === LEAVE_ENCASHMENT_STATUS.Pending && enc.routedToId === ROUTED_TO.Admin)) &&
+                        onReject && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => onReject(enc)}
+                            className="min-h-[44px] px-3 py-1.5 text-xs"
+                          >
+                            Reject
+                          </Button>
+                        )}
                     </div>
                   </td>
                 )}
@@ -387,10 +437,24 @@ export function AdminEncashmentQueue() {
 
   const currentYear = new Date().getFullYear();
 
-  // Server-side cursor pagination — cursor map resets on tab change.
+  // "All this year" tab carries its own filter bar. Filters are buffered in
+  // the input state and pushed to appliedFilters on Apply so we don't refetch
+  // on every keystroke. None of these filters apply to the other two tabs.
+  const [statusInput, setStatusInput] = useState<'' | number>('');
+  const [fromDateInput, setFromDateInput] = useState('');
+  const [toDateInput, setToDateInput] = useState('');
+  const [employeeQInput, setEmployeeQInput] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<{
+    status: '' | number;
+    fromDate: string;
+    toDate: string;
+    q: string;
+  }>({ status: '', fromDate: '', toDate: '', q: '' });
+
+  // Server-side cursor pagination — cursor map resets on tab or filter change.
   const pager = useCursorPagination({
     pageSize: 20,
-    filtersKey: activeTab,
+    filtersKey: `${activeTab}|${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}|${appliedFilters.q}`,
   });
 
   // Per-tab query. The list endpoint is role-scoped server-side so admin sees
@@ -400,8 +464,32 @@ export function AdminEncashmentQueue() {
       ? { status: LEAVE_ENCASHMENT_STATUS.ManagerApproved, limit: pager.pageSize, cursor: pager.cursor }
       : activeTab === 'pending'
         ? { status: LEAVE_ENCASHMENT_STATUS.Pending, limit: pager.pageSize, cursor: pager.cursor }
-        : { year: currentYear, limit: pager.pageSize, cursor: pager.cursor },
+        : {
+            year: currentYear,
+            limit: pager.pageSize,
+            cursor: pager.cursor,
+            ...(appliedFilters.status !== '' ? { status: appliedFilters.status } : {}),
+            ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
+            ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+            ...(appliedFilters.q.trim() ? { q: appliedFilters.q.trim() } : {}),
+          },
   );
+
+  function handleApplyAllFilters() {
+    setAppliedFilters({
+      status: statusInput,
+      fromDate: fromDateInput,
+      toDate: toDateInput,
+      q: employeeQInput,
+    });
+  }
+  function handleResetAllFilters() {
+    setStatusInput('');
+    setFromDateInput('');
+    setToDateInput('');
+    setEmployeeQInput('');
+    setAppliedFilters({ status: '', fromDate: '', toDate: '', q: '' });
+  }
 
   useEffect(() => {
     if (query.data) pager.cacheNextCursor(query.data.nextCursor);
@@ -492,14 +580,95 @@ export function AdminEncashmentQueue() {
           <>
             {activeTab === 'all' && (
               <div className="px-6 pt-5 pb-4 border-b border-sage/20">
-                <p className="text-xs text-slate">All encashment requests — Year {currentYear}</p>
+                <p className="text-xs text-slate mb-3">All encashment requests — Year {currentYear}</p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label htmlFor="enc-all-status" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
+                      Status
+                    </label>
+                    <select
+                      id="enc-all-status"
+                      value={statusInput === '' ? '' : String(statusInput)}
+                      onChange={(e) => setStatusInput(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+                    >
+                      <option value="">All statuses</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.Pending}>Pending</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.ManagerApproved}>Manager Approved</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.AdminFinalised}>Admin Finalised</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.Rejected}>Rejected</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.Cancelled}>Cancelled</option>
+                      <option value={LEAVE_ENCASHMENT_STATUS.Paid}>Paid</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="enc-all-from" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
+                      Submitted From
+                    </label>
+                    <input
+                      id="enc-all-from"
+                      type="date"
+                      value={fromDateInput}
+                      onChange={(e) => setFromDateInput(e.target.value)}
+                      className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="enc-all-to" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
+                      Submitted To
+                    </label>
+                    <input
+                      id="enc-all-to"
+                      type="date"
+                      value={toDateInput}
+                      onChange={(e) => setToDateInput(e.target.value)}
+                      className="border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label htmlFor="enc-all-q" className="block text-[11px] font-semibold text-slate uppercase tracking-wide mb-1">
+                      Search Employee
+                    </label>
+                    <input
+                      id="enc-all-q"
+                      type="text"
+                      value={employeeQInput}
+                      onChange={(e) => setEmployeeQInput(e.target.value)}
+                      placeholder="Name or code…"
+                      className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm bg-white"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button type="button" variant="primary" onClick={handleApplyAllFilters}>
+                      Apply
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={handleResetAllFilters}>
+                      Reset
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
+            {/* Action column shows on both Manager-Approved and Pending tabs.
+                On Pending, the Finalise button only renders for admin-routed
+                rows (employees with no manager — top-of-tree admins or the
+                exited-manager fallback); manager-routed Pending rows still
+                wait for the manager step and get no button. The inner
+                conditional in QueueTable handles that filtering. */}
             <QueueTable
               items={rows}
-              showActions={activeTab === 'manager-approved'}
-              onFinalise={activeTab === 'manager-approved' ? setFinaliseTarget : undefined}
-              onReject={activeTab === 'manager-approved' ? setRejectTarget : undefined}
+              showActions={activeTab === 'manager-approved' || activeTab === 'pending'}
+              showView={activeTab === 'all'}
+              onFinalise={
+                activeTab === 'manager-approved' || activeTab === 'pending'
+                  ? setFinaliseTarget
+                  : undefined
+              }
+              onReject={
+                activeTab === 'manager-approved' || activeTab === 'pending'
+                  ? setRejectTarget
+                  : undefined
+              }
             />
             <CursorPaginator
               currentPage={pager.currentPage}
@@ -510,6 +679,7 @@ export function AdminEncashmentQueue() {
               onPageChange={pager.goToPage}
               onPrev={pager.goPrev}
               onNext={pager.goNext}
+              total={query.data?.total}
             />
           </>
         )}

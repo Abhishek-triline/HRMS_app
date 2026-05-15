@@ -216,10 +216,25 @@ function QueueRow({ enc, onApprove, onReject }: QueueRowProps) {
       <td className="px-4 py-3 font-mono text-xs text-forest font-semibold">{enc.code}</td>
       <td className="px-4 py-3 text-sm text-charcoal text-center">{enc.year}</td>
       <td className="px-4 py-3 text-sm text-charcoal text-right">{enc.daysRequested}</td>
-      <td className="px-4 py-3 text-xs text-slate text-right">
-        <span title="Approximate — actual rate locked at Admin-Finalise">
-          Rate locked at finalise
-        </span>
+      <td className="px-4 py-3 text-sm text-right">
+        {(() => {
+          // Server-computed estimate based on the employee's current salary.
+          // Replaces the placeholder "Rate locked at finalise" copy that used
+          // to live here. The locked amount still snapshots at Admin Finalise.
+          const est = (enc as { amountPaiseEstimate?: number | null }).amountPaiseEstimate;
+          const paise = enc.amountPaise ?? est ?? null;
+          if (paise == null) return <span className="text-slate">—</span>;
+          const isEstimate = enc.amountPaise == null;
+          return (
+            <span
+              className={isEstimate ? 'text-slate' : 'font-semibold text-charcoal'}
+              title={isEstimate ? 'Estimated — actual rate locks at Admin Finalise' : undefined}
+            >
+              {`₹${Math.round(paise / 100).toLocaleString('en-IN')}`}
+              {isEstimate && <span className="ml-1 text-[10px] italic">(est.)</span>}
+            </span>
+          );
+        })()}
       </td>
       <td className="px-4 py-3 text-xs text-slate">{fmtDate(enc.createdAt)}</td>
       <td className="px-4 py-3">
