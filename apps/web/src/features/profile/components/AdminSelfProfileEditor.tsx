@@ -33,6 +33,7 @@ import { FieldError } from '@/components/ui/FieldError';
 import { Button } from '@/components/ui/Button';
 import { showToast } from '@/components/ui/Toast';
 import { useUpdateEmployee } from '@/lib/hooks/useEmployees';
+import { useDesignations } from '@/lib/hooks/useMasters';
 import { ApiError } from '@/lib/api/client';
 import { EMPLOYMENT_TYPE_MAP, EMPLOYEE_STATUS_MAP } from '@/lib/status/maps';
 import type { EmployeeDetail } from '@nexora/contracts/employees';
@@ -45,7 +46,10 @@ const SelfEditSchema = z.object({
     .min(2, 'Name must be at least 2 characters')
     .max(200)
     .regex(/^[^\x00-\x08\x0A-\x1F\x7F]*$/u, 'Name must not contain control characters'),
-  designation: z.string().min(1, 'Designation is required').max(150),
+  // designationId is the canonical FK that UpdateEmployeeRequest accepts.
+  // The previous string field was silently dropped by Zod stripping on the
+  // server, so self-edits to designation never actually saved.
+  designationId: z.coerce.number().int().positive('Designation is required'),
   department: z.string().min(1, 'Department is required').max(100),
   /** Optional personal info — now exposed once the API contract includes them. */
   phone: z.string().max(20).nullable().optional(),
@@ -79,6 +83,8 @@ interface AdminSelfProfileEditorProps {
 
 export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfileEditorProps) {
   const updateEmployee = useUpdateEmployee(employee.id);
+  const designationsQuery = useDesignations();
+  const designations = designationsQuery.data ?? [];
 
   const {
     register,
@@ -89,7 +95,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
     resolver: zodResolver(SelfEditSchema),
     defaultValues: {
       name: employee.name,
-      designation: employee.designation ?? '',
+      designationId: employee.designationId ?? 0,
       department: employee.department ?? '',
       phone: employee.phone ?? null,
       dateOfBirth: employee.dateOfBirth ?? null,
@@ -102,7 +108,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
   useEffect(() => {
     reset({
       name: employee.name,
-      designation: employee.designation ?? '',
+      designationId: employee.designationId ?? 0,
       department: employee.department ?? '',
       phone: employee.phone ?? null,
       dateOfBirth: employee.dateOfBirth ?? null,
@@ -189,13 +195,19 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
             />
           </div>
           <div>
-            <Input
-              {...register('designation')}
-              label="Designation / Job Title"
-              required
-              error={errors.designation?.message}
-              maxLength={150}
-            />
+            <Label htmlFor="self-designation" required>Designation / Job Title</Label>
+            <select
+              id="self-designation"
+              {...register('designationId')}
+              aria-describedby={errors.designationId ? 'self-designation-error' : undefined}
+              className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest bg-white transition"
+            >
+              <option value={0}>Select designation</option>
+              {designations.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <FieldError id="self-designation-error" message={errors.designationId?.message} />
           </div>
           <div>
             <Label htmlFor="self-department" required>Department</Label>
@@ -339,7 +351,7 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
           onClick={() =>
             reset({
               name: employee.name,
-              designation: employee.designation ?? '',
+              designationId: employee.designationId ?? 0,
               department: employee.department ?? '',
               phone: employee.phone ?? null,
               dateOfBirth: employee.dateOfBirth ?? null,
