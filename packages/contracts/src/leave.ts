@@ -254,6 +254,8 @@ export type LeaveListQuery = z.infer<typeof LeaveListQuerySchema>;
 export const LeaveListResponseSchema = z.object({
   data: z.array(LeaveRequestSummarySchema),
   nextCursor: z.string().nullable(),
+  /** Total rows that match the filter (independent of cursor / limit). */
+  total: z.number().int().nonnegative(),
 });
 export type LeaveListResponse = z.infer<typeof LeaveListResponseSchema>;
 

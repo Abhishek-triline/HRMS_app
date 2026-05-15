@@ -138,6 +138,17 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
     return false;
   }
 
+  // Approver column header tracks the active tab. Pending / All keep a
+  // status-neutral label because the column may render rows in mixed states;
+  // Approved / Rejected use the past-tense action since every visible row
+  // had that decision made by the named person.
+  const approverColumnLabel =
+    activeTab === 'approved'
+      ? 'Approved By'
+      : activeTab === 'rejected'
+        ? 'Rejected By'
+        : 'Approver';
+
   // ── FY subtitle ──────────────────────────────────────────────────────────
   const todayDate = new Date();
   const fiscalYear = todayDate.getMonth() >= 3 ? todayDate.getFullYear() : todayDate.getFullYear() - 1;
@@ -239,7 +250,7 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Days</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Reason</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Status</th>
-                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Approved By</th>
+                      <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">{approverColumnLabel}</th>
                       <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-slate uppercase tracking-wide">Actions</th>
                     </tr>
                   </thead>
@@ -276,6 +287,7 @@ export function MyLeaveShell({ employeeId, basePath, pageTitle = 'My Leave' }: M
                 onPageChange={pager.goToPage}
                 onPrev={pager.goPrev}
                 onNext={pager.goNext}
+                total={listQuery.data.total}
               />
             </>
           )}

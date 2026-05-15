@@ -54,6 +54,13 @@ export interface CursorPaginatorProps {
   onPrev: () => void;
   onNext: () => void;
   /**
+   * Exact total row count, if the API returns one. When provided, the label
+   * reads "Showing X–Y of N" with no "+" suffix and the numbered buttons fill
+   * out to the full page range. Leave undefined for endpoints that only
+   * surface a cursor floor.
+   */
+  total?: number;
+  /**
    * Optional override for the "Showing X-Y of Z" copy. The default reads
    * naturally for record lists; override for non-record nouns ("Showing
    * 1-20 of 42+ employees").
@@ -73,6 +80,7 @@ export function CursorPaginator(props: CursorPaginatorProps) {
     onPageChange,
     onPrev,
     onNext,
+    total: knownTotal,
     label,
     className,
   } = props;
@@ -82,7 +90,7 @@ export function CursorPaginator(props: CursorPaginatorProps) {
     // Still render the "Showing X" copy for clarity, but no buttons.
     const from = currentPageCount === 0 ? 0 : 1;
     const to = currentPageCount;
-    const total = currentPageCount;
+    const total = knownTotal ?? currentPageCount;
     const text = label
       ? label({ from, to, total, hasMore: false })
       : currentPageCount === 0
@@ -102,21 +110,28 @@ export function CursorPaginator(props: CursorPaginatorProps) {
 
   const from = (currentPage - 1) * pageSize + 1;
   const to = (currentPage - 1) * pageSize + currentPageCount;
-  // Total estimate. On the *final* page (we've seen the last row, so
-  // !hasMore on the current page) the total is exact — `to`. Earlier
+  // Total. If the API gave us an exact `total`, use it — the label reads
+  // "Showing X–Y of N" cleanly. Otherwise fall back to a cursor floor:
+  // on the *final* page (!hasMore here) the total is exact — `to`. Earlier
   // pages can only floor the total at `highestReachablePage * pageSize`
   // because we don't yet know how full the last page will be, so the
   // label gets a "+" suffix.
   const onFinalPage = !hasMore && currentPage >= highestReachablePage;
-  const knownFloor = onFinalPage
-    ? to
-    : Math.max(to, highestReachablePage * pageSize);
+  const hasKnownTotal = typeof knownTotal === 'number';
+  const totalForLabel = hasKnownTotal
+    ? knownTotal
+    : onFinalPage
+      ? to
+      : Math.max(to, highestReachablePage * pageSize);
+  const suffix = hasKnownTotal || onFinalPage ? '' : '+';
   const text = label
-    ? label({ from, to, total: knownFloor, hasMore })
-    : `Showing ${from}–${to} of ${knownFloor}${onFinalPage ? '' : '+'}`;
+    ? label({ from, to, total: totalForLabel, hasMore })
+    : `Showing ${from}–${to} of ${totalForLabel}${suffix}`;
 
-  // Numbered buttons: 1..highestReachablePage. Cap at 7 visible numbers with
-  // an ellipsis if highestReachablePage is large.
+  // Numbered buttons can only be shown for pages we've cached a cursor for —
+  // cursor pagination has no way to jump to an arbitrary page. Even when a
+  // known `total` lets the label advertise more pages, the buttons stay
+  // bounded by `highestReachablePage`; the Next button walks the user there.
   const pages: (number | 'ellipsis')[] = [];
   if (highestReachablePage <= 7) {
     for (let i = 1; i <= highestReachablePage; i++) pages.push(i);
