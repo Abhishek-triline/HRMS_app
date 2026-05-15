@@ -162,21 +162,6 @@ export default function NewPayrollRunPage() {
 
   return (
     <>
-      {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-6">
-          {['Setup', 'Calculate', 'Review', 'Finalise'].map((step, i) => (
-            <div key={step} className="flex items-center gap-2">
-              {i > 0 && <div className="flex-1 h-px bg-sage/40 w-8" />}
-              <div className={`flex items-center gap-2 ${i > 0 ? 'opacity-50' : ''}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-forest text-white' : 'border-2 border-sage text-slate'}`}>
-                  {i + 1}
-                </div>
-                <span className={`text-sm ${i === 0 ? 'font-semibold text-charcoal' : 'text-slate'}`}>{step}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Setup card */}
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-xl shadow-sm border border-sage/30 p-6 mb-5">
