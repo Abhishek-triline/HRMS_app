@@ -61,7 +61,9 @@ function encashmentErrorMessage(code: string, message: string): string {
     case 'ENCASHMENT_ALREADY_USED':
       return 'You already have an approved or finalised encashment for this year. Only one encashment is allowed per year.';
     case 'ENCASHMENT_INSUFFICIENT_BALANCE':
-      return 'Requested days exceed 50% of your current Annual leave balance.';
+      // Defer to the server's message — it already names the configured
+      // percent cap (50 by default, admin can change it).
+      return message || 'Requested days exceed the configured percent of your current Annual leave balance.';
     case 'ENCASHMENT_INVALID_LEAVE_TYPE':
       return 'Encashment applies to Annual leave only.';
     default:
@@ -345,11 +347,11 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
   const daysRemaining = annualBalance?.remaining ?? 0;
   // daysEncashed is a new field on LeaveBalance (BL-LE-06); may be absent on older API responses
   const daysEncashed = (annualBalance as (typeof annualBalance & { daysEncashed?: number }) | undefined)?.daysEncashed ?? 0;
-  const maxEncashable = Math.floor((daysRemaining ?? 0) * 0.5);
 
   // Window check — driven by the live config (admin can move the window via
-  // /admin/configuration → Leave Quotas). The server enforces the same rule
-  // on submit; this client check is just UX gating for the Apply button.
+  // /admin/configuration → Leave Quotas). Logic mirrors the server-side
+  // isInsideEncashmentWindow in leave-encashment.service.ts so the UI gate
+  // and the server-side guard agree day-for-day.
   const encashmentConfigQuery = useEncashmentConfigSettings();
   const encashmentCfg = encashmentConfigQuery.data;
   const now = new Date();
@@ -358,25 +360,28 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
   const inWindow = (() => {
     if (!encashmentCfg) return false; // wait for config; safer to default closed
     const { windowStartMonth, windowEndMonth, windowEndDay } = encashmentCfg;
-    // Window wraps the calendar (e.g. Dec→Jan): if start > end, "open" means
-    // we're at/after start OR at/before end. Otherwise the simple in-range
-    // check applies.
     if (windowStartMonth > windowEndMonth) {
-      return (
-        month > windowStartMonth ||
-        month < windowEndMonth ||
-        (month === windowEndMonth && day <= windowEndDay)
-      );
+      // Crosses year boundary (e.g. May → Jan)
+      if (month === windowStartMonth) return true;
+      if (month < windowStartMonth && month > windowEndMonth) return false;
+      if (month === windowEndMonth) return day <= windowEndDay;
+      if (month < windowEndMonth) return true;
+      return false;
     }
-    if (windowStartMonth === windowEndMonth) {
-      return month === windowStartMonth && day <= windowEndDay;
-    }
-    return (
-      (month > windowStartMonth && month < windowEndMonth) ||
-      month === windowStartMonth ||
-      (month === windowEndMonth && day <= windowEndDay)
-    );
+    // Same-year window (e.g. Nov → Dec, or single-month May → May)
+    if (month < windowStartMonth) return false;
+    if (month > windowEndMonth) return false;
+    if (month === windowStartMonth) return true;
+    if (month === windowEndMonth) return day <= windowEndDay;
+    return true;
   })();
+
+  // Maximum days the employee can encash this year — driven by the admin's
+  // configured percent (50 by default). Hardcoding 50% client-side would let
+  // the UI offer values the server would reject if the admin lowers the cap.
+  const maxEncashable = Math.floor(
+    (daysRemaining ?? 0) * ((encashmentCfg?.maxPercent ?? 50) / 100),
+  );
 
   // Disable apply if already has open/approved
   const hasOpenRequest = useMemo(() => {
