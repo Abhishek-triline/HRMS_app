@@ -243,13 +243,17 @@ export function AdminSelfProfileEditor({ employee, onSuccess }: AdminSelfProfile
               id="self-dob"
               type="date"
               min="1950-01-01"
-              max={new Date().toISOString().slice(0, 10)}
+              max={(() => {
+                const d = new Date();
+                d.setFullYear(d.getFullYear() - 18);
+                return d.toISOString().slice(0, 10);
+              })()}
               {...register('dateOfBirth')}
               aria-describedby="self-dob-hint"
               className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
             />
             <p id="self-dob-hint" className="text-xs text-slate mt-1">
-              Between 1950-01-01 and today.
+              Must be at least 18 years ago.
             </p>
             <FieldError id="self-dob-error" message={errors.dateOfBirth?.message} />
           </div>

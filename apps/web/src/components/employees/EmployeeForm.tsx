@@ -81,10 +81,15 @@ const JOIN_DATE_MAX = `${new Date().getFullYear() + 1}-03-31`;
 // Date-of-birth bounds:
 //   - Floor at 1950-01-01: older entries are almost certainly typos; the
 //     oldest plausibly-active workforce hovers around mid-70s in 2026.
-//   - Ceiling at today: a future DOB is never legitimate. Native picker
-//     blocks the click and the hint copy spells it out for screen readers.
+//   - Ceiling at today - 18 years: the employee must be at least 18 on the
+//     day the record is created. Native picker blocks earlier selections;
+//     the hint copy spells the rule out for screen readers.
 const DOB_MIN = '1950-01-01';
-const DOB_MAX = TODAY;
+const DOB_MAX = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d.toISOString().slice(0, 10);
+})();
 
 // Coerce select value to number | null (empty string → undefined, '0' → undefined)
 function toIntOrUndefined(val: string | number): number | undefined {
@@ -317,7 +322,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
                     className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
                   />
                   <p id="dob-hint" className="text-xs text-slate mt-1">
-                    Between {DOB_MIN} and today.
+                    Between {DOB_MIN} and {DOB_MAX} — employee must be at least 18.
                   </p>
                   <FieldError id="dob-error" message={errors.dateOfBirth?.message} />
                 </div>
@@ -662,7 +667,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
               className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
             />
             <p id="edit-dob-hint" className="text-xs text-slate mt-1">
-              Between {DOB_MIN} and today.
+              Between {DOB_MIN} and {DOB_MAX} — employee must be at least 18.
             </p>
             <FieldError id="edit-dob-error" message={editErrors.dateOfBirth?.message} />
           </div>
