@@ -70,10 +70,12 @@ export default function AdminRegularisationQueuePage() {
     toDate: '',
   });
 
-  // Server-side cursor pagination. Auto-resets when filtersKey changes.
+  // Server-side cursor pagination. Auto-resets when filtersKey changes —
+  // include employee q so changing it (rare) doesn't strand the user on a
+  // stale cursor for a different result set.
   const pager = useCursorPagination({
     pageSize: 20,
-    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}|${appliedFilters.employee}`,
   });
 
   // Build query from applied filters
@@ -82,6 +84,7 @@ export default function AdminRegularisationQueuePage() {
     ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    ...(appliedFilters.employee.trim() ? { q: appliedFilters.employee.trim() } : {}),
     limit: pager.pageSize,
     cursor: pager.cursor,
   };
@@ -99,39 +102,55 @@ export default function AdminRegularisationQueuePage() {
   // only the visible page, not the dataset).
   const allRows = data?.data ?? [];
 
-  // Client-side employee name search — page-local only. Note: with server
-  // pagination this filters only the current 20 rows. A true cross-page
-  // search needs a backend `q`/`employeeName` query param (not yet in
-  // RegularisationListQuerySchema).
-  const filteredRows = useMemo(() => {
-    const q = appliedFilters.employee.toLowerCase().trim();
-    if (!q) return allRows;
-    return allRows.filter(
-      (r) =>
-        r.employeeName.toLowerCase().includes(q) ||
-        r.employeeCode.toLowerCase().includes(q),
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, appliedFilters.employee]);
-
   // Pending-first within the current page (server already orders so but
-  // we re-sort defensively for the displayed slice).
+  // we re-sort defensively for the displayed slice). Employee-name search
+  // is now server-side via the `q` query param, so we sort the loaded rows
+  // directly rather than filter them again here.
   const sorted = useMemo(() => {
-    return [...filteredRows].sort((a, b) => {
+    return [...allRows].sort((a, b) => {
       if (a.status === REG_STATUS.Pending && b.status !== REG_STATUS.Pending) return -1;
       if (a.status !== REG_STATUS.Pending && b.status === REG_STATUS.Pending) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [filteredRows]);
+  }, [allRows]);
 
-  // KPI counts — current page only. With cursor pagination these reflect
-  // the loaded page (max 20 rows); a true org-wide count needs a separate
-  // count endpoint or cursor-walk helper (see useEmployeesCount pattern).
-  // For now the "+" suffix on the total in the paginator below tells the
-  // user that more rows exist beyond these counts.
-  const pendingCount = allRows.filter((r) => r.status === REG_STATUS.Pending).length;
-  const approvedCount = allRows.filter((r) => r.status === REG_STATUS.Approved).length;
-  const rejectedCount = allRows.filter((r) => r.status === REG_STATUS.Rejected).length;
+  // KPI counts — each card reads its own status total independently of the
+  // status filter, so the strip is a stable summary rather than a mirror
+  // of the active filter. They DO respect From/To/Employee filters so the
+  // user can scope counts to a specific window or person.
+  //
+  // Approved This Month uses the calendar-month floor when the user hasn't
+  // entered a from date — that keeps the "this month" label honest.
+  const monthStart = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  })();
+  const sharedFilters = {
+    routedToId: 2 as const,
+    ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
+    ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    ...(appliedFilters.employee.trim() ? { q: appliedFilters.employee.trim() } : {}),
+  };
+  const pendingTotalQ = useRegularisations({
+    ...sharedFilters,
+    status: REG_STATUS.Pending,
+    limit: 1,
+  });
+  const approvedThisMonthQ = useRegularisations({
+    ...sharedFilters,
+    status: REG_STATUS.Approved,
+    // Only apply the month floor when the user hasn't set their own fromDate.
+    ...(appliedFilters.fromDate ? {} : { fromDate: monthStart }),
+    limit: 1,
+  });
+  const rejectedTotalQ = useRegularisations({
+    ...sharedFilters,
+    status: REG_STATUS.Rejected,
+    limit: 1,
+  });
+  const pendingCount = pendingTotalQ.data?.total ?? 0;
+  const approvedCount = approvedThisMonthQ.data?.total ?? 0;
+  const rejectedCount = rejectedTotalQ.data?.total ?? 0;
 
   const handleApply = () => {
     setAppliedFilters({

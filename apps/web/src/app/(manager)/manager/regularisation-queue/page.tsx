@@ -73,12 +73,13 @@ export default function ManagerRegularisationQueuePage() {
   // Server-side cursor pagination; resets on filter change.
   const pager = useCursorPagination({
     pageSize: 20,
-    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}`,
+    filtersKey: `${appliedFilters.status}|${appliedFilters.fromDate}|${appliedFilters.toDate}|${appliedFilters.employee}`,
   });
   const query = {
     ...(appliedFilters.status !== 'all' ? { status: appliedFilters.status as RegStatusValue } : {}),
     ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
     ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    ...(appliedFilters.employee.trim() ? { q: appliedFilters.employee.trim() } : {}),
     limit: pager.pageSize,
     cursor: pager.cursor,
   };
@@ -90,29 +91,50 @@ export default function ManagerRegularisationQueuePage() {
 
   const rows = data?.data ?? [];
 
-  // Client-side employee search
-  const filteredRows = useMemo(() => {
-    const q = appliedFilters.employee.toLowerCase().trim();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.employeeName.toLowerCase().includes(q) ||
-        r.employeeCode.toLowerCase().includes(q),
-    );
-  }, [rows, appliedFilters.employee]);
-
-  // Pending-first sort
+  // Pending-first sort. Employee-name search is server-side via `q`, so we
+  // sort the loaded rows directly here.
   const sorted = useMemo(() => {
-    return [...filteredRows].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       if (a.status === REG_STATUS.Pending && b.status !== REG_STATUS.Pending) return -1;
       if (a.status !== REG_STATUS.Pending && b.status === REG_STATUS.Pending) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [filteredRows]);
+  }, [rows]);
 
-  const pendingCount = rows.filter((r) => r.status === REG_STATUS.Pending).length;
-  const approvedCount = rows.filter((r) => r.status === REG_STATUS.Approved).length;
-  const rejectedCount = rows.filter((r) => r.status === REG_STATUS.Rejected).length;
+  // KPI counts — each card reads its own status total independently of the
+  // status filter, and respects From/To/Employee filters. Manager scope is
+  // implicit on the server (defaults to user's own + reportees with self as
+  // approver), so we don't pass routedToId here.
+  const monthStart = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  })();
+  const sharedKpiFilters = {
+    ...(appliedFilters.fromDate ? { fromDate: appliedFilters.fromDate } : {}),
+    ...(appliedFilters.toDate ? { toDate: appliedFilters.toDate } : {}),
+    ...(appliedFilters.employee.trim() ? { q: appliedFilters.employee.trim() } : {}),
+  };
+  const pendingTotalQ = useRegularisations({
+    ...sharedKpiFilters,
+    status: REG_STATUS.Pending,
+    limit: 1,
+  });
+  const approvedThisMonthQ = useRegularisations({
+    ...sharedKpiFilters,
+    status: REG_STATUS.Approved,
+    ...(appliedFilters.fromDate ? {} : { fromDate: monthStart }),
+    limit: 1,
+  });
+  const rejectedTotalQ = useRegularisations({
+    ...sharedKpiFilters,
+    status: REG_STATUS.Rejected,
+    limit: 1,
+  });
+  const pendingCount = pendingTotalQ.data?.total ?? 0;
+  const approvedCount = approvedThisMonthQ.data?.total ?? 0;
+  const rejectedCount = rejectedTotalQ.data?.total ?? 0;
+  // Admin-routed badge stays page-local (only colours visible rows that
+  // bumped to Admin) — it's a visual aid on the loaded slice, not a metric.
   const adminRoutedCount = rows.filter((r) => r.routedToId === ROUTED_TO.Admin).length;
 
   const handleApply = () => {

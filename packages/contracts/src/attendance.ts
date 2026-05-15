@@ -356,12 +356,18 @@ export const RegularisationListQuerySchema = PaginationQuerySchema.extend({
   employeeId: IdParamSchema.optional(),
   fromDate: ISODateOnlySchema.optional(),
   toDate: ISODateOnlySchema.optional(),
+  /** Free-text search matched against employee.name (contains, case-insensitive)
+   *  or employee.code (exact prefix). Used by the approval queue search box so
+   *  KPI tiles and the table see the same row set under server-side pagination. */
+  q: z.string().trim().min(1).max(100).optional(),
 });
 export type RegularisationListQuery = z.infer<typeof RegularisationListQuerySchema>;
 
 export const RegularisationListResponseSchema = z.object({
   data: z.array(RegularisationSummarySchema),
   nextCursor: z.string().nullable(),
+  /** Total rows that match the filter (independent of cursor / limit). */
+  total: z.number().int().nonnegative(),
 });
 export type RegularisationListResponse = z.infer<typeof RegularisationListResponseSchema>;
 
