@@ -169,29 +169,48 @@ export function SalaryStructureForm({
         </span>
       </div>
 
-      {/* Effective From */}
+      {/* Effective From — salary changes apply to the *next* payroll run
+          (BL-030); back-dating into already-finalised runs is meaningless
+          and would mislead the operator. The native picker is capped at
+          today on the lower end (no past) and at today + 3 years on the
+          upper end so a typo can't put the change centuries away. */}
       <div>
         <Controller
           name="salaryStructure.effectiveFrom"
           control={control}
-          render={({ field }) => (
-            <div>
-              <Label htmlFor="salary-effective" required>
-                Effective From
-              </Label>
-              <input
-                id="salary-effective"
-                type="date"
-                value={field.value ?? ''}
-                onChange={field.onChange}
-                className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
-              />
-              <FieldError
-                id="salary-effective-error"
-                message={(errors?.salaryStructure as { effectiveFrom?: { message?: string } })?.effectiveFrom?.message}
-              />
-            </div>
-          )}
+          render={({ field }) => {
+            const ymd = (d: Date) =>
+              `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const today = new Date();
+            const todayYmd = ymd(today);
+            const maxDate = new Date(today);
+            maxDate.setFullYear(today.getFullYear() + 3);
+            const maxYmd = ymd(maxDate);
+            return (
+              <div>
+                <Label htmlFor="salary-effective" required>
+                  Effective From
+                </Label>
+                <input
+                  id="salary-effective"
+                  type="date"
+                  min={todayYmd}
+                  max={maxYmd}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  aria-describedby="salary-effective-hint"
+                  className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
+                />
+                <p id="salary-effective-hint" className="text-xs text-slate mt-1">
+                  Today through {maxYmd}. Salary changes apply to the next payroll run.
+                </p>
+                <FieldError
+                  id="salary-effective-error"
+                  message={(errors?.salaryStructure as { effectiveFrom?: { message?: string } })?.effectiveFrom?.message}
+                />
+              </div>
+            );
+          }}
         />
       </div>
 
