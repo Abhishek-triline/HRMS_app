@@ -379,7 +379,11 @@ function parseTab(raw: string | null): Tab {
 export function AdminEncashmentQueue() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = parseTab(searchParams.get('tab'));
+  // The outer page (admin/queues) owns the ?tab= query param to switch
+  // between Regularisation and Encashment panels. We can't reuse it for the
+  // inner filter tabs here without colliding — clicking an inner tab would
+  // navigate away from the encashment panel entirely. Use ?subtab= instead.
+  const activeTab = parseTab(searchParams.get('subtab'));
 
   const currentYear = new Date().getFullYear();
 
@@ -418,7 +422,7 @@ export function AdminEncashmentQueue() {
 
   function setTab(t: Tab) {
     const next = new URLSearchParams(searchParams.toString());
-    next.set('tab', t);
+    next.set('subtab', t);
     router.replace(`?${next.toString()}`, { scroll: false });
   }
 

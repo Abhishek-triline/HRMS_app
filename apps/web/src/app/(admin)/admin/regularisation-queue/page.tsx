@@ -59,12 +59,14 @@ function KpiTile({ label, count, icon, iconBg }: KpiTileProps) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function AdminRegularisationQueuePage() {
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>(REG_STATUS.Pending);
+  // Default to "All" so the table opens with the full picture; KPI tiles
+  // still surface pending/approved/rejected counts independently.
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({
-    status: REG_STATUS.Pending as FilterStatus,
+    status: 'all' as FilterStatus,
     employee: '',
     fromDate: '',
     toDate: '',

@@ -92,8 +92,16 @@ const adminNav: NavEntry[] = [
   { type: 'link', label: 'Dashboard',            href: '/admin/dashboard',               iconPath: ICONS.dashboard },
   { type: 'link', label: 'Employees',            href: '/admin/employees',               iconPath: ICONS.employees },
   { type: 'link', label: 'Leave',                href: '/admin/leave-queue',             iconPath: ICONS.leave },
-  { type: 'link', label: 'Encashment Queue',     href: '/admin/leave-encashment-queue',  iconPath: ICONS.encashment },
-  { type: 'link', label: 'Regularisation Queue', href: '/admin/regularisation-queue',    iconPath: ICONS.regularisation },
+  // Consolidated approval queues — Regularisation + Encashment live behind
+  // a tabbed hub at /admin/queues. Standalone routes still resolve for
+  // existing notification deep-links; they just aren't in the sidebar.
+  {
+    type: 'link',
+    label: 'Queues',
+    href: '/admin/queues',
+    iconPath: ICONS.regularisation,
+    matchPaths: ['/admin/regularisation-queue', '/admin/leave-encashment-queue'],
+  },
   { type: 'link', label: 'Attendance',           href: '/admin/attendance',              iconPath: ICONS.attendance },
   { type: 'link', label: 'Payroll Runs',         href: '/admin/payroll-runs',            iconPath: ICONS.payroll },
   // Reports hidden until v1.1 — exports are stubbed ("Coming soon" toasts) and the
@@ -121,8 +129,16 @@ const managerNav: NavEntry[] = [
   { type: 'link', label: 'Dashboard',              href: '/manager/dashboard',               iconPath: ICONS.dashboard },
   { type: 'link', label: 'My Team',                href: '/manager/team',                    iconPath: ICONS.myTeam },
   { type: 'link', label: 'Leave Queue',            href: '/manager/leave-queue',             iconPath: ICONS.leaveQueue },
-  { type: 'link', label: 'Encashment Queue',       href: '/manager/leave-encashment-queue',  iconPath: ICONS.encashment },
-  { type: 'link', label: 'Regularisation Queue',   href: '/manager/regularisation-queue',    iconPath: ICONS.regularisation },
+  // Consolidated approval queues — Regularisation + Encashment in a tabbed
+  // hub at /manager/queues. Standalone routes still resolve for notification
+  // deep-links; just not in the sidebar.
+  {
+    type: 'link',
+    label: 'Queues',
+    href: '/manager/queues',
+    iconPath: ICONS.regularisation,
+    matchPaths: ['/manager/regularisation-queue', '/manager/leave-encashment-queue'],
+  },
   { type: 'link', label: 'Performance',            href: '/manager/performance',             iconPath: ICONS.performance },
   { type: 'subhead', label: 'My Records' },
   { type: 'link', label: 'My Leave',               href: '/manager/leave',                   iconPath: ICONS.leave },

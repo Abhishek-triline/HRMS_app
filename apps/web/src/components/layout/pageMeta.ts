@@ -43,6 +43,7 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/admin/my-review':                 { title: 'My Performance Review',            subtitle: 'Cycle 1 · FY 2026-27 · April–September 2026' },
   '/admin/audit-log':                 { title: 'Audit Log' },
   '/admin/configuration':             { title: 'System Configuration' },
+  '/admin/queues':                    { title: 'Approval Queues',                   subtitle: 'Regularisation & Encashment requests' },
   '/admin/notifications':             { title: 'Notifications' },
   '/admin/profile':                   { title: 'My Profile' },
 
@@ -53,6 +54,7 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/manager/leave-encashment':        { title: 'My Leave Encashment' },
   '/manager/leave-encashment-queue':  { title: 'Encashment Queue',                  subtitle: 'Pending requests assigned to you' },
   '/manager/regularisation-queue':    { title: 'Regularisation Approvals' },
+  '/manager/queues':                  { title: 'Approval Queues',                   subtitle: 'Pending requests assigned to you' },
   '/manager/regularisation':          { title: 'Regularisation Request' },
   '/manager/team-attendance':         { title: 'Team Attendance' },
   '/manager/performance':             { title: 'Performance' },
