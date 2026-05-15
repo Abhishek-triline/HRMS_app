@@ -13,9 +13,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePayrollRuns } from '@/lib/hooks/usePayroll';
+import { usePayrollRuns, useReversals } from '@/lib/hooks/usePayroll';
 import { PayrollRunStatusBadge } from '@/components/payroll/PayrollRunStatusBadge';
 import { MoneyDisplay } from '@/components/payroll/MoneyDisplay';
+import { ReversalHistoryTable } from '@/components/payroll/ReversalHistoryTable';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { PayrollRunStatus } from '@nexora/contracts/payroll';
@@ -56,6 +57,14 @@ export default function PayrollRunsPage() {
   });
 
   const runs = data?.data ?? [];
+
+  // Reversal history — embedded below the run history table on this same
+  // page (admin only). PO still uses the standalone /payroll/reversal-history
+  // route. The data hook is independent of the year/status filter so the
+  // reversal list shows the full company history regardless of the filters
+  // applied to the main runs table above.
+  const reversalsQuery = useReversals();
+  const reversals = reversalsQuery.data?.data ?? [];
 
   // Compute simple stat tiles from run list
   const finalised = runs.filter((r) => r.status === PayrollRunStatus.Finalised);
@@ -267,6 +276,30 @@ export default function PayrollRunsPage() {
 
       {/* Footer disclaimer — matches prototype exactly */}
       <p className="text-xs text-slate mt-3">* Estimated amounts for Draft runs. Final figures available after finalisation.</p>
+
+      {/* Reversal History — embedded on this page so admins don't have to
+          hop to a separate route. PO panel still uses the standalone
+          /payroll/reversal-history page. */}
+      <div className="bg-white rounded-xl shadow-sm border border-sage/30 overflow-hidden mt-6">
+        <div className="px-5 py-4 border-b border-sage/20">
+          <h2 className="text-sm font-semibold text-charcoal">
+            Reversal History
+            <span className="ml-2 text-xs font-normal text-slate">
+              {reversalsQuery.isLoading
+                ? '— loading…'
+                : `— ${reversals.length} reversal${reversals.length !== 1 ? 's' : ''} on record`}
+            </span>
+          </h2>
+          <p className="text-xs text-slate mt-0.5">All Admin-initiated payroll run reversals</p>
+        </div>
+        {reversalsQuery.isError ? (
+          <div className="text-center py-8 text-crimson text-sm">
+            Failed to load reversal history. Please refresh.
+          </div>
+        ) : (
+          <ReversalHistoryTable items={reversals} isLoading={reversalsQuery.isLoading} />
+        )}
+      </div>
     </>
   );
 }

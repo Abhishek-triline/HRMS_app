@@ -100,7 +100,8 @@ const adminNav: NavEntry[] = [
   // page is not in the SRS A-XX list. Re-enable by uncommenting this line and the
   // matching entry in payrollNav once the CSV/PDF exports ship.
   // { type: 'link', label: 'Reports',              href: '/admin/reports',                 iconPath: ICONS.reports },
-  { type: 'link', label: 'Reversal History',     href: '/admin/reversal-history',        iconPath: ICONS.reversal },
+  // Reversal History moved inline onto /admin/payroll-runs — the standalone
+  // route still exists but is no longer in the sidebar. PO panel keeps it.
   { type: 'link', label: 'Performance',          href: '/admin/performance-cycles',      iconPath: ICONS.performance },
   { type: 'link', label: 'Audit Log',            href: '/admin/audit-log',               iconPath: ICONS.auditLog },
   { type: 'link', label: 'Configuration',        href: '/admin/configuration',           iconPath: ICONS.configuration },
