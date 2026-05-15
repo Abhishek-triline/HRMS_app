@@ -71,12 +71,17 @@ export const LeaveEncashmentDetailSchema = z.object({
   approverName: z.string().nullable(),
   decidedAt: ISODateSchema.nullable(),
   decidedBy: IdSchema.nullable(),
+  /** Resolved display name for decidedBy — surfaced so the timeline doesn't
+   *  read "By: 7" when the actor is known. Null when decidedBy is null. */
+  decidedByName: z.string().nullable().optional(),
   decisionNote: z.string().nullable(),
   escalatedAt: ISODateSchema.nullable(),
   paidInPayslipId: IdSchema.nullable(),
   paidAt: ISODateSchema.nullable(),
   cancelledAt: ISODateSchema.nullable(),
   cancelledBy: IdSchema.nullable(),
+  /** Resolved display name for cancelledBy — same rationale as decidedByName. */
+  cancelledByName: z.string().nullable().optional(),
   createdAt: ISODateSchema,
   updatedAt: ISODateSchema,
   version: VersionSchema,

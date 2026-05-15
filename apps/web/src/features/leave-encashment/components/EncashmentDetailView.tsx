@@ -297,7 +297,14 @@ function EncashmentDocument({ enc, backHref }: EncashmentDocumentProps) {
               completed
               iconBg="bg-slate"
               title="Cancelled"
-              subtitle={enc.cancelledBy ? `By: ${enc.cancelledBy}` : undefined}
+              subtitle={
+                enc.cancelledBy
+                  ? `By: ${
+                      (enc as { cancelledByName?: string | null }).cancelledByName ??
+                      `Employee ${enc.cancelledBy}`
+                    }`
+                  : undefined
+              }
               timestamp={enc.cancelledAt}
               icon={
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
