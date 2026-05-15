@@ -26,7 +26,7 @@
 import { clsx } from 'clsx';
 import { MoneyDisplay } from './MoneyDisplay';
 import { PayslipStatusBadge } from './PayslipStatusBadge';
-import { useDownloadPayslipPdf } from '@/lib/hooks/usePayslips';
+import { useDownloadPayslipPdf, usePrintPayslipPdf } from '@/lib/hooks/usePayslips';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
 import type { Payslip } from '@nexora/contracts/payroll';
@@ -159,6 +159,7 @@ interface PayslipViewerProps {
 
 export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLabel }: PayslipViewerProps) {
   const downloadMutation = useDownloadPayslipPdf(payslip.code);
+  const printMutation = usePrintPayslipPdf();
   const isFinalised = payslip.status === 3; // 3=Finalised
 
   async function handleDownload() {
@@ -168,6 +169,18 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
       showToast({
         type: 'error',
         title: 'PDF download failed',
+        message: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    }
+  }
+
+  async function handlePrint() {
+    try {
+      await printMutation.mutateAsync(payslip.id);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Print failed',
         message: err instanceof ApiError ? err.message : 'Please try again.',
       });
     }
@@ -211,13 +224,14 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
-              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+              onClick={handlePrint}
+              disabled={printMutation.isPending}
+              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Print
+              {printMutation.isPending ? 'Preparing…' : 'Print'}
             </button>
           </div>
         </div>
@@ -240,13 +254,14 @@ export function PayslipViewer({ payslip, backHref: _backHref, backLabel: _backLa
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+            onClick={handlePrint}
+            disabled={printMutation.isPending}
+            className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
-            Print
+            {printMutation.isPending ? 'Preparing…' : 'Print'}
           </button>
         </div>
       )}

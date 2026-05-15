@@ -91,3 +91,51 @@ export function useDownloadPayslipPdf(payslipCode: string) {
     },
   });
 }
+
+/**
+ * Prints the payslip PDF — the same PDF the Download button produces — so
+ * the printed page is identical to the downloaded document, byte for byte.
+ *
+ * The blob is mounted in a hidden iframe and we call print() on its window;
+ * Chromium-based browsers honour this directly on PDF iframes. If a browser
+ * refuses (some Firefox versions), we fall back to opening the PDF in a new
+ * tab so the user can use the native viewer's Print control.
+ */
+export function usePrintPayslipPdf() {
+  return useMutation({
+    mutationFn: (id: number) => downloadPayslipPdf(id),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.src = url;
+
+      let printed = false;
+      iframe.onload = () => {
+        // Some browsers fire load twice for PDF blobs; guard so we only print once.
+        if (printed) return;
+        printed = true;
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.open(url, '_blank', 'noopener');
+        }
+      };
+
+      document.body.appendChild(iframe);
+      // Keep the iframe + object URL alive long enough for the print dialog
+      // to stay interactive. The user can dismiss the dialog at their pace.
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        URL.revokeObjectURL(url);
+      }, 60_000);
+    },
+  });
+}

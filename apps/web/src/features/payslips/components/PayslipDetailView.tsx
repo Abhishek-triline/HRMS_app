@@ -41,7 +41,7 @@
  */
 
 import Link from 'next/link';
-import { usePayslip, useDownloadPayslipPdf } from '@/lib/hooks/usePayslips';
+import { usePayslip, useDownloadPayslipPdf, usePrintPayslipPdf } from '@/lib/hooks/usePayslips';
 import { Spinner } from '@/components/ui/Spinner';
 import { showToast } from '@/components/ui/Toast';
 import { ApiError } from '@/lib/api/client';
@@ -265,9 +265,11 @@ interface PayslipDocumentProps {
   payslip: Payslip;
   onDownload: () => void;
   isDownloading: boolean;
+  onPrint: () => void;
+  isPrinting: boolean;
 }
 
-function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocumentProps) {
+function PayslipDocument({ payslip, onDownload, isDownloading, onPrint, isPrinting }: PayslipDocumentProps) {
   const isFinalised = payslip.status === PAYROLL_STATUS.Finalised;
   const isReversed = payslip.status === PAYROLL_STATUS.Reversed;
   const netWorkingDays = payslip.workingDays - payslip.lopDays;
@@ -311,13 +313,14 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
-              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+              onClick={onPrint}
+              disabled={isPrinting}
+              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Print
+              {isPrinting ? 'Preparing…' : 'Print'}
             </button>
           </div>
         </div>
@@ -355,13 +358,14 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
-              className="border border-sage/60 text-slate hover:border-crimson hover:text-crimson px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+              onClick={onPrint}
+              disabled={isPrinting}
+              className="border border-sage/60 text-slate hover:border-crimson hover:text-crimson px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Print
+              {isPrinting ? 'Preparing…' : 'Print'}
             </button>
           </div>
         </div>
@@ -385,13 +389,14 @@ function PayslipDocument({ payslip, onDownload, isDownloading }: PayslipDocument
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
-              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+              onClick={onPrint}
+              disabled={isPrinting}
+              className="border border-sage/60 text-slate hover:border-forest hover:text-forest px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Print
+              {isPrinting ? 'Preparing…' : 'Print'}
             </button>
           </div>
         </div>
@@ -701,6 +706,7 @@ export function PayslipDetailView({
   const { data: payslip, isLoading, isError } = usePayslip(Number(payslipId));
 
   const downloadMutation = useDownloadPayslipPdf(payslip?.code ?? String(payslipId));
+  const printMutation = usePrintPayslipPdf();
 
   async function handleDownload() {
     if (!payslip) return;
@@ -710,6 +716,19 @@ export function PayslipDetailView({
       showToast({
         type: 'error',
         title: 'PDF download failed',
+        message: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    }
+  }
+
+  async function handlePrint() {
+    if (!payslip) return;
+    try {
+      await printMutation.mutateAsync(payslip.id);
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Print failed',
         message: err instanceof ApiError ? err.message : 'Please try again.',
       });
     }
@@ -771,6 +790,8 @@ export function PayslipDetailView({
           payslip={payslip}
           onDownload={handleDownload}
           isDownloading={downloadMutation.isPending}
+          onPrint={handlePrint}
+          isPrinting={printMutation.isPending}
         />
       )}
     </div>
