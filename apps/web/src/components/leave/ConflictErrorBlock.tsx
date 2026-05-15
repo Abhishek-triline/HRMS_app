@@ -170,9 +170,6 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
       <div className="text-sm text-charcoal">
         <div className="font-semibold text-crimson mb-0.5">{heading}</div>
         {body}
-        {error.ruleId && (
-          <div className="mt-1 text-xs text-slate/70">Rule: {error.ruleId}</div>
-        )}
       </div>
     </div>
   );
