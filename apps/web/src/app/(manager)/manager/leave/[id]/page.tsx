@@ -186,9 +186,18 @@ export default function ManagerLeaveDetailPage() {
   const cfg = buildStatusConfig(request);
 
   const escalationDeadline = (() => {
+    // Step forward 5 working days (skip Sat/Sun) from the submission timestamp.
+    // The local formatDate() expects a YYYY-MM-DD string (it appends T00:00:00),
+    // so we build the date from local fields rather than passing toISOString().
     const d = new Date(request.createdAt);
-    d.setDate(d.getDate() + 7);
-    return formatDate(d.toISOString());
+    let added = 0;
+    while (added < 5) {
+      d.setDate(d.getDate() + 1);
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) added++;
+    }
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return formatDate(ymd);
   })();
 
   const showBalanceCard = request.status !== LEAVE_STATUS.Rejected && request.status !== LEAVE_STATUS.Cancelled;
