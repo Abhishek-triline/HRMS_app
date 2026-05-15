@@ -68,6 +68,16 @@ function formatRupees(paise: number) {
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
+// Date-of-joining bounds:
+//   - Floor at 2000-01-01: the company didn't exist before that, so anything
+//     older is a typo (operators occasionally tab into year and overshoot).
+//   - Ceiling at March 31 of the next calendar year: covers the rest of the
+//     current Indian fiscal year and all of the next one (Apr–Mar). Wide
+//     enough for typical notice-period overlap and next-FY planned hires,
+//     but still blocks typos like 2099.
+const JOIN_DATE_MIN = '2000-01-01';
+const JOIN_DATE_MAX = `${new Date().getFullYear() + 1}-03-31`;
+
 // Coerce select value to number | null (empty string → undefined, '0' → undefined)
 function toIntOrUndefined(val: string | number): number | undefined {
   const n = Number(val);
@@ -417,9 +427,15 @@ export function EmployeeForm(props: EmployeeFormProps) {
                   <input
                     id="join-date"
                     type="date"
+                    min={JOIN_DATE_MIN}
+                    max={JOIN_DATE_MAX}
                     {...register('joinDate')}
+                    aria-describedby="join-date-hint"
                     className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
                   />
+                  <p id="join-date-hint" className="text-xs text-slate mt-1">
+                    Between {JOIN_DATE_MIN} and {JOIN_DATE_MAX} (covers the current fiscal year and the next).
+                  </p>
                   <FieldError id="join-date-error" message={errors.joinDate?.message} />
                 </div>
               </div>
@@ -738,9 +754,15 @@ export function EmployeeForm(props: EmployeeFormProps) {
             <input
               id="edit-join-date"
               type="date"
+              min={JOIN_DATE_MIN}
+              max={JOIN_DATE_MAX}
               {...editRegister('joinDate')}
+              aria-describedby="edit-join-date-hint"
               className="w-full border border-sage/60 rounded-lg px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/20 focus:border-forest transition"
             />
+            <p id="edit-join-date-hint" className="text-xs text-slate mt-1">
+              Between {JOIN_DATE_MIN} and {JOIN_DATE_MAX}.
+            </p>
             <FieldError id="edit-join-date-error" message={editErrors.joinDate?.message} />
           </div>
         </div>
