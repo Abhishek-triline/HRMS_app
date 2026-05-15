@@ -40,12 +40,21 @@ function EditDatesModal({
 
   if (!isOpen) return null;
 
+  // Cap both deadline pickers to the cycle's own fiscal-year window. The
+  // server already enforces that deadlines fall inside [fyStart, fyEnd] on
+  // cycle creation; mirror that here so a careless edit can't drift out.
+  // Manager deadline additionally can't be earlier than the self deadline.
+  const fyStart = cycle.fyStart;
+  const fyEnd = cycle.fyEnd;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6 border-b border-sage/20">
           <h2 className="font-heading font-bold text-lg text-charcoal">Edit Cycle Dates</h2>
-          <p className="text-xs text-slate mt-0.5">{cycle.code}</p>
+          <p className="text-xs text-slate mt-0.5">
+            {cycle.code} · FY window {fyStart} → {fyEnd}
+          </p>
         </div>
         <div className="p-6 space-y-4">
           <div>
@@ -53,18 +62,26 @@ function EditDatesModal({
             <input
               type="date"
               value={selfDeadline}
+              min={fyStart}
+              max={fyEnd}
               onChange={(e) => setSelfDeadline(e.target.value)}
               className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
             />
+            <p className="text-xs text-slate mt-1">Must fall within {fyStart} – {fyEnd}.</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-charcoal mb-1.5">Manager-Review Deadline</label>
             <input
               type="date"
               value={mgrDeadline}
+              min={selfDeadline || fyStart}
+              max={fyEnd}
               onChange={(e) => setMgrDeadline(e.target.value)}
               className="w-full border border-sage/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest/20"
             />
+            <p className="text-xs text-slate mt-1">
+              On or after the self-review deadline, up to {fyEnd}.
+            </p>
           </div>
           <p className="text-xs text-slate">
             Note: Editing cycle dates requires confirmation from Admin. Changes take effect immediately.
