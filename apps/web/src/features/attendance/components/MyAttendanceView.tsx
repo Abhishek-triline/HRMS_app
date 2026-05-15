@@ -83,6 +83,12 @@ interface ChartBar {
   status: number;
   /** Late mark — only meaningful for Present. */
   late: boolean;
+  /**
+   * True when this past-date row has a checkInTime but no checkOutTime —
+   * the employee forgot to check out and the day rolled over. Rendered
+   * distinctly so it can't be confused with an Absent or a low-hours day.
+   */
+  missedCheckout?: boolean;
 }
 
 /** Per-status visual treatment for chart bars. */
@@ -138,18 +144,28 @@ function HoursBarChart({ bars }: BarChartProps) {
           const isPresent = b.status === ATTENDANCE_STATUS.Present;
           const style = STATUS_BAR_STYLES[b.status] ?? STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!;
           const underTarget = isPresent && b.hours > 0 && b.hours < b.targetHours;
-          const gradient = isPresent && b.late
-            ? 'bg-gradient-to-t from-crimson to-crimson/70'
-            : isPresent && underTarget
-              ? UNDER_TARGET_GRADIENT
-              : style.gradient;
+          // Missed-checkout bars get a distinct umber gradient — different
+          // enough from Absent (crimson) and Below target (mint) that the
+          // user can't mistake it for either. Rendered as a short
+          // indicator since there's no real hours value to scale by.
+          const gradient = b.missedCheckout
+            ? 'bg-gradient-to-t from-umber to-umber/40'
+            : isPresent && b.late
+              ? 'bg-gradient-to-t from-crimson to-crimson/70'
+              : isPresent && underTarget
+                ? UNDER_TARGET_GRADIENT
+                : style.gradient;
           const pct = maxH > 0 ? (b.hours / maxH) * 100 : 0;
-          const barHeight = isPresent
-            ? Math.max((pct / 100) * chartH, 4)
-            : indicatorPx;
-          const tooltipMain = isPresent
-            ? `${b.hours.toFixed(1)} hrs / ${b.targetHours}h target${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
-            : style.label;
+          const barHeight = b.missedCheckout
+            ? indicatorPx
+            : isPresent
+              ? Math.max((pct / 100) * chartH, 4)
+              : indicatorPx;
+          const tooltipMain = b.missedCheckout
+            ? 'Missed checkout — submit a regularisation'
+            : isPresent
+              ? `${b.hours.toFixed(1)} hrs / ${b.targetHours}h target${b.late ? ' (late)' : underTarget ? ' (below target)' : ''}`
+              : style.label;
           const dateLabel = `${b.weekday} ${b.dayNum}`;
           return (
             <div
@@ -195,6 +211,7 @@ function ChartLegend() {
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Present]!.gradient,   key: 'On / over target' },
     { gradient: UNDER_TARGET_GRADIENT,                                    key: 'Below target' },
     { gradient: 'bg-gradient-to-t from-crimson to-crimson/70',            key: 'Late check-in' },
+    { gradient: 'bg-gradient-to-t from-umber to-umber/40',                key: 'Missed checkout' },
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Absent]!.gradient,    key: 'Absent' },
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.OnLeave]!.gradient,   key: 'Leave' },
     { gradient: STATUS_BAR_STYLES[ATTENDANCE_STATUS.Holiday]!.gradient,   key: 'Holiday' },
@@ -337,6 +354,16 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((r) => {
       const d = new Date(r.date);
+      // A past-date Present row with a check-in but no check-out is a
+      // "missed checkout" — common when an employee shuts the laptop
+      // without clicking Check Out and the midnight cron rolls over.
+      // hoursWorkedMinutes stays null in that case; rendering it as 0
+      // misleads the user into thinking they were absent.
+      const missedCheckout =
+        r.status === ATTENDANCE_STATUS.Present &&
+        r.date < todayISO &&
+        !!r.checkInTime &&
+        !r.checkOutTime;
       return {
         date: r.date,
         weekday: WEEKDAY_LABELS[d.getDay()] ?? '',
@@ -345,6 +372,7 @@ export function MyAttendanceView({ regularisationHref = '/regularisation' }: MyA
         targetHours: r.targetHours,
         status: r.status,
         late: r.late,
+        missedCheckout,
       };
     });
 
