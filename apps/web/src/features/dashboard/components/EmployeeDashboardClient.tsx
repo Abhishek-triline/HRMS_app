@@ -99,6 +99,43 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
         data-nx-no-filter
         aria-label="Key metrics"
       >
+        {/* Attendance This Month */}
+        <KpiTile
+          label={`Attendance · ${new Date().toLocaleString('en-IN', { month: 'short' })}`}
+          value={
+            <>
+              {dash.attendanceStats.present}{' '}
+              <span className="text-base font-body font-normal text-slate">
+                / {dash.attendanceStats.workingDays}
+              </span>
+            </>
+          }
+          subtext={`${Math.max(0, dash.attendanceStats.workingDays - dash.attendanceStats.present)} days remaining`}
+          isLoading={dash.attendanceLoading}
+          isError={dash.attendanceError}
+          onRetry={dash.attendanceRefetch}
+          href="/employee/attendance"
+          progressPct={attendancePct}
+          progressColor="bg-richgreen"
+        />
+
+        {/* Late Marks */}
+        <KpiTile
+          label={`Late Marks · ${new Date().toLocaleString('en-IN', { month: 'short' })}`}
+          value={dash.attendanceStats.lateCount}
+          subtext={
+            dash.attendanceStats.lateCount >= 2
+              ? `${3 - (dash.attendanceStats.lateCount % 3)} more before deduction`
+              : 'No deduction risk'
+          }
+          isLoading={dash.attendanceLoading}
+          isError={dash.attendanceError}
+          onRetry={dash.attendanceRefetch}
+          href="/employee/attendance"
+          attention={dash.attendanceStats.lateCount > 0}
+          attentionDot={dash.attendanceStats.lateCount > 0}
+        />
+
         {/* Annual Leave */}
         <KpiTile
           label="Annual Leave"
@@ -149,43 +186,6 @@ export function EmployeeDashboardClient({ firstName: firstNameProp }: EmployeeDa
           href="/employee/leave"
           progressPct={sickPct}
           progressColor="bg-emerald"
-        />
-
-        {/* Attendance This Month */}
-        <KpiTile
-          label={`Attendance · ${new Date().toLocaleString('en-IN', { month: 'short' })}`}
-          value={
-            <>
-              {dash.attendanceStats.present}{' '}
-              <span className="text-base font-body font-normal text-slate">
-                / {dash.attendanceStats.workingDays}
-              </span>
-            </>
-          }
-          subtext={`${Math.max(0, dash.attendanceStats.workingDays - dash.attendanceStats.present)} days remaining`}
-          isLoading={dash.attendanceLoading}
-          isError={dash.attendanceError}
-          onRetry={dash.attendanceRefetch}
-          href="/employee/attendance"
-          progressPct={attendancePct}
-          progressColor="bg-richgreen"
-        />
-
-        {/* Late Marks */}
-        <KpiTile
-          label={`Late Marks · ${new Date().toLocaleString('en-IN', { month: 'short' })}`}
-          value={dash.attendanceStats.lateCount}
-          subtext={
-            dash.attendanceStats.lateCount >= 2
-              ? `${3 - (dash.attendanceStats.lateCount % 3)} more before deduction`
-              : 'No deduction risk'
-          }
-          isLoading={dash.attendanceLoading}
-          isError={dash.attendanceError}
-          onRetry={dash.attendanceRefetch}
-          href="/employee/attendance"
-          attention={dash.attendanceStats.lateCount > 0}
-          attentionDot={dash.attendanceStats.lateCount > 0}
         />
       </div>
 
