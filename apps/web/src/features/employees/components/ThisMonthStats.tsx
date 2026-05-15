@@ -12,12 +12,21 @@ import { useMemo } from 'react';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { ATTENDANCE_STATUS } from '@/lib/status/maps';
 
+// Build YYYY-MM-DD from local fields, not via toISOString(). The UTC
+// round-trip silently rolls dates back by a day for timezones east of
+// UTC — see the same fix in dashboard hooks for context.
+function ymd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 function getMonthBounds(): { from: string; to: string; label: string } {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth(); // 0-indexed
-  const from = new Date(year, month, 1).toISOString().slice(0, 10);
-  const to = now.toISOString().slice(0, 10); // today
+  const from = ymd(new Date(year, month, 1));
+  const to = ymd(now); // today
   const label = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
   return { from, to, label };
 }

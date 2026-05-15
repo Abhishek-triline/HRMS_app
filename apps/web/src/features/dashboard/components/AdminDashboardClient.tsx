@@ -21,12 +21,21 @@ import { KpiTile } from './KpiTile';
 import { DashboardPanelCard } from './DashboardPanelCard';
 import Link from 'next/link';
 
+// Build YYYY-MM-DD from local fields, not via toISOString() — the UTC
+// round-trip silently rolls the date back by a day for timezones east
+// of UTC (in Asia/Kolkata this turned May 1 into April 30 and inflated
+// the attendance KPI by one row).
+function ymd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return ymd(new Date());
 }
 function monthStartISO() {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return ymd(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 function currentMonthLabel() {
   return new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });

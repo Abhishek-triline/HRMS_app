@@ -20,13 +20,29 @@ import { usePayslipsList } from '@/lib/hooks/usePayslips';
 import { useCycles, useReviews } from '@/lib/hooks/usePerformance';
 import { ATTENDANCE_STATUS, LEAVE_TYPE_ID } from '@/lib/status/maps';
 
+/**
+ * LOCAL YYYY-MM-DD for today / start-of-this-month. Earlier these went
+ * through `.toISOString()`, which converts the local Date to UTC and
+ * silently shifts the date back by a day for any timezone east of UTC.
+ * In Asia/Kolkata (UTC+5:30), `new Date(2026, 4, 1).toISOString()` is
+ * "2026-04-30T18:30:00.000Z" — so `monthStartISO()` returned April 30
+ * and the attendance KPI counted a stray prior-month day as Present.
+ * Build the strings from local fields directly.
+ */
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return ymd(new Date());
 }
 
 function monthStartISO(): string {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return ymd(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
 /** Working days in a month (rough estimate — Mon–Fri, no holiday API call here). */

@@ -18,8 +18,15 @@ import { usePayrollRuns } from '@/lib/hooks/usePayroll';
 import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
 import { EMPLOYEE_STATUS, LEAVE_STATUS } from '@/lib/status/maps';
 
+// Build YYYY-MM-DD from local fields, not via toISOString() — the UTC
+// round-trip silently rolls the date back by a day for timezones east
+// of UTC (in Asia/Kolkata this turned May 1 into April 30 and inflated
+// the attendance KPI by one row).
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
 function currentMonthYear(): { month: number; year: number } {

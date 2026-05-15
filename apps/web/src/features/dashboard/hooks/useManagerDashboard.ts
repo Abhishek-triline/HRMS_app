@@ -21,13 +21,23 @@ import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { useCycles, useReviews } from '@/lib/hooks/usePerformance';
 import { LEAVE_STATUS, ROUTED_TO } from '@/lib/status/maps';
 
+// Build YYYY-MM-DD from local fields, not via toISOString() — the UTC
+// round-trip silently rolls the date back by a day for timezones east
+// of UTC (in Asia/Kolkata this turned May 1 into April 30 and inflated
+// the attendance KPI by one row).
+function ymd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return ymd(new Date());
 }
 
 function monthStartISO(): string {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return ymd(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
 export function useManagerDashboard() {
