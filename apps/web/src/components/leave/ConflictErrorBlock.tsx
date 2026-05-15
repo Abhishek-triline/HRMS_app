@@ -121,10 +121,13 @@ export function ConflictErrorBlock({ error, className }: ConflictErrorBlockProps
     body = (
       <p className="text-xs text-slate leading-relaxed">
         You've already checked in today, so today can't be converted to a
-        leave day through this form. Submit a{' '}
+        leave day through this form. Either continue treating today as a
+        working day, or submit a{' '}
         <span className="font-semibold text-charcoal">Regularisation request</span>{' '}
-        for today's date with the correct attendance state — that flow
-        cleanly overlays the existing record.
+        <span className="font-semibold text-charcoal">tomorrow</span> for
+        today's date — regularisation only accepts past-dated records, so
+        the form will let you correct today's attendance once it's no
+        longer the current day.
       </p>
     );
   } else if (code === ErrorCode.LEAVE_CROSSES_YEAR_BOUNDARY) {

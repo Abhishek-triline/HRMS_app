@@ -11,7 +11,7 @@
  * - At least one time field required (CreateRegularisationRequestSchema refine)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,34 +25,47 @@ import { RegularisationStatusBadge } from './RegularisationStatusBadge';
 import { useSubmitRegularisation } from '@/lib/hooks/useRegularisations';
 import { useAttendanceList } from '@/lib/hooks/useAttendance';
 import { useRegularisations } from '@/lib/hooks/useRegularisations';
+import { useMe } from '@/lib/hooks/useAuth';
+import { useProfile } from '@/lib/hooks/useEmployees';
+import { formatDate } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
 
 // ── Zod schema (mirrors CreateRegularisationRequestSchema but with UX coercion) ─
+//
+// `joinDate` is closed over at component scope so the date refine can reject
+// pre-employment dates. We rebuild the schema only when joinDate changes —
+// otherwise the form keeps a single stable resolver across renders.
 
-const formSchema = z
-  .object({
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
-      .refine((v) => v < new Date().toISOString().slice(0, 10), 'Date must be in the past'),
-    proposedCheckIn: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
-      .nullable()
-      .optional(),
-    proposedCheckOut: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
-      .nullable()
-      .optional(),
-    reason: z.string().min(5, 'Reason must be at least 5 characters.').max(1000, 'Max 1000 characters.'),
-  })
-  .refine((v) => v.proposedCheckIn || v.proposedCheckOut, {
-    message: 'At least one of Check-in or Check-out time is required.',
-    path: ['proposedCheckIn'],
-  });
+function buildFormSchema(joinDate: string | null) {
+  return z
+    .object({
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+        .refine((v) => v < new Date().toISOString().slice(0, 10), 'Date must be in the past')
+        .refine(
+          (v) => !joinDate || v >= joinDate,
+          'Date is before your joining date.',
+        ),
+      proposedCheckIn: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
+        .nullable()
+        .optional(),
+      proposedCheckOut: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/, 'Use HH:MM (24-hour)')
+        .nullable()
+        .optional(),
+      reason: z.string().min(5, 'Reason must be at least 5 characters.').max(1000, 'Max 1000 characters.'),
+    })
+    .refine((v) => v.proposedCheckIn || v.proposedCheckOut, {
+      message: 'At least one of Check-in or Check-out time is required.',
+      path: ['proposedCheckIn'],
+    });
+}
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,6 +86,16 @@ function todayMinus1(): string {
 export function RegularisationForm() {
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  // Joining date floor — the date picker must not allow days before the
+  // employee actually started. /auth/me carries the user id; /employees/{id}
+  // is the only endpoint that surfaces joinDate today, so we chain them.
+  const { data: meData } = useMe();
+  const myEmployeeId = meData?.data?.user?.id ?? 0;
+  const { data: profileData } = useProfile(myEmployeeId);
+  const joinDate = profileData?.joinDate ?? null;
+
+  const formSchema = useMemo(() => buildFormSchema(joinDate), [joinDate]);
 
   const {
     register,
@@ -158,13 +181,15 @@ export function RegularisationForm() {
                 id="reg-date"
                 type="date"
                 max={todayMinus1()}
+                min={joinDate ?? undefined}
                 aria-required="true"
                 aria-describedby={errors.date ? 'reg-date-error' : 'reg-date-hint'}
                 {...register('date')}
                 className="mt-1 w-full border border-sage rounded-lg px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-colors"
               />
               <div id="reg-date-hint" className="text-xs text-slate mt-1">
-                You can only submit corrections for past dates.
+                You can only submit corrections for past dates
+                {joinDate ? ` on or after your joining date (${formatDate(joinDate)})` : ''}.
               </div>
               <FieldError id="reg-date-error" message={errors.date?.message} />
             </div>
