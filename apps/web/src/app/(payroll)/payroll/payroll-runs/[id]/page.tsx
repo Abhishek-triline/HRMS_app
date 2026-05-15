@@ -121,6 +121,7 @@ export default function POPayrollRunDetailPage() {
               onPageChange={pager.goToPage}
               onPrev={pager.goPrev}
               onNext={pager.goNext}
+              total={payslipsQuery.data?.total}
             />
           </div>
         </div>

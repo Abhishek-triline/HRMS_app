@@ -318,6 +318,8 @@ export type PayslipListQuery = z.infer<typeof PayslipListQuerySchema>;
 export const PayslipListResponseSchema = z.object({
   data: z.array(PayslipSummarySchema),
   nextCursor: z.string().nullable(),
+  /** Total rows that match the filter (independent of cursor / limit). */
+  total: z.number().int().nonnegative(),
 });
 export type PayslipListResponse = z.infer<typeof PayslipListResponseSchema>;
 
