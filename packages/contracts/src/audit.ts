@@ -85,3 +85,15 @@ export const AuditLogListResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type AuditLogListResponse = z.infer<typeof AuditLogListResponseSchema>;
+
+/**
+ * GET /audit-logs/export — single-shot export (no cursor). Server hard-caps
+ * at 20,000 rows; `truncated` flags when the cap was hit so the UI can hint
+ * the admin to narrow their filter.
+ */
+export const AuditLogExportResponseSchema = z.object({
+  data: z.array(AuditLogEntrySchema),
+  total: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+});
+export type AuditLogExportResponse = z.infer<typeof AuditLogExportResponseSchema>;

@@ -14,6 +14,7 @@ import type {
   TodayAttendanceResponse,
   AttendanceListQuery,
   AttendanceListResponse,
+  AttendanceExportResponse,
   AttendanceStatsQuery,
   AttendanceStatsResponse,
   CreateRegularisationRequest,
@@ -90,6 +91,23 @@ export async function listAttendance(
   }
   const qs = params.toString();
   return apiClient.get<AttendanceListResponse>(`${path}${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * GET /attendance/export — single-shot org-wide export (Admin only).
+ * Returns every matching row at once (server hard-caps at 20,000).
+ */
+export async function exportAttendance(
+  query: Partial<AttendanceListQuery> = {},
+): Promise<AttendanceExportResponse> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  return apiClient.get<AttendanceExportResponse>(`${ATT_BASE}/export${qs ? `?${qs}` : ''}`);
 }
 
 /** GET /api/v1/attendance/stats — Admin aggregate counts for a date/range. */

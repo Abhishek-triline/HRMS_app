@@ -24,6 +24,8 @@ import { CursorPaginator } from '@/components/ui/CursorPaginator';
 import { useAttendanceList, useAttendanceStats } from '@/lib/hooks/useAttendance';
 import { useCursorPagination } from '@/lib/hooks/useCursorPagination';
 import { useDepartments } from '@/lib/hooks/useMasters';
+import { exportAttendance } from '@/lib/api/attendance';
+import { showToast } from '@/components/ui/Toast';
 import { MyAttendanceView } from '@/features/attendance/components/MyAttendanceView';
 import type { AttendanceStatusValue } from '@nexora/contracts/attendance';
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_MAP } from '@/lib/status/maps';
@@ -177,6 +179,97 @@ function OrgAttendancePage() {
     return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
+  // ── CSV export ───────────────────────────────────────────────────────────────
+  // Single GET to /attendance/export pulls every attendance row for the
+  // current calendar year (Jan 1 → today), honouring the active department +
+  // status filters. Server hard-caps at 20,000 rows; the `truncated` flag
+  // surfaces a toast when that cap is hit so the admin knows the CSV is
+  // partial and can narrow the filter.
+  const [isExporting, setIsExporting] = useState(false);
+  async function handleExportCsv() {
+    setIsExporting(true);
+    try {
+      const yearStart = `${new Date().getFullYear()}-01-01`;
+      const today = todayISO();
+      const resp = await exportAttendance({
+        from: yearStart,
+        to: today,
+        ...(statusFilter ? { status: statusFilter as AttendanceStatusValue } : {}),
+        ...(departmentId ? { departmentId } : {}),
+      });
+      const rows = resp.data ?? [];
+      const header = [
+        'Date', 'Employee Name', 'Employee Code', 'Department', 'Status',
+        'Check-In', 'Check-Out', 'Hours Worked', 'Late', 'Late This Month',
+      ];
+      // Format the YYYY-MM-DD as "15 May 2026" — keeps Excel from auto-typing
+      // the cell into a locale-default date format that widens the column
+      // and shows ### until the user manually resizes it.
+      const fmtCsvDate = (ymd: string): string => {
+        const [y, m, d] = ymd.split('-');
+        if (!y || !m || !d) return ymd;
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${Number(d)} ${months[Number(m) - 1] ?? m} ${y}`;
+      };
+      const body = rows.map((r) => {
+        const statusLabel = ATTENDANCE_STATUS_MAP[r.status as AttendanceStatusValue]?.label ?? String(r.status);
+        const hours = r.hoursWorkedMinutes != null
+          ? `${Math.floor(r.hoursWorkedMinutes / 60)}h ${r.hoursWorkedMinutes % 60}m`
+          : '';
+        return [
+          fmtCsvDate(r.date ?? ''),
+          r.employeeName ?? '',
+          r.employeeCode ?? '',
+          (r as { department?: string | null }).department ?? '',
+          statusLabel,
+          fmtTime(r.checkInTime),
+          fmtTime(r.checkOutTime),
+          hours,
+          r.late ? 'Yes' : 'No',
+          String(r.lateMonthCount ?? 0),
+        ];
+      });
+      // CSV-safe cell: escape quotes, prefix formula-trigger chars to neutralise
+      // spreadsheet injection (=, +, -, @, tab, CR).
+      const cell = (v: string) => {
+        const s = String(v ?? '');
+        const escaped = s.replace(/"/g, '""');
+        return `"${/^[=+\-@\t\r]/.test(s) ? `'${escaped}` : escaped}"`;
+      };
+      const csv = [header, ...body].map((r) => r.map(cell).join(',')).join('\r\n');
+      // UTF-8 BOM so Excel picks up the encoding.
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const safeDept = departmentId
+        ? `_${(departments.find((d) => d.id === departmentId)?.name ?? 'dept').replace(/[^a-zA-Z0-9._-]+/g, '-')}`
+        : '';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance_${new Date().getFullYear()}-YTD${safeDept}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (resp.truncated) {
+        showToast({
+          type: 'info',
+          title: 'Export truncated',
+          message: `Hit the 20,000-row server cap. ${rows.length} rows exported — narrow the filter for a complete export.`,
+        });
+      } else {
+        showToast({
+          type: 'success',
+          title: 'CSV downloaded',
+          message: `${rows.length} row${rows.length !== 1 ? 's' : ''} exported.`,
+        });
+      }
+    } catch (_err) {
+      showToast({ type: 'error', title: 'Export failed', message: 'Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <>
       {/* Day picker + filter row — matches prototype exactly */}
@@ -214,7 +307,14 @@ function OrgAttendancePage() {
           <option value={ATTENDANCE_STATUS.WeeklyOff}>Weekly Off</option>
         </select>
         <div className="ml-auto flex gap-2">
-          <button className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite">Export CSV</button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={isExporting}
+            className="border border-sage/50 px-3 py-2 rounded-lg text-sm text-slate hover:bg-offwhite disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? 'Exporting…' : 'Export CSV'}
+          </button>
         </div>
       </div>
 

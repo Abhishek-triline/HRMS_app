@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { useMe } from '@/lib/hooks/useAuth';
 import { useLeaveBalances } from '@/lib/hooks/useLeave';
+import { useEncashmentConfigSettings } from '@/features/admin/hooks/useEncashmentConfigSettings';
 import {
   useEncashmentList,
   useSubmitEncashment,
@@ -54,7 +55,9 @@ function fmtDate(iso: string | null): string {
 function encashmentErrorMessage(code: string, message: string): string {
   switch (code) {
     case 'ENCASHMENT_OUT_OF_WINDOW':
-      return 'Encashment requests can only be submitted during the Dec 1 – Jan 15 window.';
+      // Defer to the server's message — it already names the configured window
+      // dates so we don't hard-code "Dec 1 – Jan 15" here.
+      return message || 'Encashment requests can only be submitted during the configured window.';
     case 'ENCASHMENT_ALREADY_USED':
       return 'You already have an approved or finalised encashment for this year. Only one encashment is allowed per year.';
     case 'ENCASHMENT_INSUFFICIENT_BALANCE':
@@ -64,6 +67,15 @@ function encashmentErrorMessage(code: string, message: string): string {
     default:
       return message;
   }
+}
+
+const MONTH_NAMES_SHORT = [
+  '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+function fmtWindowLabel(startMonth: number, endMonth: number, endDay: number): string {
+  return `${MONTH_NAMES_SHORT[startMonth] ?? `M${startMonth}`} 1 – ${MONTH_NAMES_SHORT[endMonth] ?? `M${endMonth}`} ${endDay}`;
 }
 
 // ── Apply modal ───────────────────────────────────────────────────────────────
@@ -335,11 +347,36 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
   const daysEncashed = (annualBalance as (typeof annualBalance & { daysEncashed?: number }) | undefined)?.daysEncashed ?? 0;
   const maxEncashable = Math.floor((daysRemaining ?? 0) * 0.5);
 
-  // Window check — simple client-side heuristic (Dec or Jan 1-15)
+  // Window check — driven by the live config (admin can move the window via
+  // /admin/configuration → Leave Quotas). The server enforces the same rule
+  // on submit; this client check is just UX gating for the Apply button.
+  const encashmentConfigQuery = useEncashmentConfigSettings();
+  const encashmentCfg = encashmentConfigQuery.data;
   const now = new Date();
   const month = now.getMonth() + 1; // 1-indexed
   const day = now.getDate();
-  const inWindow = month === 12 || (month === 1 && day <= 15);
+  const inWindow = (() => {
+    if (!encashmentCfg) return false; // wait for config; safer to default closed
+    const { windowStartMonth, windowEndMonth, windowEndDay } = encashmentCfg;
+    // Window wraps the calendar (e.g. Dec→Jan): if start > end, "open" means
+    // we're at/after start OR at/before end. Otherwise the simple in-range
+    // check applies.
+    if (windowStartMonth > windowEndMonth) {
+      return (
+        month > windowStartMonth ||
+        month < windowEndMonth ||
+        (month === windowEndMonth && day <= windowEndDay)
+      );
+    }
+    if (windowStartMonth === windowEndMonth) {
+      return month === windowStartMonth && day <= windowEndDay;
+    }
+    return (
+      (month > windowStartMonth && month < windowEndMonth) ||
+      month === windowStartMonth ||
+      (month === windowEndMonth && day <= windowEndDay)
+    );
+  })();
 
   // Disable apply if already has open/approved
   const hasOpenRequest = useMemo(() => {
@@ -404,9 +441,9 @@ export function MyEncashmentView({ detailBasePath }: MyEncashmentViewProps) {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    {month > 1 && month < 12
-                      ? 'Window opens Dec 1'
-                      : 'Window closed Jan 15'}
+                    {encashmentCfg
+                      ? `Window: ${fmtWindowLabel(encashmentCfg.windowStartMonth, encashmentCfg.windowEndMonth, encashmentCfg.windowEndDay)}`
+                      : 'Encashment window'}
                   </span>
                 )}
               </div>

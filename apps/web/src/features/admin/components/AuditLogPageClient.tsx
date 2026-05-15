@@ -19,8 +19,10 @@ import { useAuditLogs } from '@/features/admin/hooks/useAuditLogs';
 import { useEmployeeNameMap } from '@/lib/hooks/useEmployees';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { showToast } from '@/components/ui/Toast';
 import type { AuditLogEntry } from '@nexora/contracts/audit';
 import type { AuditLogFilters } from '@/lib/api/audit';
+import { exportAuditLogs } from '@/lib/api/audit';
 import {
   ROLE_ID,
   AUDIT_ACTOR_ROLE_MAP,
@@ -788,9 +790,35 @@ export function AuditLogPageClient() {
     setAppliedFilters({});
   }
 
-  const handleExport = useCallback(() => {
-    exportToCsv(allEntries);
-  }, [allEntries]);
+  // Fetch the full filtered set in a single request so the CSV reflects
+  // every matching row, not just the pages the infinite-scroll buffer
+  // happens to have loaded. Server hard-caps at 20,000 rows and reports
+  // truncated=true when hit so we can prompt the admin to narrow filters.
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const resp = await exportAuditLogs(appliedFilters);
+      exportToCsv(resp.data);
+      if (resp.truncated) {
+        showToast({
+          type: 'info',
+          title: 'Export truncated',
+          message: `Hit the 20,000-row server cap. ${resp.total} rows exported — narrow the filter for a complete export.`,
+        });
+      } else {
+        showToast({
+          type: 'success',
+          title: 'CSV downloaded',
+          message: `${resp.total} row${resp.total !== 1 ? 's' : ''} exported.`,
+        });
+      }
+    } catch {
+      showToast({ type: 'error', title: 'Export failed', message: 'Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [appliedFilters]);
 
   const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
 
@@ -1005,14 +1033,15 @@ export function AuditLogPageClient() {
             variant="secondary"
             size="sm"
             onClick={handleExport}
-            disabled={allEntries.length === 0}
+            disabled={isExporting}
+            loading={isExporting}
             leadingIcon={
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h11l5 5v7a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
               </svg>
             }
           >
-            Export CSV
+            {isExporting ? 'Exporting…' : 'Export CSV'}
           </Button>
         </div>
       </div>

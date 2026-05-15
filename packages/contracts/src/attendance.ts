@@ -178,6 +178,25 @@ export const AttendanceListQuerySchema = PaginationQuerySchema.extend({
 });
 export type AttendanceListQuery = z.infer<typeof AttendanceListQuerySchema>;
 
+/**
+ * GET /attendance/export — single-shot export response (no cursor).
+ * Server hard-caps at 20,000 rows; `truncated` is true when the cap was hit.
+ */
+export const AttendanceExportResponseSchema = z.object({
+  data: z.array(
+    AttendanceCalendarItemSchema.extend({
+      employeeId: IdSchema,
+      employeeName: z.string().optional(),
+      employeeCode: EmployeeCodeSchema.optional(),
+      department: z.string().nullable().optional(),
+      lateMonthCount: z.number().int().min(0),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+});
+export type AttendanceExportResponse = z.infer<typeof AttendanceExportResponseSchema>;
+
 /** Calendar-style payload — used by E-05 and the manager / admin grids. */
 export const AttendanceListResponseSchema = z.object({
   data: z.array(
